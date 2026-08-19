@@ -1,0 +1,47 @@
+//
+//  DLUtil.h
+//  Discord Lite
+//
+//  Created by Collin Mistr on 10/27/21.
+//  Copyright (c) 2021 dosdude1. All rights reserved.
+//
+
+#import <Cocoa/Cocoa.h>
+#include <sys/sysctl.h>
+#import "BezierPathRoundedRect.h"
+#import "NSString+Base64.h"
+#import "CJSONSerializer.h"
+
+@interface DLUtil : NSObject
+
++(NSImage *)imageResize:(NSImage*)anImage newSize:(NSSize)newSize cornerRadius:(CGFloat)radius;
++(NSString *)appVersionString;
++(NSString *)networkVersionString;
++(NSString *)kernelVersion;
++(NSString *)randomStringWithLength:(NSInteger)len;
++(NSString *)mimeTypeForExtension:(NSString *)ext;
++(NSString *)downloadsPath;
++(NSString *)generateSnowflake;
++(NSDate *)dateFromTimestampString:(NSString *)timestampString;
++(NSString *)userAgentString;
++(NSString *)superPropertiesString;
++(NSDictionary *)defaultHTTPPostHeaders;
++(NSString *)caBundlePath;
++(NSString *)URLPathEncodedString:(NSString *)string;
+
+// AppKit-native appearance shared by the legacy-compatible UI.
++(NSColor *)nativeServerRailColor;
++(NSColor *)nativeSidebarColor;
++(NSColor *)nativeContentColor;
++(NSColor *)nativeChromeColor;
++(NSColor *)nativeHeaderTopColor;
++(NSColor *)nativeHeaderBottomColor;
++(NSColor *)nativePrimaryTextColor;
++(NSColor *)nativeSecondaryTextColor;
++(NSColor *)nativeSelectionColor;
++(NSColor *)nativeSelectedTextColor;
++(NSColor *)nativeMentionColor;
++(NSColor *)nativeTagColor;
++(NSColor *)nativeLinkColor;
+
+@end

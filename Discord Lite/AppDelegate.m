@@ -1,0 +1,86 @@
+//
+//  AppDelegate.m
+//  Discord Lite
+//
+//  Created by Collin Mistr on 10/26/21.
+//  Copyright (c) 2021 dosdude1. All rights reserved.
+//
+
+#import "AppDelegate.h"
+
+@interface AppDelegate ()
+
+@end
+
+@implementation AppDelegate
+
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    NSMenuItem *applicationMenuItem = [[NSApp mainMenu] itemAtIndex:0];
+    NSMenuItem *preferencesItem = [[applicationMenuItem submenu] itemWithTitle:@"Preferences…"];
+    [preferencesItem setTarget:self];
+    [preferencesItem setAction:@selector(showPreferencesWindow:)];
+
+    //[NSURLProtocol registerClass:[DLURLProtocol class]];
+    
+    if (![[DLController sharedInstance] isLoggedIn]) {
+        loginWindow = [[DLLoginWindowController alloc] initWithWindowNibName:@"DLLoginWindowController"];
+        [loginWindow setDelegate:self];
+        [loginWindow showWindow:loginWindow.window];
+    } else {
+        [[DLController sharedInstance] startWebSocket];
+        mainWindow = [[DLMainWindowController alloc] initWithWindowNibName:@"DLMainWindowController"];
+        [mainWindow setDelegate:self];
+        [mainWindow showWindow:mainWindow.window];
+    }
+}
+
+- (void)applicationWillTerminate:(NSNotification *)aNotification {
+    // Insert code here to tear down your application
+    [[DLController sharedInstance] stopWebSocket];
+}
+
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)theApplication hasVisibleWindows:(BOOL)flag {
+    if (![[DLController sharedInstance] isLoggedIn]) {
+        if (!loginWindow) {
+            loginWindow = [[DLLoginWindowController alloc] initWithWindowNibName:@"DLLoginWindowController"];
+        }
+        [loginWindow setDelegate:self];
+        [loginWindow showWindow:loginWindow.window];
+    } else {
+        if (!mainWindow) {
+            mainWindow = [[DLMainWindowController alloc] initWithWindowNibName:@"DLMainWindowController"];
+            [[DLController sharedInstance] startWebSocket];
+        }
+        [mainWindow setDelegate:self];
+        [mainWindow showWindow:mainWindow.window];
+    }
+    return YES;
+}
+
+- (IBAction)showPreferencesWindow:(id)sender {
+    if (!preferencesWindow) {
+        preferencesWindow = [[DLPreferencesWindowController alloc] initWithWindowNibName:@"DLPreferencesWindowController"];
+    }
+    [preferencesWindow showWindow:preferencesWindow.window];
+}
+
+#pragma mark Delegated Functions
+
+-(void)loginWasSuccessful {
+    [loginWindow close];
+    [loginWindow release];
+    [[DLController sharedInstance] startWebSocket];
+    mainWindow = [[DLMainWindowController alloc] initWithWindowNibName:@"DLMainWindowController"];
+    [mainWindow setDelegate:self];
+    [mainWindow showWindow:mainWindow.window];
+}
+
+-(void)logoutWasSuccessful {
+    [mainWindow close];
+    [mainWindow release];
+    [[DLController sharedInstance] stopWebSocket];
+    loginWindow = [[DLLoginWindowController alloc] initWithWindowNibName:@"DLLoginWindowController"];
+    [loginWindow setDelegate:self];
+    [loginWindow showWindow:loginWindow.window];
+}
+@end

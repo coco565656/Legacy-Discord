@@ -1,0 +1,10 @@
+.DS_Store
+.Trashes
+__MACOSX
+artifacts/
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint

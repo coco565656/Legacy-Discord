@@ -1,0 +1,160 @@
+//
+//  DLDirectMessageChannel.m
+//  Discord Lite
+//
+//  Created by Collin Mistr on 11/3/21.
+//  Copyright (c) 2021 dosdude1. All rights reserved.
+//
+
+#import "DLDirectMessageChannel.h"
+
+@implementation DLDirectMessageChannel
+
+-(id)init {
+    self = [super init];
+    return self;
+}
+
+-(id)initWithDict:(NSDictionary *)d {
+    self = [super initWithDict:d];
+    [self updateWithDict:d];
+    return self;
+}
+
+-(void)updateWithDict:(NSDictionary *)d {
+    [super updateWithDict:d];
+    NSMutableArray *rec = [[NSMutableArray alloc] init];
+    NSEnumerator *e = [[d objectForKey:@"recipients"] objectEnumerator];
+    NSDictionary *recipientData;
+    while (recipientData = [e nextObject]) {
+        DLUser *user = [[DLUser alloc] initWithDict:recipientData];
+        [user setDelegate:self];
+        [rec addObject:user];
+        [user release];
+    }
+    recipients = rec;
+    [self setUpdateTimestamp];
+    
+    if (recipients.count == 1) {
+        imageData = [[recipients objectAtIndex:0] avatarImageData];
+    } else if (recipients.count > 1) {
+        imageData = [[NSData alloc] initWithContentsOfFile:[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"discord_group.png"]];
+    }
+    
+    if (recipients.count > 1) {
+        subImageData = [[NSData alloc] initWithContentsOfFile:[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"f5k.png"]];
+    } else if (recipients.count == 1) {
+        subImageData = [[NSData alloc] initWithContentsOfFile:[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"at.png"]];
+    }
+}
+
+-(void)setUpdateTimestamp {
+    if (lastMessage) {
+        uint64_t timeMillis = (([[lastMessage messageID] doubleValue] / 4194304) + 1420070400000);
+        lastUpdateTimestamp = [[NSDate dateWithTimeIntervalSince1970:timeMillis/1000] retain];
+    } else {
+        lastUpdateTimestamp = [[NSDate dateWithTimeIntervalSince1970:0] retain];
+    }
+}
+
+-(BOOL)isGroupMessage {
+    return recipients.count > 1;
+}
+
+-(NSArray *)recipients {
+    return recipients;
+}
+-(NSString *)name {
+    if (name == nil || [name isKindOfClass:[NSNull class]]) {
+        if (recipients.count == 1) {
+            return [[recipients objectAtIndex:0] globalName];
+        } else if (recipients.count > 1) {
+            NSString *globalNames = @"";
+            for (int i = 0; i<recipients.count; i++) {
+                if (i < recipients.count - 1) {
+                    globalNames = [globalNames stringByAppendingString:[NSString stringWithFormat:@"%@, ", [[recipients objectAtIndex:i] globalName]]];
+                } else {
+                    globalNames = [globalNames stringByAppendingString:[[recipients objectAtIndex:i] globalName]];
+                }
+            }
+            return globalNames;
+        }
+    }
+    return name;
+}
+-(NSData *)imageData {
+    return imageData;
+}
+-(NSData *)subImageData {
+    return subImageData;
+}
+-(NSString *)serverID {
+    return @"@me";
+}
+-(NSDate *)lastUpdateTimestamp {
+    return lastUpdateTimestamp;
+}
+
+-(DLUser *)recipientWithUserID:(NSString *)userID {
+    NSEnumerator *e = [recipients objectEnumerator];
+    DLUser *user;
+    while (user = [e nextObject]) {
+        if ([[user userID] isEqualToString:userID]) {
+            return user;
+        }
+    }
+    return nil;
+}
+
+-(NSArray *)recipientsWithUsernameContainingString:(NSString *)username {
+    NSMutableArray *matchedUsers = [[NSMutableArray alloc] init];
+    NSEnumerator *e = [recipients objectEnumerator];
+    DLUser *user;
+    while (user = [e nextObject]) {
+        if ([[user username] rangeOfString:username].location != NSNotFound || [[user globalName] rangeOfString:username].location != NSNotFound) {
+            [matchedUsers addObject:user];
+        }
+    }
+    return [matchedUsers autorelease];
+}
+
+- (NSComparisonResult)compare:(DLDirectMessageChannel *)o {
+    if (lastUpdateTimestamp && [o lastUpdateTimestamp]) {
+        if ([lastUpdateTimestamp isGreaterThan: [o lastUpdateTimestamp]]) {
+            return NSOrderedAscending;
+        } else if ([lastUpdateTimestamp isLessThan: [o lastUpdateTimestamp]]) {
+            return NSOrderedDescending;
+        }
+    }
+    return NSOrderedSame;
+}
+
+-(void)setLastMessage:(DLMessage *)msg {
+    [super setLastMessage:msg];
+    [self setUpdateTimestamp];
+}
+
+-(void)loadAvatarImageData {
+    NSEnumerator *e = [recipients objectEnumerator];
+    DLUser *user;
+    while (user = [e nextObject]) {
+        [user loadAvatarData];
+    }
+}
+
+-(void)dealloc {
+    [recipients release];
+    [lastUpdateTimestamp release];
+    [super dealloc];
+}
+
+#pragma mark Delegated Functions
+
+-(void)user:(DLUser *)u avatarDidUpdateWithData:(NSData *)data {
+    if (recipients.count == 1) {
+        imageData = data;
+        [delegate channel:self imageDidUpdateWithData:data];
+    }
+}
+
+@end
