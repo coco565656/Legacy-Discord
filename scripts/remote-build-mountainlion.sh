@@ -110,7 +110,8 @@ if [ "$SYNC_SOURCE" -eq 1 ]; then
         "$REMOTE_HOST:$REMOTE_DIR/"
 fi
 
-ARTIFACT_DIR="$PROJECT_DIR/artifacts/mountainlion/$CONFIGURATION"
+# Keep products from different legacy Macs separate when --host is used.
+ARTIFACT_DIR="$PROJECT_DIR/artifacts/$REMOTE_HOST/$CONFIGURATION"
 mkdir -p "$ARTIFACT_DIR"
 LOCAL_LOG="$ARTIFACT_DIR/xcodebuild.log"
 
@@ -152,6 +153,13 @@ if [ "$RUN_AFTER_BUILD" -eq 1 ]; then
     printf 'Opening the app on %s...\n' "$REMOTE_HOST"
     $SSH_RSH "$REMOTE_HOST" "
         APP_PATH=\"\$HOME/$REMOTE_DIR/build/$CONFIGURATION/Discord Lite.app\"
+        if pgrep -x Finder >/dev/null && /usr/bin/osascript \\
+            -e 'on run argv' \\
+            -e 'tell application \"Finder\" to open POSIX file (item 1 of argv)' \\
+            -e 'end run' \\
+            \"\$APP_PATH\"; then
+            exit 0
+        fi
         FINDER_PID=\$(pgrep -x Finder | head -n 1)
         if [ -n \"\$FINDER_PID\" ] && launchctl bsexec \"\$FINDER_PID\" /usr/bin/open \"\$APP_PATH\"; then
             exit 0
