@@ -83,6 +83,8 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
     if (!representedServer) {
         return;
     }
+    NSInteger row = [(NSTableView *)controlView rowAtPoint:NSMakePoint(NSMidX(cellFrame), NSMidY(cellFrame))];
+    BOOL selected = (row >= 0 && [[(NSTableView *)controlView selectedRowIndexes] containsIndex:(NSUInteger)row]);
 
     if (drawsSeparatorBefore) {
         [[NSColor colorWithCalibratedWhite:0.38 alpha:1.0] set];
@@ -93,7 +95,8 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
     NSRect iconRect = NSMakeRect(NSMidX(cellFrame) - 22.0, NSMidY(cellFrame) - 22.0, 44.0, 44.0);
     NSImage *sourceImage = [[[NSImage alloc] initWithData:[representedServer iconImageData]] autorelease];
     if (sourceImage) {
-        NSImage *roundedImage = [DLUtil imageResize:sourceImage newSize:iconRect.size cornerRadius:22.0];
+        CGFloat cornerRadius = selected ? 14.0 : 22.0;
+        NSImage *roundedImage = [DLUtil imageResize:sourceImage newSize:iconRect.size cornerRadius:cornerRadius];
         [roundedImage drawInRect:iconRect
                        fromRect:NSZeroRect
                       operation:NSCompositeSourceOver
@@ -102,7 +105,13 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
                           hints:nil];
     }
 
-    if ([representedServer hasUnreadMessages] && ![self isHighlighted]) {
+    if (selected) {
+        [[NSColor whiteColor] set];
+        NSBezierPath *selectedPath = [NSBezierPath bezierPathWithRoundedRect:
+                                      NSMakeRect(NSMinX(cellFrame), NSMidY(cellFrame) - 18.0, 4.0, 36.0)
+                                                                           xRadius:2.0 yRadius:2.0];
+        [selectedPath fill];
+    } else if ([representedServer hasUnreadMessages]) {
         [[NSColor whiteColor] set];
         NSBezierPath *unreadPath = [NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX(cellFrame), NSMidY(cellFrame) - 5.0, 4.0, 10.0)
                                                                       xRadius:2.0 yRadius:2.0];
@@ -797,6 +806,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 
     [serversScrollView setDrawsBackground:YES];
     [serversScrollView setBackgroundColor:[DLUtil nativeServerRailColor]];
+    [serversScrollView setFocusRingType:NSFocusRingTypeNone];
     [[serversScrollView contentView] setBackgroundColor:[DLUtil nativeServerRailColor]];
     [self installNativeServerTableView];
     [channelsScrollView setDrawsBackground:YES];
@@ -2742,10 +2752,11 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [serverTableView setDelegate:self];
     [serverTableView setRowHeight:58.0];
     [serverTableView setIntercellSpacing:NSMakeSize(0.0, 0.0)];
-    [serverTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleRegular];
+    [serverTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
     [serverTableView setAllowsMultipleSelection:NO];
     [serverTableView setAllowsEmptySelection:YES];
     [serverTableView setBackgroundColor:[DLUtil nativeServerRailColor]];
+    [serverTableView setFocusRingType:NSFocusRingTypeNone];
     [serverTableView setGridStyleMask:NSTableViewGridNone];
     [serversScrollView setDocumentView:serverTableView];
 }
