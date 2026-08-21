@@ -43,6 +43,7 @@ typedef enum {
     BOOL madeMentionChange;
     
     IBOutlet NSView_BGColor *messageEntryContainerView;
+    NSView *messageComposerBackgroundView;
     IBOutlet NSView_BGColor *channelViewHeader;
     IBOutlet NSView_BGColor *chatViewHeader;
     IBOutlet NSView_BGColor *userInfoView;

@@ -46,6 +46,21 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
 }
 @end
 
+@interface DLMessageComposerBackgroundView : NSView
+@end
+
+@implementation DLMessageComposerBackgroundView
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = NSInsetRect([self bounds], 0.5, 0.5);
+    NSBezierPath *background = [NSBezierPath bezierPathWithRoundedRect:bounds xRadius:7.0 yRadius:7.0];
+    [[DLUtil nativeInputColor] set];
+    [background fill];
+    [[DLUtil nativeBorderColor] set];
+    [background setLineWidth:1.0];
+    [background stroke];
+}
+@end
+
 @interface DLServerTableCell : NSCell {
     DLServer *representedServer;
     BOOL drawsSeparatorBefore;
@@ -786,6 +801,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [self installNativeServerTableView];
     [channelsScrollView setDrawsBackground:YES];
     [channelsScrollView setBackgroundColor:[DLUtil nativeSidebarColor]];
+    [channelsScrollView setFocusRingType:NSFocusRingTypeNone];
     [[channelsScrollView contentView] setBackgroundColor:[DLUtil nativeSidebarColor]];
     [self installNativeChannelOutlineView];
     [chatScrollView setDrawsBackground:YES];
@@ -809,15 +825,25 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [myDiscTextField setTextColor:[DLUtil nativeSecondaryTextColor]];
 
     [messageEntryContainerView setBackgroundColor:[DLUtil nativeChromeColor]];
-    [messageEntryTextView setBackgroundColor:[DLUtil nativeInputColor]];
+    [messageEntryTextView setBackgroundColor:[NSColor clearColor]];
+    [messageEntryTextView setDrawsBackground:NO];
     [messageEntryTextView setTextColor:[DLUtil nativePrimaryTextColor]];
     [messageEntryTextView setInsertionPointColor:[DLUtil nativePrimaryTextColor]];
     [messageEntryScrollView setBorderType:NSNoBorder];
-    [messageEntryScrollView setDrawsBackground:YES];
-    [messageEntryScrollView setBackgroundColor:[DLUtil nativeInputColor]];
+    [messageEntryScrollView setDrawsBackground:NO];
+    [messageEntryScrollView setBackgroundColor:[NSColor clearColor]];
+    [[messageEntryScrollView contentView] setDrawsBackground:NO];
     NSRect entryFrame = [messageEntryScrollView frame];
-    entryFrame.size.width -= 56;
+    entryFrame.origin.x += 6.0;
+    entryFrame.size.width -= 62.0;
     [messageEntryScrollView setFrame:entryFrame];
+    NSRect composerFrame = NSMakeRect(MAX(4.0, NSMinX(entryFrame) - 10.0),
+                                      MAX(4.0, NSMinY(entryFrame) - 8.0),
+                                      NSWidth([messageEntryContainerView bounds]) - MAX(4.0, NSMinX(entryFrame) - 10.0) - 7.0,
+                                      NSHeight(entryFrame) + 16.0);
+    messageComposerBackgroundView = [[DLMessageComposerBackgroundView alloc] initWithFrame:composerFrame];
+    [messageComposerBackgroundView setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
+    [messageEntryContainerView addSubview:messageComposerBackgroundView positioned:NSWindowBelow relativeTo:messageEntryScrollView];
     stickerButton = [[DLStickerButton alloc] initWithFrame:NSMakeRect(NSWidth([messageEntryContainerView bounds]) - 63, 15, 28, 26)];
     [stickerButton setAutoresizingMask:NSViewMinXMargin | NSViewMaxYMargin];
     [stickerButton setBordered:NO];
@@ -2771,6 +2797,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [channelOutlineView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
     [channelOutlineView setAllowsMultipleSelection:NO];
     [channelOutlineView setAllowsEmptySelection:YES];
+    [channelOutlineView setFocusRingType:NSFocusRingTypeNone];
     [channelOutlineView setBackgroundColor:[DLUtil nativeSidebarColor]];
     [channelOutlineView setAutoresizesOutlineColumn:YES];
     [channelsScrollView setDocumentView:channelOutlineView];
@@ -3913,6 +3940,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
         NSRect scrollViewFrame = messageEntryScrollView.frame;
         scrollViewFrame.size.height = textFrame.size.height + 8;
         [messageEntryScrollView setFrame:scrollViewFrame];
+        NSRect composerFrame = [messageComposerBackgroundView frame];
+        composerFrame.size.height = scrollViewFrame.size.height + 16.0;
+        [messageComposerBackgroundView setFrame:composerFrame];
         
         CGFloat change = scrollViewFrame.size.height - currentMessageScrollHeight;
         
@@ -4052,6 +4082,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [searchResultsPane release];
     [emojiButton release];
     [stickerButton release];
+    [messageComposerBackgroundView release];
     [emojiPickerItems release];
     [emojiPickerSearchField release];
     [emojiPickerScrollView release];
