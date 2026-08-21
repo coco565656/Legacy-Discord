@@ -19,9 +19,16 @@
     IBOutlet NSSecureTextField *SOCKSPasswordTextField;
     IBOutlet NSButton *applyButton;
     NSPopUpButton *displayScalePopup;
+    NSView *appearancePane;
+    NSView *comingSoonPane;
+    NSTextField *comingSoonTitle;
+    NSMutableArray *settingsSidebarButtons;
 }
 - (IBAction)useProxyToggled:(id)sender;
 - (IBAction)useSOCKSPasswordToggled:(id)sender;
 - (IBAction)applyChanges:(id)sender;
+- (IBAction)displayScaleChanged:(id)sender;
+- (IBAction)themeChanged:(id)sender;
+- (IBAction)showSettingsSection:(id)sender;
 
 @end

@@ -7,6 +7,7 @@
 //
 
 #import "DLUtil.h"
+#import "DLPreferencesHandler.h"
 
 @implementation DLUtil
 
@@ -118,27 +119,48 @@ static NSDictionary *superPropertiesDict;
 }
 
 +(NSColor *)nativeServerRailColor {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.055 green:0.059 blue:0.075 alpha:1.0];
+    if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.075 green:0.094 blue:0.110 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.118 green:0.122 blue:0.133 alpha:1.0];
 }
 +(NSColor *)nativeSidebarColor {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.090 green:0.098 blue:0.125 alpha:1.0];
+    if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.105 green:0.145 blue:0.145 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.169 green:0.176 blue:0.192 alpha:1.0];
 }
 +(NSColor *)nativeContentColor {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.115 green:0.122 blue:0.153 alpha:1.0];
+    if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.125 green:0.180 blue:0.170 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.192 green:0.200 blue:0.220 alpha:1.0];
 }
 +(NSColor *)nativeChromeColor {
-    return [NSColor colorWithCalibratedRed:0.169 green:0.176 blue:0.192 alpha:1.0];
+    return [self nativeSidebarColor];
 }
 +(NSColor *)nativeInputColor {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.145 green:0.153 blue:0.188 alpha:1.0];
+    if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.165 green:0.225 blue:0.205 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.220 green:0.227 blue:0.247 alpha:1.0];
 }
 +(NSColor *)nativeBorderColor {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.045 green:0.047 blue:0.063 alpha:1.0];
+    if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.060 green:0.110 blue:0.105 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.125 green:0.129 blue:0.141 alpha:1.0];
 }
 +(NSColor *)nativeHeaderTopColor {
+    if ([[[DLPreferencesHandler sharedInstance] appearanceTheme] isEqualToString:@"aurora"]) {
+        return [NSColor colorWithCalibratedRed:0.105 green:0.175 blue:0.155 alpha:1.0];
+    }
     return [self nativeContentColor];
 }
 +(NSColor *)nativeHeaderBottomColor {
+    if ([[[DLPreferencesHandler sharedInstance] appearanceTheme] isEqualToString:@"aurora"]) {
+        return [NSColor colorWithCalibratedRed:0.145 green:0.170 blue:0.235 alpha:1.0];
+    }
     return [self nativeContentColor];
 }
 +(NSColor *)nativePrimaryTextColor {
@@ -148,6 +170,9 @@ static NSDictionary *superPropertiesDict;
     return [NSColor colorWithCalibratedRed:0.710 green:0.729 blue:0.757 alpha:1.0];
 }
 +(NSColor *)nativeSelectionColor {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.200 green:0.210 blue:0.270 alpha:1.0];
+    if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.205 green:0.315 blue:0.285 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.251 green:0.259 blue:0.286 alpha:1.0];
 }
 +(NSColor *)nativeSelectedTextColor {

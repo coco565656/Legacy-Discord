@@ -67,6 +67,11 @@ typedef enum {
     NSSplitView *mainSplitView;
     NSView *channelPaneView;
     NSView *chatPaneView;
+    NSView_BGColor *friendsHomeView;
+    NSScrollView *friendsHomeScrollView;
+    NSArray *friendsHomeChannels;
+    BOOL compactDMLayout;
+    CGFloat expandedChannelPaneWidth;
     NSSearchField *messageSearchField;
     NSView *connectionStatusField;
     NSButton *reloadButton;

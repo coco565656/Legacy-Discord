@@ -828,6 +828,7 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
 -(void)installSearchResultsPane;
 -(void)installThreadBrowser;
 -(void)installMemberListPane;
+-(void)installFriendsHome;
 -(void)installMessageStateBanners;
 -(BOOL)isViewingLatestMessages;
 -(void)refreshMessageBannerVisibility;
@@ -895,6 +896,14 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
 -(void)selectChannel:(DLChannel *)channel;
 -(void)scheduleEmojiPickerReload:(id)sender;
 -(void)messageDisplayScaleDidChange:(NSNotification *)notification;
+-(void)appearanceThemeDidChange:(NSNotification *)notification;
+-(void)applyCurrentTheme;
+-(void)showFriendsHomeWithChannels:(NSArray *)channels;
+-(void)refreshFriendsHomeAvatars;
+-(void)hideFriendsHome;
+-(IBAction)openFriendDirectMessage:(id)sender;
+-(void)updateResponsiveDMLayout;
+-(void)openUserSettings:(id)sender;
 -(NSArray *)standardEmojiPickerItems;
 @end
 
@@ -913,6 +922,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [self installSearchResultsPane];
     [self installThreadBrowser];
     [self installMemberListPane];
+    [self installFriendsHome];
 
     [serversScrollView setDrawsBackground:YES];
     [serversScrollView setBackgroundColor:[DLUtil nativeServerRailColor]];
@@ -1035,6 +1045,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [chatScrollView.contentView setPostsBoundsChangedNotifications:YES];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(chatScrollViewBoundsDidChange:) name:NSViewBoundsDidChangeNotification object:chatScrollView.contentView];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageDisplayScaleDidChange:) name:DLMessageDisplayScaleDidChangeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appearanceThemeDidChange:) name:DLAppearanceThemeDidChangeNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mainWindowDidBecomeKey:) name:NSWindowDidBecomeKeyNotification object:self.window];
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
     [myUserAvatarImage setImage:[DLUtil imageResize:[[[NSImage alloc] initWithContentsOfFile:[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"discord_placeholder.png"]] autorelease] newSize:myUserAvatarImage.frame.size cornerRadius:MY_USER_AVATAR_RADIUS]];
@@ -1051,6 +1062,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     currentMessageScrollHeight = messageEntryScrollView.frame.size.height;
     typingUsers = [[NSMutableArray alloc] init];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateTextViewSizing) name:NSWindowDidResizeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mainWindowDidResize:) name:NSWindowDidResizeNotification object:self.window];
 }
 
 -(void)moveView:(NSView *)view toPane:(NSView *)pane frame:(NSRect)frame autoresizingMask:(NSUInteger)mask {
@@ -1133,6 +1145,151 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [mainSplitView setAutosaveName:autosaveName];
     if (!hasSavedPosition) {
         [mainSplitView setPosition:initialChannelWidth ofDividerAtIndex:0];
+    }
+}
+
+-(void)installFriendsHome {
+    NSRect bounds = [chatPaneView bounds];
+    friendsHomeView = [[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, 0.0, NSWidth(bounds), NSHeight(bounds) - 42.0)];
+    [friendsHomeView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [friendsHomeView setBackgroundColor:[DLUtil nativeContentColor]];
+
+    NSTextField *title = [[[NSTextField alloc] initWithFrame:NSMakeRect(24.0, NSHeight([friendsHomeView bounds]) - 43.0, 300.0, 25.0)] autorelease];
+    [title setAutoresizingMask:NSViewMaxXMargin | NSViewMinYMargin];
+    [title setBezeled:NO];
+    [title setDrawsBackground:NO];
+    [title setEditable:NO];
+    [title setSelectable:NO];
+    [title setFont:[NSFont boldSystemFontOfSize:18.0]];
+    [title setTextColor:[DLUtil nativePrimaryTextColor]];
+    [title setStringValue:@"Friends"];
+    [friendsHomeView addSubview:title];
+
+    NSTextField *subtitle = [[[NSTextField alloc] initWithFrame:NSMakeRect(25.0, NSHeight([friendsHomeView bounds]) - 65.0, 420.0, 18.0)] autorelease];
+    [subtitle setAutoresizingMask:NSViewMaxXMargin | NSViewMinYMargin];
+    [subtitle setBezeled:NO];
+    [subtitle setDrawsBackground:NO];
+    [subtitle setEditable:NO];
+    [subtitle setSelectable:NO];
+    [subtitle setFont:[NSFont systemFontOfSize:11.0]];
+    [subtitle setTextColor:[DLUtil nativeSecondaryTextColor]];
+    [subtitle setStringValue:@"Recent conversations"];
+    [friendsHomeView addSubview:subtitle];
+
+    friendsHomeScrollView = [[NSScrollView alloc] initWithFrame:NSMakeRect(16.0, 16.0, NSWidth(bounds) - 32.0, NSHeight(bounds) - 92.0)];
+    [friendsHomeScrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [friendsHomeScrollView setBorderType:NSNoBorder];
+    [friendsHomeScrollView setHasVerticalScroller:YES];
+    [friendsHomeScrollView setDrawsBackground:YES];
+    [friendsHomeScrollView setBackgroundColor:[DLUtil nativeContentColor]];
+    [friendsHomeView addSubview:friendsHomeScrollView];
+    [chatPaneView addSubview:friendsHomeView];
+    [friendsHomeView setHidden:YES];
+}
+
+-(void)showFriendsHomeWithChannels:(NSArray *)channels {
+    NSArray *newChannels = [channels retain];
+    [friendsHomeChannels release];
+    friendsHomeChannels = newChannels;
+    NSRect visibleBounds = [[friendsHomeScrollView contentView] bounds];
+    CGFloat rowHeight = 58.0;
+    CGFloat documentHeight = MAX(NSHeight(visibleBounds), [channels count] * rowHeight + 8.0);
+    NSView_BGColor *document = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, 0.0, NSWidth(visibleBounds), documentHeight)] autorelease];
+    [document setAutoresizingMask:NSViewWidthSizable];
+    [document setBackgroundColor:[DLUtil nativeContentColor]];
+    NSInteger row = 0;
+    for (DLDirectMessageChannel *channel in channels) {
+        CGFloat y = documentHeight - (row + 1) * rowHeight;
+        NSButton *rowButton = [[[NSButton alloc] initWithFrame:NSMakeRect(0.0, y, NSWidth(visibleBounds), rowHeight - 2.0)] autorelease];
+        [rowButton setAutoresizingMask:NSViewWidthSizable];
+        [rowButton setBordered:NO];
+        [rowButton setTitle:@""];
+        [rowButton setTag:row];
+        [rowButton setTarget:self];
+        [rowButton setAction:@selector(openFriendDirectMessage:)];
+        [rowButton setToolTip:[NSString stringWithFormat:@"Open %@", [channel name]]];
+        [document addSubview:rowButton];
+
+        NSImageView *avatar = [[[NSImageView alloc] initWithFrame:NSMakeRect(12.0, y + 9.0, 38.0, 38.0)] autorelease];
+        NSImage *avatarImage = [[[NSImage alloc] initWithData:[channel imageData]] autorelease];
+        if (avatarImage) [avatar setImage:[DLUtil imageResize:avatarImage newSize:NSMakeSize(38.0, 38.0) cornerRadius:19.0]];
+        [document addSubview:avatar];
+
+        NSTextField *name = [[[NSTextField alloc] initWithFrame:NSMakeRect(62.0, y + 20.0, MAX(100.0, NSWidth(visibleBounds) - 120.0), 20.0)] autorelease];
+        [name setAutoresizingMask:NSViewWidthSizable];
+        [name setBezeled:NO];
+        [name setDrawsBackground:NO];
+        [name setEditable:NO];
+        [name setSelectable:NO];
+        [name setFont:[NSFont boldSystemFontOfSize:13.0]];
+        [name setTextColor:[DLUtil nativePrimaryTextColor]];
+        [name setStringValue:[channel name] ? [channel name] : @"Direct Message"];
+        [document addSubview:name];
+
+        NSBox *separator = [[[NSBox alloc] initWithFrame:NSMakeRect(62.0, y, MAX(0.0, NSWidth(visibleBounds) - 74.0), 1.0)] autorelease];
+        [separator setAutoresizingMask:NSViewWidthSizable];
+        [separator setBoxType:NSBoxSeparator];
+        [document addSubview:separator];
+        row++;
+    }
+    if ([channels count] == 0) {
+        NSTextField *empty = [[[NSTextField alloc] initWithFrame:NSMakeRect(20.0, NSMidY([document bounds]) - 20.0, NSWidth(visibleBounds) - 40.0, 40.0)] autorelease];
+        [empty setBezeled:NO]; [empty setDrawsBackground:NO]; [empty setEditable:NO];
+        [empty setAlignment:NSCenterTextAlignment]; [empty setTextColor:[DLUtil nativeSecondaryTextColor]];
+        [empty setStringValue:@"No recent direct messages"];
+        [document addSubview:empty];
+    }
+    [friendsHomeScrollView setDocumentView:document];
+    [chatHeaderLabel setStringValue:@"Friends"];
+    [chatHeaderImage setImage:nil];
+    [chatScrollView setHidden:YES];
+    [messageEntryContainerView setHidden:YES];
+    [friendsHomeView setHidden:NO];
+    [self updateResponsiveDMLayout];
+}
+
+-(void)hideFriendsHome {
+    [friendsHomeView setHidden:YES];
+    [chatScrollView setHidden:NO];
+    [messageEntryContainerView setHidden:NO];
+}
+
+-(void)refreshFriendsHomeAvatars {
+    if (![friendsHomeView isHidden] && friendsHomeChannels) {
+        [self showFriendsHomeWithChannels:friendsHomeChannels];
+    }
+}
+
+-(IBAction)openFriendDirectMessage:(id)sender {
+    NSInteger row = [(NSButton *)sender tag];
+    if (row >= 0 && row < (NSInteger)[friendsHomeChannels count]) {
+        DLChannel *channel = [friendsHomeChannels objectAtIndex:row];
+        NSInteger outlineRow = [channelOutlineView rowForItem:channel];
+        if (outlineRow >= 0) {
+            updatingChannelOutlineSelection = YES;
+            [channelOutlineView selectRowIndexes:[NSIndexSet indexSetWithIndex:outlineRow] byExtendingSelection:NO];
+            updatingChannelOutlineSelection = NO;
+        }
+        [self selectChannel:channel];
+    }
+}
+
+-(void)mainWindowDidResize:(NSNotification *)notification {
+    [self updateResponsiveDMLayout];
+}
+
+-(void)updateResponsiveDMLayout {
+    BOOL showingDM = [[[DLController sharedInstance] selectedServer] isEqual:[[DLController sharedInstance] myServerItem]];
+    if (!showingDM || !mainSplitView) return;
+    CGFloat width = NSWidth([[self.window contentView] bounds]);
+    if (!compactDMLayout && width < 680.0) {
+        expandedChannelPaneWidth = NSWidth([channelPaneView frame]);
+        compactDMLayout = YES;
+        [mainSplitView setPosition:0.0 ofDividerAtIndex:0];
+    } else if (compactDMLayout && width > 740.0) {
+        compactDMLayout = NO;
+        CGFloat restoredWidth = expandedChannelPaneWidth >= 180.0 ? expandedChannelPaneWidth : 220.0;
+        [mainSplitView setPosition:MIN(restoredWidth, 300.0) ofDividerAtIndex:0];
     }
 }
 
@@ -2424,7 +2581,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 }
 
 -(CGFloat)splitView:(NSSplitView *)splitView constrainMinCoordinate:(CGFloat)proposedMinimumPosition ofSubviewAt:(NSInteger)dividerIndex {
-    return 180.0;
+    return compactDMLayout ? 0.0 : 180.0;
 }
 
 -(CGFloat)splitView:(NSSplitView *)splitView constrainMaxCoordinate:(CGFloat)proposedMaximumPosition ofSubviewAt:(NSInteger)dividerIndex {
@@ -2444,6 +2601,35 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     if ([[DLController sharedInstance] selectedChannel]) {
         [self reloadSelectedChannel:nil];
     }
+}
+
+-(void)appearanceThemeDidChange:(NSNotification *)notification {
+    [self applyCurrentTheme];
+}
+
+-(void)applyCurrentTheme {
+    [self.window setBackgroundColor:[DLUtil nativeContentColor]];
+    [serversScrollView setBackgroundColor:[DLUtil nativeServerRailColor]];
+    [[serversScrollView contentView] setBackgroundColor:[DLUtil nativeServerRailColor]];
+    [serverTableView setBackgroundColor:[DLUtil nativeServerRailColor]];
+    [channelsScrollView setBackgroundColor:[DLUtil nativeSidebarColor]];
+    [[channelsScrollView contentView] setBackgroundColor:[DLUtil nativeSidebarColor]];
+    [channelOutlineView setBackgroundColor:[DLUtil nativeSidebarColor]];
+    [chatScrollView setBackgroundColor:[DLUtil nativeContentColor]];
+    [[chatScrollView contentView] setBackgroundColor:[DLUtil nativeContentColor]];
+    [channelViewHeader setGradientStartColor:[DLUtil nativeHeaderTopColor] endColor:[DLUtil nativeHeaderBottomColor]];
+    [chatViewHeader setGradientStartColor:[DLUtil nativeHeaderTopColor] endColor:[DLUtil nativeHeaderBottomColor]];
+    [channelViewHeader setBottomBorderColor:[DLUtil nativeBorderColor]];
+    [chatViewHeader setBottomBorderColor:[DLUtil nativeBorderColor]];
+    [userInfoView setBackgroundColor:[DLUtil nativeChromeColor]];
+    [messageEntryContainerView setBackgroundColor:[DLUtil nativeChromeColor]];
+    [friendsHomeView setBackgroundColor:[DLUtil nativeContentColor]];
+    [friendsHomeScrollView setBackgroundColor:[DLUtil nativeContentColor]];
+    [[friendsHomeScrollView documentView] setNeedsDisplay:YES];
+    [serverTableView reloadData];
+    [channelOutlineView reloadData];
+    [chatScrollView setNeedsDisplay:YES];
+    [[self.window contentView] setNeedsDisplay:YES];
 }
 
 -(void)installNativeToolbar {
@@ -2903,10 +3089,18 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
         [serverTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:selectedRow] byExtendingSelection:NO];
         [serverTableView scrollRowToVisible:selectedRow];
     } else {
-        [serverTableView deselectAll:self];
+        selectedRow = [serverItems indexOfObject:[[DLController sharedInstance] myServerItem]];
+        if (selectedRow != NSNotFound) {
+            [serverTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:selectedRow] byExtendingSelection:NO];
+        } else {
+            [serverTableView deselectAll:self];
+        }
     }
     updatingServerTableSelection = NO;
     isLoadingViews = NO;
+    if (!selectedServer && selectedRow != NSNotFound) {
+        [self selectServer:[serverItems objectAtIndex:selectedRow]];
+    }
 }
 
 -(void)installNativeChannelOutlineView {
@@ -2974,6 +3168,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     }
     updatingChannelOutlineSelection = NO;
     isLoadingViews = NO;
+    if (showingDirectMessages && !selectedChannel) {
+        [self showFriendsHomeWithChannels:items];
+    }
 }
 
 -(void)setDelegate:(id<DLMainWindowDelegate>)inDelegate {
@@ -3095,6 +3292,11 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 }
 
 -(void)selectServer:(DLServer *)server {
+    if (![server isEqual:[[DLController sharedInstance] myServerItem]] && compactDMLayout) {
+        compactDMLayout = NO;
+        CGFloat restoredWidth = expandedChannelPaneWidth >= 180.0 ? expandedChannelPaneWidth : 220.0;
+        [mainSplitView setPosition:MIN(restoredWidth, 300.0) ofDividerAtIndex:0];
+    }
     [self.window setTitle:([server isEqual:[[DLController sharedInstance] myServerItem]] ? @"Direct Messages" : ([server name] ? [server name] : @"Legacy Discord"))];
     if (memberListVisible) {
         [self setMemberListVisible:NO];
@@ -3110,6 +3312,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [self resetUI];
     [[DLController sharedInstance] setSelectedChannel:nil];
     [chatScrollView setContent:[NSArray array]];
+    [self hideFriendsHome];
 
     if ([server isEqual:[[DLController sharedInstance] myServerItem]]) {
         [NSThread detachNewThreadSelector:@selector(loadDirectMessageChannels) toTarget:self withObject:nil];
@@ -3211,6 +3414,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 }
 
 -(void)selectChannel:(DLChannel *)channel {
+    [self hideFriendsHome];
     if (searchResultsPaneVisible) {
         [self closeMessageSearchResults:nil];
     }
@@ -3266,6 +3470,10 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 
 -(void)channel:(DLChannel *)channel imageDidUpdateWithData:(NSData *)data {
     [self performSelectorOnMainThread:@selector(refreshChannelOutlineItem:) withObject:channel waitUntilDone:NO];
+    if (![friendsHomeView isHidden] && [friendsHomeChannels containsObject:channel]) {
+        [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(refreshFriendsHomeAvatars) object:nil];
+        [self performSelectorOnMainThread:@selector(refreshFriendsHomeAvatars) withObject:nil waitUntilDone:NO];
+    }
     if ([channel isEqual:[[DLController sharedInstance] selectedChannel]]) {
         NSImage *headerAvatar = [[[NSImage alloc] initWithData:data] autorelease];
         if (headerAvatar) {
@@ -3538,8 +3746,16 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 
 - (IBAction)showSettingsMenu:(id)sender {
     NSMenu *contextMenu = [[NSMenu alloc] init];
+    NSMenuItem *settingsItem = [contextMenu addItemWithTitle:@"User Settings…" action:@selector(openUserSettings:) keyEquivalent:@""];
+    [settingsItem setTarget:self];
+    [contextMenu addItem:[NSMenuItem separatorItem]];
     [contextMenu addItemWithTitle:@"Log Out" action:@selector(logOutUser) keyEquivalent:@""];
     [NSMenu popUpContextMenu:contextMenu withEvent:[NSApp currentEvent] forView:(NSButton *)sender];
+    [contextMenu release];
+}
+
+-(void)openUserSettings:(id)sender {
+    [NSApp sendAction:@selector(showPreferencesWindow:) to:nil from:self];
 }
 
 -(void)showEmojiMenu:(id)sender {
@@ -4224,6 +4440,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [stickerPickerScrollView release];
     [stickerPopoverController release];
     [stickerPopover release];
+    [friendsHomeChannels release];
+    [friendsHomeScrollView release];
+    [friendsHomeView release];
     [mainToolbar setDelegate:nil];
     [mainToolbar release];
     NSEnumerator *channelEnumerator = [channelOutlineItems objectEnumerator];

@@ -152,14 +152,14 @@ rsync \
 if [ "$RUN_AFTER_BUILD" -eq 1 ]; then
     printf 'Opening the app on %s...\n' "$REMOTE_HOST"
     $SSH_RSH "$REMOTE_HOST" "
-        APP_PATH=\"\$HOME/$REMOTE_DIR/build/$CONFIGURATION/Discord Lite.app\"
+        APP_PATH=\"\$HOME/$REMOTE_DIR/build/$CONFIGURATION/Legacy Discord.app\"
         # Finder reuses an already-running application even when its bundle was
         # rebuilt in place. Quit that process first so --run always tests the
         # binary produced by this build, rather than leaving the old image open.
-        if pgrep -x \"Discord Lite\" >/dev/null; then
-            /usr/bin/osascript -e 'tell application \"Discord Lite\" to quit' >/dev/null 2>&1 || true
+        if pgrep -x \"Legacy Discord\" >/dev/null; then
+            /usr/bin/osascript -e 'tell application \"Legacy Discord\" to quit' >/dev/null 2>&1 || true
             WAIT_COUNT=0
-            while pgrep -x \"Discord Lite\" >/dev/null && [ \"\$WAIT_COUNT\" -lt 30 ]; do
+            while pgrep -x \"Legacy Discord\" >/dev/null && [ \"\$WAIT_COUNT\" -lt 30 ]; do
                 sleep 0.1
                 WAIT_COUNT=\$((WAIT_COUNT + 1))
             done
@@ -182,5 +182,5 @@ if [ "$RUN_AFTER_BUILD" -eq 1 ]; then
 fi
 
 printf '\nRemote build succeeded.\n'
-printf 'App: %s/Discord Lite.app\n' "$ARTIFACT_DIR"
+printf 'App: %s/Legacy Discord.app\n' "$ARTIFACT_DIR"
 printf 'Log: %s\n' "$LOCAL_LOG"

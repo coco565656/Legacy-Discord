@@ -46,6 +46,13 @@ static DLPreferencesHandler* sharedObject = nil;
     CGFloat scale = [[NSUserDefaults standardUserDefaults] floatForKey:@kMessageDisplayScale];
     return scale >= 0.8 && scale <= 1.25 ? scale : 0.9;
 }
+-(NSString *)appearanceTheme {
+    NSString *theme = [[NSUserDefaults standardUserDefaults] stringForKey:@kAppearanceTheme];
+    if ([theme isEqualToString:@"midnight"] || [theme isEqualToString:@"aurora"]) {
+        return theme;
+    }
+    return @"default";
+}
 
 -(void)setShouldUseSOCKSProxy:(BOOL)shouldUse {
     [[NSUserDefaults standardUserDefaults] setBool:shouldUse forKey:@kShouldUseSOCKSProxy];
@@ -76,6 +83,14 @@ static DLPreferencesHandler* sharedObject = nil;
     [[NSUserDefaults standardUserDefaults] setFloat:scale forKey:@kMessageDisplayScale];
     [[NSUserDefaults standardUserDefaults] synchronize];
     [[NSNotificationCenter defaultCenter] postNotificationName:DLMessageDisplayScaleDidChangeNotification object:self];
+}
+-(void)setAppearanceTheme:(NSString *)theme {
+    if (![theme isEqualToString:@"midnight"] && ![theme isEqualToString:@"aurora"]) {
+        theme = @"default";
+    }
+    [[NSUserDefaults standardUserDefaults] setObject:theme forKey:@kAppearanceTheme];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLAppearanceThemeDidChangeNotification object:self];
 }
 
 @end

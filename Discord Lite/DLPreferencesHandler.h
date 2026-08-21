@@ -15,7 +15,9 @@
 #define kSOCKSProxyUsername "SOCKSUsername"
 #define kSOCKSProxyPassword "SOCKSPassword"
 #define kMessageDisplayScale "MessageDisplayScale"
+#define kAppearanceTheme "AppearanceTheme"
 #define DLMessageDisplayScaleDidChangeNotification @"DLMessageDisplayScaleDidChangeNotification"
+#define DLAppearanceThemeDidChangeNotification @"DLAppearanceThemeDidChangeNotification"
 
 @interface DLPreferencesHandler : NSObject
 
@@ -28,6 +30,7 @@
 -(NSString *)SOCKSProxyUsername;
 -(NSString *)SOCKSProxyPassword;
 -(CGFloat)messageDisplayScale;
+-(NSString *)appearanceTheme;
 
 -(void)setShouldUseSOCKSProxy:(BOOL)shouldUse;
 -(void)setSOCKSProxyPort:(NSInteger)proxyPort;
@@ -36,5 +39,6 @@
 -(void)setSOCKSProxyUsername:(NSString *)username;
 -(void)setSOCKSProxyPassword:(NSString *)password;
 -(void)setMessageDisplayScale:(CGFloat)scale;
+-(void)setAppearanceTheme:(NSString *)theme;
 
 @end

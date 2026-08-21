@@ -67,8 +67,10 @@
 #pragma mark Delegated Functions
 
 -(void)loginWasSuccessful {
+    [[DLController sharedInstance] setLoginDelegate:nil];
     [loginWindow close];
     [loginWindow release];
+    loginWindow = nil;
     [[DLController sharedInstance] startWebSocket];
     mainWindow = [[DLMainWindowController alloc] initWithWindowNibName:@"DLMainWindowController"];
     [mainWindow setDelegate:self];
@@ -76,9 +78,14 @@
 }
 
 -(void)logoutWasSuccessful {
+    // A connection-state delivery can already be queued on the main thread when
+    // logout completes. Detach the window before releasing it so that queued
+    // WebSocket callbacks safely become no-ops instead of messaging freed memory.
+    [[DLController sharedInstance] setDelegate:nil];
+    [[DLController sharedInstance] stopWebSocket];
     [mainWindow close];
     [mainWindow release];
-    [[DLController sharedInstance] stopWebSocket];
+    mainWindow = nil;
     loginWindow = [[DLLoginWindowController alloc] initWithWindowNibName:@"DLLoginWindowController"];
     [loginWindow setDelegate:self];
     [loginWindow showWindow:loginWindow.window];
