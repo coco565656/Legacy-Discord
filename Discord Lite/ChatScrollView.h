@@ -19,6 +19,8 @@
     NSMutableArray *content;
     id<ChatScrollViewDelegate> delegate;
     ChatItemViewController *visibleActionBarItem;
+    NSView *sharedMessageActionBar;
+    NSTrackingArea *messageHoverTrackingArea;
     NSString *unreadStartMessageID;
     NSView *unreadSeparatorView;
 }

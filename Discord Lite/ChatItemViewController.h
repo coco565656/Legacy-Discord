@@ -77,6 +77,7 @@
 -(void)setGroupedMessageFollows:(BOOL)follows;
 -(BOOL)isMessageActionBarVisible;
 -(void)hideMessageActionBar;
+-(void)populateMessageActionBar:(NSView *)actionBar;
 -(void)stopAnimatedEmojiPlayback;
 -(void)beginEditingContent;
 -(void)endEditingContent;

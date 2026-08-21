@@ -7,9 +7,79 @@
 //
 
 #import "ChatScrollView.h"
+#import "DLUtil.h"
+#import "HTTPCache.h"
 
 extern NSString * const DLMessageActionBarDidShowNotification;
 extern NSString * const DLMessageActionBarDidHideNotification;
+
+@class ChatScrollView;
+
+@interface DLSharedMessageActionBar : NSView {
+    ChatScrollView *owner;
+    NSTrackingArea *trackingArea;
+}
+-(void)setOwner:(ChatScrollView *)inOwner;
+@end
+
+@interface ChatScrollView (MessageActionBarPrivate)
+-(void)messageActionBarMouseEntered;
+-(void)messageActionBarMouseExited;
+-(void)hideSharedMessageActionBar;
+-(void)showSharedMessageActionBarForItem:(ChatItemViewController *)item;
+@end
+
+@implementation DLSharedMessageActionBar
+
+-(void)setOwner:(ChatScrollView *)inOwner {
+    owner = inOwner;
+}
+
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = NSInsetRect([self bounds], 0.5, 0.5);
+    NSBezierPath *path = [NSBezierPath bezierPathWithRoundedRect:bounds xRadius:7.0 yRadius:7.0];
+    [[DLUtil nativeChromeColor] set];
+    [path fill];
+    [[DLUtil nativeBorderColor] set];
+    [path setLineWidth:1.0];
+    [path stroke];
+}
+
+-(void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (trackingArea) {
+        [self removeTrackingArea:trackingArea];
+        [trackingArea release];
+        trackingArea = nil;
+    }
+    if ([self window]) {
+        NSTrackingAreaOptions options = NSTrackingMouseEnteredAndExited |
+            NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect;
+        trackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
+                                                   options:options
+                                                     owner:self
+                                                  userInfo:nil];
+        [self addTrackingArea:trackingArea];
+    }
+}
+
+-(void)mouseEntered:(NSEvent *)event {
+    [owner messageActionBarMouseEntered];
+}
+
+-(void)mouseExited:(NSEvent *)event {
+    [owner messageActionBarMouseExited];
+}
+
+-(void)dealloc {
+    if (trackingArea) {
+        [self removeTrackingArea:trackingArea];
+        [trackingArea release];
+    }
+    [super dealloc];
+}
+
+@end
 
 @interface DLUnreadSeparatorView : NSView
 @end
@@ -105,6 +175,9 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenResize) name:NSWindowDidResizeNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageActionBarDidShow:) name:DLMessageActionBarDidShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageActionBarDidHide:) name:DLMessageActionBarDidHideNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageActionBarCacheDidUpdate:) name:HTTPCacheDataDidUpdateNotification object:nil];
+    [[self contentView] setPostsBoundsChangedNotifications:YES];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contentViewBoundsDidChange:) name:NSViewBoundsDidChangeNotification object:[self contentView]];
     NSRect frame = [self.contentView frame];
     frame.size.height = 100;
     [self.documentView setFrame: frame];
@@ -112,21 +185,105 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     [unreadSeparatorView setAutoresizingMask:NSViewWidthSizable];
     [unreadSeparatorView setHidden:YES];
     [self.documentView addSubview:unreadSeparatorView];
+    sharedMessageActionBar = [[DLSharedMessageActionBar alloc] initWithFrame:NSMakeRect(0.0, 0.0, 188.0, 30.0)];
+    [(DLSharedMessageActionBar *)sharedMessageActionBar setOwner:self];
+    [sharedMessageActionBar setHidden:YES];
+    [[self contentView] addSubview:sharedMessageActionBar];
+    [[self window] setAcceptsMouseMovedEvents:YES];
+    [self updateTrackingAreas];
 }
 -(void)messageActionBarDidShow:(NSNotification *)notification {
     ChatItemViewController *item = [notification object];
+    [self showSharedMessageActionBarForItem:item];
+}
+-(void)showSharedMessageActionBarForItem:(ChatItemViewController *)item {
     if (![content containsObject:item]) {
         return;
     }
-    if (visibleActionBarItem && visibleActionBarItem != item) {
-        [visibleActionBarItem hideMessageActionBar];
+    if (visibleActionBarItem == item && ![sharedMessageActionBar isHidden]) {
+        [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideSharedMessageActionBar) object:nil];
+        return;
     }
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideSharedMessageActionBar) object:nil];
     visibleActionBarItem = item;
+    [item populateMessageActionBar:sharedMessageActionBar];
+    NSRect visibleBounds = [[self contentView] bounds];
+    NSRect itemRect = [[self contentView] convertRect:[[item view] bounds] fromView:[item view]];
+    NSRect actionFrame = [sharedMessageActionBar frame];
+    actionFrame.origin.x = MAX(NSMinX(visibleBounds) + 4.0,
+                               NSMaxX(visibleBounds) - NSWidth(actionFrame) - 10.0);
+    actionFrame.origin.y = NSMaxY(itemRect) - NSHeight(actionFrame) - 1.0;
+    actionFrame.origin.y = MAX(NSMinY(visibleBounds) + 4.0,
+                               MIN(actionFrame.origin.y,
+                                   NSMaxY(visibleBounds) - NSHeight(actionFrame) - 4.0));
+    [sharedMessageActionBar setFrame:actionFrame];
+    [sharedMessageActionBar setHidden:NO];
+    [[self contentView] addSubview:sharedMessageActionBar positioned:NSWindowAbove relativeTo:nil];
 }
 -(void)messageActionBarDidHide:(NSNotification *)notification {
     if (visibleActionBarItem == [notification object]) {
-        visibleActionBarItem = nil;
+        [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideSharedMessageActionBar) object:nil];
+        [self performSelector:@selector(hideSharedMessageActionBar) withObject:nil afterDelay:0.10];
     }
+}
+-(void)messageActionBarMouseEntered {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideSharedMessageActionBar) object:nil];
+}
+-(void)messageActionBarMouseExited {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideSharedMessageActionBar) object:nil];
+    [self performSelector:@selector(hideSharedMessageActionBar) withObject:nil afterDelay:0.08];
+}
+-(void)messageActionBarCacheDidUpdate:(NSNotification *)notification {
+    if (visibleActionBarItem && ![sharedMessageActionBar isHidden]) {
+        [visibleActionBarItem populateMessageActionBar:sharedMessageActionBar];
+    }
+}
+-(void)contentViewBoundsDidChange:(NSNotification *)notification {
+    [self hideSharedMessageActionBar];
+}
+-(void)hideSharedMessageActionBar {
+    [sharedMessageActionBar setHidden:YES];
+    visibleActionBarItem = nil;
+}
+-(void)viewDidMoveToWindow {
+    [super viewDidMoveToWindow];
+    [[self window] setAcceptsMouseMovedEvents:YES];
+    [self updateTrackingAreas];
+}
+-(void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (messageHoverTrackingArea) {
+        [[self contentView] removeTrackingArea:messageHoverTrackingArea];
+        [messageHoverTrackingArea release];
+        messageHoverTrackingArea = nil;
+    }
+    if ([self window] && [self contentView]) {
+        NSTrackingAreaOptions options = NSTrackingMouseMoved |
+            NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect;
+        messageHoverTrackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
+                                                               options:options
+                                                                 owner:self
+                                                              userInfo:nil];
+        [[self contentView] addTrackingArea:messageHoverTrackingArea];
+    }
+}
+-(void)mouseMoved:(NSEvent *)event {
+    NSPoint clipPoint = [[self contentView] convertPoint:[event locationInWindow] fromView:nil];
+    if (![sharedMessageActionBar isHidden] && NSPointInRect(clipPoint, [sharedMessageActionBar frame])) {
+        [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideSharedMessageActionBar) object:nil];
+        return;
+    }
+
+    NSPoint documentPoint = [[self documentView] convertPoint:[event locationInWindow] fromView:nil];
+    NSEnumerator *enumerator = [content objectEnumerator];
+    ChatItemViewController *item;
+    while (item = [enumerator nextObject]) {
+        if (NSPointInRect(documentPoint, [[item view] frame])) {
+            [self showSharedMessageActionBarForItem:item];
+            return;
+        }
+    }
+    [self hideSharedMessageActionBar];
 }
 -(void)setDelegate:(id<ChatScrollViewDelegate>)inDelegate {
     delegate = inDelegate;
@@ -135,6 +292,7 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     return content;
 }
 -(void)screenResize {
+    [self hideSharedMessageActionBar];
     [self updateMessageGroups];
     CGFloat currentHeight = 0;
     NSEnumerator *e = [content objectEnumerator];
@@ -161,7 +319,7 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
 }
 -(void)setContent:(NSArray *)inContent {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(screenResize) object:nil];
-    visibleActionBarItem = nil;
+    [self hideSharedMessageActionBar];
     NSEnumerator *e = [content objectEnumerator];
     ChatItemViewController *item;
     while (item = [e nextObject]) {
@@ -262,7 +420,7 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
 }
 -(void)removeViewController:(ChatItemViewController *)vc {
     if (visibleActionBarItem == vc) {
-        visibleActionBarItem = nil;
+        [self hideSharedMessageActionBar];
     }
     [vc.view removeFromSuperview];
     [content removeObject:vc];
@@ -289,9 +447,16 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     [unreadSeparatorView setHidden:YES];
 }
 -(void)dealloc {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(hideSharedMessageActionBar) object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [unreadStartMessageID release];
     [unreadSeparatorView release];
+    if (messageHoverTrackingArea) {
+        [[self contentView] removeTrackingArea:messageHoverTrackingArea];
+        [messageHoverTrackingArea release];
+    }
+    [(DLSharedMessageActionBar *)sharedMessageActionBar setOwner:nil];
+    [sharedMessageActionBar release];
     [super dealloc];
 }
 

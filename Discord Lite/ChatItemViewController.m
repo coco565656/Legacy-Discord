@@ -30,6 +30,45 @@ static NSString *DLStickerURL(NSDictionary *sticker) {
     return [NSString stringWithFormat:@"https://cdn.discordapp.com/stickers/%@.png", stickerID];
 }
 
+@interface DLMessageActionButton : NSButton
+@end
+
+@implementation DLMessageActionButton
+
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = NSInsetRect([self bounds], 1.0, 1.0);
+    NSBezierPath *background = [NSBezierPath bezierPathWithRoundedRect:bounds xRadius:5.0 yRadius:5.0];
+    NSColor *fill = [[self cell] isHighlighted] ? [DLUtil nativeSelectionColor] : [NSColor clearColor];
+    [fill set];
+    [background fill];
+
+    NSImage *image = [self image];
+    if (image) {
+        CGFloat side = MIN(18.0, MIN(NSWidth(bounds) - 6.0, NSHeight(bounds) - 6.0));
+        NSRect imageRect = NSMakeRect(floor(NSMidX(bounds) - side / 2.0),
+                                      floor(NSMidY(bounds) - side / 2.0), side, side);
+        [image drawInRect:imageRect
+                 fromRect:NSZeroRect
+                operation:NSCompositeSourceOver
+                 fraction:1.0
+           respectFlipped:YES
+                    hints:nil];
+        return;
+    }
+
+    NSString *title = [self title] ? [self title] : @"";
+    CGFloat fontSize = [title length] > 3 ? 11.0 : 14.0;
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont systemFontOfSize:fontSize], NSFontAttributeName,
+                                [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName, nil];
+    NSSize titleSize = [title sizeWithAttributes:attributes];
+    [title drawAtPoint:NSMakePoint(floor(NSMidX(bounds) - titleSize.width / 2.0),
+                                   floor(NSMidY(bounds) - titleSize.height / 2.0))
+         withAttributes:attributes];
+}
+
+@end
+
 @implementation ChatItemViewController
 
 const NSInteger ATTACHMENT_SPACING = 15;
@@ -125,7 +164,6 @@ const NSInteger ATTACHMENT_SPACING = 15;
     messageActionBar = [[NSView alloc] initWithFrame:NSMakeRect(NSWidth([insetView bounds]) - 196, NSHeight([insetView bounds]) - 31, 188, 30)];
     [messageActionBar setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
     [messageActionBar setHidden:YES];
-    [insetView addSubview:messageActionBar];
     [self rebuildMessageActionBar];
 
     reactionMenu = [[NSMenu alloc] initWithTitle:@"Reactions"];
@@ -551,6 +589,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
         emoji = [NSDictionary dictionaryWithObject:identifier forKey:@"name"];
     }
     [self toggleReactionWithEmoji:emoji];
+    if ([sender superview] != messageActionBar) {
+        [self populateMessageActionBar:[sender superview]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DLMessageActionBarDidShowNotification object:self];
+    }
 }
 
 -(void)showReactionPicker:(id)sender {
@@ -558,7 +600,14 @@ const NSInteger ATTACHMENT_SPACING = 15;
 }
 
 -(void)rebuildMessageActionBar {
-    NSArray *subviews = [[messageActionBar subviews] copy];
+    [self populateMessageActionBar:messageActionBar];
+}
+
+-(void)populateMessageActionBar:(NSView *)actionBar {
+    if (!actionBar) {
+        return;
+    }
+    NSArray *subviews = [[actionBar subviews] copy];
     NSEnumerator *subviewEnumerator = [subviews objectEnumerator];
     NSView *subview;
     while (subview = [subviewEnumerator nextObject]) {
@@ -581,8 +630,9 @@ const NSInteger ATTACHMENT_SPACING = 15;
     CGFloat x = 0;
     for (NSInteger index = 0; index < 3; index++) {
         NSString *identifier = [recent objectAtIndex:index];
-        NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(x, 1, 34, 28)];
-        [button setBezelStyle:NSRecessedBezelStyle];
+        NSButton *button = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(x, 1, 34, 28)];
+        [button setBordered:NO];
+        [button setRefusesFirstResponder:YES];
         [button setFont:[NSFont systemFontOfSize:14]];
         [[button cell] setRepresentedObject:identifier];
         [button setTarget:self];
@@ -601,27 +651,36 @@ const NSInteger ATTACHMENT_SPACING = 15;
                 [button setImagePosition:NSImageOnly];
             } else {
                 [button setTitle:@":"];
+                if ([[HTTPCache sharedInstance] beginLoadingURL:emojiURL]) {
+                    AsyncHTTPGetRequest *request = [[AsyncHTTPGetRequest alloc] init];
+                    [request setDelegate:self];
+                    [request setUrl:emojiURL];
+                    [request setCached:YES];
+                    [request start];
+                }
             }
         }
-        [messageActionBar addSubview:button];
+        [actionBar addSubview:button];
         [button release];
         x += 34;
     }
-    NSButton *pickerButton = [[NSButton alloc] initWithFrame:NSMakeRect(102, 1, 34, 28)];
-    [pickerButton setBezelStyle:NSRecessedBezelStyle];
+    NSButton *pickerButton = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(102, 1, 34, 28)];
+    [pickerButton setBordered:NO];
+    [pickerButton setRefusesFirstResponder:YES];
     [pickerButton setTitle:@"+"];
     [pickerButton setToolTip:@"Add reaction"];
     [pickerButton setTarget:self];
     [pickerButton setAction:@selector(showReactionPicker:)];
-    [messageActionBar addSubview:pickerButton];
+    [actionBar addSubview:pickerButton];
     [pickerButton release];
-    NSButton *replyButton = [[NSButton alloc] initWithFrame:NSMakeRect(136, 1, 52, 28)];
-    [replyButton setBezelStyle:NSRecessedBezelStyle];
+    NSButton *replyButton = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(136, 1, 52, 28)];
+    [replyButton setBordered:NO];
+    [replyButton setRefusesFirstResponder:YES];
     [replyButton setTitle:@"Reply"];
     [replyButton setToolTip:@"Reply"];
     [replyButton setTarget:self];
     [replyButton setAction:@selector(addReply)];
-    [messageActionBar addSubview:replyButton];
+    [actionBar addSubview:replyButton];
     [replyButton release];
 }
 
@@ -1022,7 +1081,6 @@ const NSInteger ATTACHMENT_SPACING = 15;
     if (viewHasLoaded) {
         [self layoutDynamicMessageViews];
         [self refreshAnimatedEmojiTimer];
-        [insetView addSubview:messageActionBar positioned:NSWindowAbove relativeTo:nil];
         [self syncAvatarProfileButton];
         return;
     }
@@ -1128,7 +1186,6 @@ const NSInteger ATTACHMENT_SPACING = 15;
         [insetView setNeedsDisplay:YES];
     }
     
-    [insetView addSubview:messageActionBar positioned:NSWindowAbove relativeTo:nil];
     [self syncAvatarProfileButton];
     viewHasLoaded = YES;
     [self refreshAnimatedEmojiTimer];
@@ -1278,13 +1335,11 @@ const NSInteger ATTACHMENT_SPACING = 15;
 }
 -(void)mouseEnteredView:(NSView *)hoveredView {
     if (hoveredView == insetView) {
-        [messageActionBar setHidden:NO];
         [[NSNotificationCenter defaultCenter] postNotificationName:DLMessageActionBarDidShowNotification object:self];
     }
 }
 -(void)mouseExitedView:(NSView *)hoveredView {
     if (hoveredView == insetView) {
-        [messageActionBar setHidden:YES];
         [[NSNotificationCenter defaultCenter] postNotificationName:DLMessageActionBarDidHideNotification object:self];
     }
 }
