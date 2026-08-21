@@ -535,6 +535,106 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
 
 @end
 
+@interface DLChannelOutlineView : NSOutlineView {
+    NSInteger hoveredRow;
+    NSInteger pendingHoveredRow;
+    NSTrackingArea *hoverTrackingArea;
+}
+-(NSInteger)hoveredRow;
+@end
+
+@implementation DLChannelOutlineView
+
+-(id)initWithFrame:(NSRect)frameRect {
+    self = [super initWithFrame:frameRect];
+    if (self) {
+        hoveredRow = -1;
+        pendingHoveredRow = -1;
+    }
+    return self;
+}
+
+-(NSInteger)hoveredRow {
+    return hoveredRow;
+}
+
+-(void)viewDidMoveToWindow {
+    [super viewDidMoveToWindow];
+    [[self window] setAcceptsMouseMovedEvents:YES];
+    [self updateTrackingAreas];
+}
+
+-(void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (hoverTrackingArea) {
+        [self removeTrackingArea:hoverTrackingArea];
+        [hoverTrackingArea release];
+        hoverTrackingArea = nil;
+    }
+    if ([self window]) {
+        NSTrackingAreaOptions options = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited |
+            NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect;
+        hoverTrackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
+                                                         options:options
+                                                           owner:self
+                                                        userInfo:nil];
+        [self addTrackingArea:hoverTrackingArea];
+    }
+}
+
+-(void)setHoveredRow:(NSInteger)row {
+    if (hoveredRow == row) {
+        return;
+    }
+    NSInteger previousRow = hoveredRow;
+    hoveredRow = row;
+    if (previousRow >= 0 && previousRow < [self numberOfRows]) {
+        [self setNeedsDisplayInRect:[self rectOfRow:previousRow]];
+    }
+    if (hoveredRow >= 0 && hoveredRow < [self numberOfRows]) {
+        [self setNeedsDisplayInRect:[self rectOfRow:hoveredRow]];
+    }
+}
+
+-(void)mouseMoved:(NSEvent *)event {
+    NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+    NSInteger row = [self rowAtPoint:point];
+    if (row == hoveredRow) {
+        [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(applyPendingHoveredRow) object:nil];
+        pendingHoveredRow = -1;
+        return;
+    }
+    if (row == pendingHoveredRow) {
+        return;
+    }
+    pendingHoveredRow = row;
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(applyPendingHoveredRow) object:nil];
+    [self performSelector:@selector(applyPendingHoveredRow) withObject:nil afterDelay:0.06];
+}
+
+-(void)applyPendingHoveredRow {
+    NSInteger row = pendingHoveredRow;
+    pendingHoveredRow = -1;
+    [self setHoveredRow:row];
+}
+
+-(void)mouseExited:(NSEvent *)event {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(applyPendingHoveredRow) object:nil];
+    pendingHoveredRow = -1;
+    [self setHoveredRow:-1];
+}
+
+-(void)dealloc {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(applyPendingHoveredRow) object:nil];
+    if (hoverTrackingArea) {
+        [self removeTrackingArea:hoverTrackingArea];
+        [hoverTrackingArea release];
+    }
+    [super dealloc];
+}
+
+@end
+
 @interface DLChannelTableCell : NSCell {
     DLChannel *representedChannel;
 }
@@ -616,12 +716,18 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
     BOOL isCategory = ([representedChannel type] == ChannelTypeHeader);
     NSInteger row = [(NSOutlineView *)controlView rowAtPoint:NSMakePoint(NSMidX(cellFrame), NSMidY(cellFrame))];
     BOOL selected = (row >= 0 && [[(NSOutlineView *)controlView selectedRowIndexes] containsIndex:(NSUInteger)row]);
+    BOOL hovered = ([controlView isKindOfClass:[DLChannelOutlineView class]] &&
+                    row == [(DLChannelOutlineView *)controlView hoveredRow]);
     NSRect contentRect = cellFrame;
 
     if (!isCategory && selected) {
         NSRect selectionRect = NSInsetRect(cellFrame, 2.0, 2.0);
         [[DLUtil nativeSelectionColor] set];
         [[NSBezierPath bezierPathWithRoundedRect:selectionRect xRadius:5.0 yRadius:5.0] fill];
+    } else if (!isCategory && hovered) {
+        NSRect hoverRect = NSInsetRect(cellFrame, 2.0, 2.0);
+        [[[DLUtil nativeSelectionColor] colorWithAlphaComponent:0.55] set];
+        [[NSBezierPath bezierPathWithRoundedRect:hoverRect xRadius:5.0 yRadius:5.0] fill];
     }
 
     NSString *name = [representedChannel name] ? [representedChannel name] : @"Untitled";
@@ -629,7 +735,10 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
                               : ([representedChannel hasUnreadMessages]
                                  ? [NSFont boldSystemFontOfSize:[NSFont systemFontSize]]
                                  : [NSFont systemFontOfSize:[NSFont systemFontSize]]);
-    NSColor *textColor = isCategory ? [DLUtil nativeSecondaryTextColor] : [DLUtil nativePrimaryTextColor];
+    BOOL emphasized = selected || hovered || [representedChannel hasUnreadMessages];
+    NSColor *textColor = isCategory ? [DLUtil nativeSecondaryTextColor]
+                                    : (emphasized ? [DLUtil nativePrimaryTextColor]
+                                                  : [DLUtil nativeSecondaryTextColor]);
     NSMutableParagraphStyle *paragraphStyle = [[[NSMutableParagraphStyle alloc] init] autorelease];
     [paragraphStyle setLineBreakMode:NSLineBreakByTruncatingTail];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -655,7 +764,8 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
         [[NSBezierPath bezierPathWithRoundedRect:unreadRect xRadius:1.5 yRadius:1.5] fill];
     }
 
-    NSColor *iconColor = [DLUtil nativeSecondaryTextColor];
+    NSColor *iconColor = emphasized ? [DLUtil nativePrimaryTextColor]
+                                    : [DLUtil nativeSecondaryTextColor];
     BOOL isDirectMessage = ([representedChannel type] == ChannelTypeDM ||
                             [representedChannel type] == ChannelTypeGroup);
     NSRect iconRect = isDirectMessage
@@ -2796,7 +2906,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [column setResizingMask:NSTableColumnAutoresizingMask];
     [column setDataCell:[[[DLChannelTableCell alloc] init] autorelease]];
 
-    channelOutlineView = [[NSOutlineView alloc] initWithFrame:[[channelsScrollView contentView] bounds]];
+    channelOutlineView = [[DLChannelOutlineView alloc] initWithFrame:[[channelsScrollView contentView] bounds]];
     [channelOutlineView addTableColumn:column];
     [channelOutlineView setOutlineTableColumn:column];
     [channelOutlineView setHeaderView:nil];
