@@ -153,9 +153,21 @@ if [ "$RUN_AFTER_BUILD" -eq 1 ]; then
     printf 'Opening the app on %s...\n' "$REMOTE_HOST"
     $SSH_RSH "$REMOTE_HOST" "
         APP_PATH=\"\$HOME/$REMOTE_DIR/build/$CONFIGURATION/Discord Lite.app\"
+        # Finder reuses an already-running application even when its bundle was
+        # rebuilt in place. Quit that process first so --run always tests the
+        # binary produced by this build, rather than leaving the old image open.
+        if pgrep -x \"Discord Lite\" >/dev/null; then
+            /usr/bin/osascript -e 'tell application \"Discord Lite\" to quit' >/dev/null 2>&1 || true
+            WAIT_COUNT=0
+            while pgrep -x \"Discord Lite\" >/dev/null && [ \"\$WAIT_COUNT\" -lt 30 ]; do
+                sleep 0.1
+                WAIT_COUNT=\$((WAIT_COUNT + 1))
+            done
+        fi
         if pgrep -x Finder >/dev/null && /usr/bin/osascript \\
             -e 'on run argv' \\
-            -e 'tell application \"Finder\" to open POSIX file (item 1 of argv)' \\
+            -e 'set appAlias to POSIX file (item 1 of argv)' \\
+            -e 'tell application \"Finder\" to open appAlias' \\
             -e 'end run' \\
             \"\$APP_PATH\"; then
             exit 0

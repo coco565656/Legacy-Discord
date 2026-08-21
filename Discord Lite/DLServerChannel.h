@@ -14,6 +14,8 @@
     NSString *topic;
     NSInteger position;
     NSArray *children;
+    BOOL joinedThread;
+    BOOL archivedThread;
 }
 
 -(id)initWithDict:(NSDictionary *)d;
@@ -25,11 +27,17 @@
 -(NSString *)topic;
 -(NSInteger) position;
 -(NSArray *)children;
+-(BOOL)joinedThread;
+-(BOOL)archivedThread;
 
 - (NSComparisonResult)compare:(DLServerChannel *)o;
 
 -(void)setChildren:(NSArray *)inChildren;
 -(void)setServerID:(NSString *)inServerID;
+-(void)setJoinedThread:(BOOL)joined;
+-(void)setArchivedThread:(BOOL)archived;
+
+-(NSComparisonResult)compareThreadRecency:(DLServerChannel *)other;
 
 
 @end

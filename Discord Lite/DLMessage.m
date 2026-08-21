@@ -87,6 +87,14 @@
         [embeds release];
         embeds = [value copy];
     }
+    value = [d objectForKey:@"sticker_items"];
+    if (![value isKindOfClass:[NSArray class]]) {
+        value = [d objectForKey:@"stickers"];
+    }
+    if ([value isKindOfClass:[NSArray class]]) {
+        [stickerItems release];
+        stickerItems = [value copy];
+    }
     if ([d objectForKey:@"mention_everyone"]) {
         mentionedEveryone = [[d objectForKey:@"mention_everyone"] boolValue];
     }
@@ -100,7 +108,10 @@
 }
 
 -(NSDictionary *)dictRepresentation {
-    NSMutableDictionary *dict = [[[NSMutableDictionary alloc] initWithObjects:[NSArray arrayWithObjects:content, [DLUtil generateSnowflake],[NSNumber numberWithBool:NO], [NSNumber numberWithInt:0], nil] forKeys:[NSArray arrayWithObjects:@"content", @"nonce", @"tts", @"flags", nil]] autorelease];
+    NSMutableDictionary *dict = [[[NSMutableDictionary alloc] initWithObjects:[NSArray arrayWithObjects:(content ? content : @""), [DLUtil generateSnowflake],[NSNumber numberWithBool:NO], [NSNumber numberWithInt:0], nil] forKeys:[NSArray arrayWithObjects:@"content", @"nonce", @"tts", @"flags", nil]] autorelease];
+    if ([outgoingStickerIDs count] > 0) {
+        [dict setObject:outgoingStickerIDs forKey:@"sticker_ids"];
+    }
     if (referencedMessage) {
         NSMutableDictionary *refMsg = [[[NSMutableDictionary alloc] initWithObjects:[NSArray arrayWithObjects:[referencedMessage channelID], [referencedMessage messageID], nil] forKeys:[NSArray arrayWithObjects:@"channel_id", @"message_id", nil]] autorelease];
         if ([referencedMessage serverID]) {
@@ -143,6 +154,9 @@
 }
 -(NSArray *)embeds {
     return embeds;
+}
+-(NSArray *)stickerItems {
+    return stickerItems;
 }
 -(NSString *)reactionSummary {
     NSMutableArray *parts = [NSMutableArray array];
@@ -208,7 +222,6 @@
     }
 
     [reactions release];
-    [embeds release];
     reactions = [updatedReactions copy];
     if ([delegate respondsToSelector:@selector(messageContentWasUpdated)]) {
         [delegate messageContentWasUpdated];
@@ -243,6 +256,11 @@
     attachments = inAttachments;
 }
 
+-(void)setOutgoingStickerIDs:(NSArray *)stickerIDs {
+    [outgoingStickerIDs release];
+    outgoingStickerIDs = [stickerIDs copy];
+}
+
 -(void)setReferencedMessage:(DLMessage *)m {
     [referencedMessage release];
     [m retain];
@@ -273,6 +291,9 @@
     [author release];
     [mentionedUsers release];
     [reactions release];
+    [embeds release];
+    [stickerItems release];
+    [outgoingStickerIDs release];
     [content release];
     [attachments release];
     [referencedMessage release];

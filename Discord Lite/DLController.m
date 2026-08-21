@@ -16,6 +16,17 @@ static const char *DLKeychainAccount = "discord-user-token";
 -(NSString *)tokenFromKeychain;
 -(void)storeTokenInKeychain:(NSString *)newToken;
 -(void)deleteTokenFromKeychain;
+-(NSString *)URLQueryValue:(NSString *)value;
+-(void)handleMessageSearchRequestResponse:(AsyncHTTPRequest *)req;
+-(void)handleMessagesAroundRequestResponse:(AsyncHTTPRequest *)req;
+-(void)handleMessagesNewerRequestResponse:(AsyncHTTPRequest *)req;
+-(void)handleActiveThreadsRequestResponse:(AsyncHTTPRequest *)req;
+-(void)handleArchivedThreadsRequestResponse:(AsyncHTTPRequest *)req;
+-(void)handleUserProfileRequestResponse:(AsyncHTTPRequest *)req;
+-(void)handleChannelPinsRequestResponse:(AsyncHTTPRequest *)req;
+-(void)parseUserProfileInBackground:(NSDictionary *)context;
+-(void)finishUserProfileParsing:(NSDictionary *)result;
+-(void)storeThreadData:(NSArray *)threads forServerWithID:(NSString *)serverID replacingExisting:(BOOL)replace;
 @end
 
 @implementation DLController
@@ -67,7 +78,10 @@ static DLController* sharedObject = nil;
     return selectedChannel;
 }
 -(void)setSelectedChannel:(DLChannel *)c {
-    selectedChannel = c;
+    if (selectedChannel != c) {
+        [selectedChannel release];
+        selectedChannel = [c retain];
+    }
 }
 -(void)setLoginDelegate:(id <DLLoginDelegate>)inLoginDelegate {
     loginDelegate = inLoginDelegate;
@@ -163,6 +177,18 @@ static DLController* sharedObject = nil;
     return [[NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:token, [DLUtil superPropertiesString], nil] forKeys:[NSArray arrayWithObjects:@"Authorization", @"X-Super-Properties", nil]] autorelease];
 }
 
+-(NSString *)URLQueryValue:(NSString *)value {
+    if (!value) {
+        return @"";
+    }
+    CFStringRef escaped = CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+                                                                  (CFStringRef)value,
+                                                                  NULL,
+                                                                  CFSTR("!*'();:@&=+$,/?%#[]"),
+                                                                  kCFStringEncodingUTF8);
+    return [(NSString *)escaped autorelease];
+}
+
 -(void)loginWithEmail:(NSString *)email andPassword:(NSString *)password {
     NSMutableDictionary *params = [NSMutableDictionary dictionaryWithObjects:[NSArray arrayWithObjects:email, password, [NSNull null], [NSNull null], [NSNumber numberWithBool:NO], nil] forKeys:[NSArray arrayWithObjects:@"login", @"password", @"gift_code_sku_id", @"login_source", @"undelete", nil]];
     if (captchaKey) {
@@ -217,11 +243,158 @@ static DLController* sharedObject = nil;
     [req setDelegate:self];
     [req setHeaders:[self requestHeaders]];
     [req setIdentifier:RequestIDMessages];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:c forKey:@"channel"]];
     NSString *requestURL = [@API_ROOT stringByAppendingString:[NSString stringWithFormat:@"/channels/%@/messages?limit=%ld", c.channelID, numMsgs]];
     if (m != nil) {
         requestURL = [requestURL stringByAppendingString:[NSString stringWithFormat:@"&before=%@", m.messageID]];
     }
     [req setUrl:requestURL];
+    [req start];
+}
+
+-(void)searchMessagesForChannel:(DLChannel *)c query:(NSString *)query authorID:(NSString *)authorID offset:(NSInteger)offset {
+    if (!c || !query || [query length] == 0) {
+        return;
+    }
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDSearchMessages];
+    [req setUserInfo:[NSDictionary dictionaryWithObjectsAndKeys:c, @"channel", query, @"query",
+                      [NSNumber numberWithInteger:offset], @"offset", nil]];
+
+    NSString *contentQuery = query;
+    if ([query hasPrefix:@"from:"]) {
+        NSRange separator = [query rangeOfCharacterFromSet:[NSCharacterSet whitespaceCharacterSet]];
+        contentQuery = separator.location == NSNotFound ? @"" :
+            [[query substringFromIndex:separator.location + 1]
+             stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    }
+    NSString *escapedQuery = [self URLQueryValue:contentQuery];
+    NSMutableString *parameters = [NSMutableString string];
+    if ([escapedQuery length] > 0) {
+        [parameters appendFormat:@"content=%@&", escapedQuery];
+    }
+    if (authorID && [authorID length] > 0) {
+        [parameters appendFormat:@"author_id=%@&", [self URLQueryValue:authorID]];
+    }
+    [parameters appendFormat:@"offset=%ld", (long)offset];
+    NSString *requestURL = nil;
+    if ([c type] == ChannelTypeDM || [c type] == ChannelTypeGroup) {
+        requestURL = [@API_ROOT stringByAppendingString:
+                      [NSString stringWithFormat:@"/channels/%@/messages/search?%@",
+                       [c channelID], parameters]];
+    } else {
+        requestURL = [@API_ROOT stringByAppendingString:
+                      [NSString stringWithFormat:@"/guilds/%@/messages/search?%@",
+                       [c serverID], parameters]];
+    }
+    [req setUrl:requestURL];
+    [req start];
+}
+
+-(void)loadMessagesAroundMessage:(DLMessage *)m inChannel:(DLChannel *)c {
+    if (!m || !c) {
+        return;
+    }
+    if (![c isEqual:selectedChannel]) {
+        [loadedMessages removeAllObjects];
+        [selectedChannel release];
+        selectedChannel = [c retain];
+        if ([selectedServer isEqual:[self myServerItem]]) {
+            [[DLWSController sharedInstance] updateWSForDirectMessageChannel:c];
+        } else {
+            [[DLWSController sharedInstance] updateWSForChannel:c inServer:selectedServer];
+        }
+    }
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDMessagesAround];
+    [req setUserInfo:[NSDictionary dictionaryWithObjectsAndKeys:c, @"channel", [m messageID], @"messageID", nil]];
+    [req setUrl:[@API_ROOT stringByAppendingString:
+                 [NSString stringWithFormat:@"/channels/%@/messages?limit=15&around=%@", [c channelID], [m messageID]]]];
+    [req start];
+}
+
+-(void)loadMessagesForChannel:(DLChannel *)c afterMessage:(DLMessage *)m quantity:(NSInteger)numMsgs {
+    if (!c || !m || ![c isEqual:selectedChannel]) {
+        return;
+    }
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDMessagesNewer];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:c forKey:@"channel"]];
+    [req setUrl:[@API_ROOT stringByAppendingString:
+                 [NSString stringWithFormat:@"/channels/%@/messages?limit=%ld&after=%@",
+                  [c channelID], (long)numMsgs, [m messageID]]]];
+    [req start];
+}
+
+-(void)loadActiveThreadsForServer:(DLServer *)server {
+    if (!server || [server isEqual:[self myServerItem]]) {
+        return;
+    }
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDActiveThreads];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:server forKey:@"server"]];
+    [req setUrl:[@API_ROOT stringByAppendingString:
+                 [NSString stringWithFormat:@"/guilds/%@/threads/active", [server serverID]]]];
+    [req start];
+}
+
+-(void)loadArchivedThreadsForChannel:(DLChannel *)channel {
+    DLServer *server = [self selectedServer];
+    if (!channel || !server || [server isEqual:[self myServerItem]]) {
+        return;
+    }
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDArchivedThreads];
+    [req setUserInfo:[NSDictionary dictionaryWithObjectsAndKeys:
+                      channel, @"channel", server, @"server", nil]];
+    [req setUrl:[@API_ROOT stringByAppendingString:
+                 [NSString stringWithFormat:@"/channels/%@/threads/archived/public?limit=50",
+                  [channel channelID]]]];
+    [req start];
+}
+
+-(void)loadProfileForUser:(DLUser *)user inServer:(DLServer *)server {
+    if (!user || ![user userID]) {
+        return;
+    }
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDUserProfile];
+    NSMutableDictionary *context = [NSMutableDictionary dictionaryWithObject:user forKey:@"user"];
+    if (server) {
+        [context setObject:server forKey:@"server"];
+    }
+    [req setUserInfo:context];
+    NSMutableString *requestURL = [NSMutableString stringWithFormat:
+                                   @API_ROOT @"/users/%@/profile?with_mutual_guilds=true&with_mutual_friends_count=false",
+                                   [user userID]];
+    if (server && ![server isEqual:[self myServerItem]] && [server serverID]) {
+        [requestURL appendFormat:@"&guild_id=%@", [server serverID]];
+    }
+    [req setUrl:requestURL];
+    [req start];
+}
+
+-(void)loadPinsForChannel:(DLChannel *)channel {
+    if (!channel) return;
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDChannelPins];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:channel forKey:@"channel"]];
+    [req setUrl:[@API_ROOT stringByAppendingString:
+                 [NSString stringWithFormat:@"/channels/%@/messages/pins?limit=50", [channel channelID]]]];
     [req start];
 }
 
@@ -240,6 +413,7 @@ static DLController* sharedObject = nil;
     }
     [req setHeaders:[self requestHeaders]];
     [req setIdentifier:RequestIDSendMessage];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:c forKey:@"channel"]];
     NSString *requestURL = [@API_ROOT stringByAppendingString:[NSString stringWithFormat:@"/channels/%@/messages", c.channelID]];
     [req setUrl:requestURL];
     [req start];
@@ -373,8 +547,6 @@ static DLController* sharedObject = nil;
     [selectedServer release];
     [s retain];
     selectedServer = s;
-    [selectedChannel release];
-    selectedChannel = nil;
     NSMutableArray *channels = [[NSMutableArray alloc] init];
     
     NSEnumerator *e = [[loadedChannels allKeys] objectEnumerator];
@@ -389,12 +561,17 @@ static DLController* sharedObject = nil;
     NSMutableArray *parentChannels = [[NSMutableArray alloc] init];
     NSMutableArray *uncategorizedChannels = [[NSMutableArray alloc] init];
     NSMutableArray *childChannels = [[NSMutableArray alloc] init];
+    NSMutableArray *recentThreads = [[NSMutableArray alloc] init];
     
     e = [channels objectEnumerator];
     DLServerChannel *c;
     while (c = [e nextObject]) {
         if (c.type == ChannelTypeHeader) {
             [parentChannels addObject:c];
+        } else if ([c isThread]) {
+            if ([c joinedThread]) {
+                [recentThreads addObject:c];
+            }
         } else if (!c.parentID || [c.parentID isEqual:[NSNull null]]) {
             [uncategorizedChannels addObject:c];
             
@@ -406,9 +583,22 @@ static DLController* sharedObject = nil;
     NSMutableArray *sortedParentChannels = [NSMutableArray arrayWithArray:[parentChannels sortedArrayUsingSelector:@selector(compare:)]];
     NSArray *sortedChildChannels = [childChannels sortedArrayUsingSelector:@selector(compare:)];
     NSArray *sortedUncategorizedChannels = [uncategorizedChannels sortedArrayUsingSelector:@selector(compare:)];
-    
-    
-    
+
+    NSMutableArray *regularChannels = [NSMutableArray arrayWithArray:sortedUncategorizedChannels];
+    [regularChannels addObjectsFromArray:sortedChildChannels];
+    e = [regularChannels objectEnumerator];
+    while (c = [e nextObject]) {
+        NSMutableArray *channelThreads = [NSMutableArray array];
+        NSEnumerator *threadEnumerator = [recentThreads objectEnumerator];
+        DLServerChannel *thread;
+        while (thread = [threadEnumerator nextObject]) {
+            if ([[thread parentID] isEqualToString:[c channelID]]) {
+                [channelThreads addObject:thread];
+            }
+        }
+        [c setChildren:[channelThreads sortedArrayUsingSelector:@selector(compareThreadRecency:)]];
+    }
+
     e = [sortedParentChannels objectEnumerator];
     while (c = [e nextObject]) {
         NSMutableArray *children = [[NSMutableArray alloc] init];
@@ -423,18 +613,31 @@ static DLController* sharedObject = nil;
         [children release];
     }
     
-    e = [sortedUncategorizedChannels objectEnumerator];
-    while (c = [e nextObject]) {
-        if (c) {
-            [sortedParentChannels insertObject:c atIndex:0];
-        }
-    }
+    NSMutableArray *result = [NSMutableArray arrayWithArray:sortedUncategorizedChannels];
+    [result addObjectsFromArray:sortedParentChannels];
     
     [channels release];
     [uncategorizedChannels release];
     [childChannels release];
+    [recentThreads release];
     [parentChannels release];
-    return sortedParentChannels;
+    return result;
+}
+
+-(NSArray *)activeThreadsForServer:(DLServer *)server parentChannel:(DLChannel *)parentChannel {
+    NSMutableArray *threads = [NSMutableArray array];
+    NSEnumerator *enumerator = [[loadedChannels allValues] objectEnumerator];
+    DLServerChannel *channel;
+    while (channel = [enumerator nextObject]) {
+        if (![channel isThread] || ![[channel serverID] isEqualToString:[server serverID]]) {
+            continue;
+        }
+        if (parentChannel && ![[channel parentID] isEqualToString:[parentChannel channelID]]) {
+            continue;
+        }
+        [threads addObject:channel];
+    }
+    return [threads sortedArrayUsingSelector:@selector(compareThreadRecency:)];
 }
 
 -(NSArray *)directMessageChannels {
@@ -497,6 +700,10 @@ static DLController* sharedObject = nil;
     [[DLWSController sharedInstance] queryServer:s forMembersContainingUsername:username];
 }
 
+-(void)requestMembersForChannel:(DLChannel *)c inServer:(DLServer *)s from:(NSInteger)start to:(NSInteger)end {
+    [[DLWSController sharedInstance] requestMembersForChannel:c inServer:s from:start to:end];
+}
+
 
 #pragma mark Response Handlers
 
@@ -554,6 +761,10 @@ static DLController* sharedObject = nil;
 
 -(void)handleMessagesRequestResponse:(AsyncHTTPRequest *)req {
     if ([req result] == HTTPResultOK) {
+        DLChannel *requestedChannel = [[req userInfo] objectForKey:@"channel"];
+        if (requestedChannel && ![requestedChannel isEqual:selectedChannel]) {
+            return;
+        }
         NSArray *resArray = [[CJSONDeserializer deserializer] deserializeAsArray:[req responseData] error:nil];
         NSEnumerator *e = [resArray objectEnumerator];
         NSDictionary *messageData;
@@ -564,16 +775,271 @@ static DLController* sharedObject = nil;
             [m release];
         }
         [loadedMessages addObjectsFromArray:newMessages];
-        [delegate messages:newMessages receivedForChannel:selectedChannel];
+        [delegate messages:newMessages receivedForChannel:(requestedChannel ? requestedChannel : selectedChannel)];
         [newMessages release];
     } else {
         [self handleHTTPRequestError:req];
     }
 }
 
+-(void)handleMessageSearchRequestResponse:(AsyncHTTPRequest *)req {
+    if ([req result] != HTTPResultOK) {
+        [self handleHTTPRequestError:req];
+        return;
+    }
+
+    NSDictionary *context = [req userInfo];
+    DLChannel *channel = [context objectForKey:@"channel"];
+    NSString *query = [context objectForKey:@"query"];
+    NSDictionary *response = [[CJSONDeserializer deserializer] deserializeAsDictionary:[req responseData] error:nil];
+    NSArray *groups = [response objectForKey:@"messages"];
+    NSMutableArray *results = [NSMutableArray array];
+    NSEnumerator *groupEnumerator = [groups objectEnumerator];
+    id group;
+    while (group = [groupEnumerator nextObject]) {
+        NSArray *candidates = [group isKindOfClass:[NSArray class]] ? group : [NSArray arrayWithObject:group];
+        NSDictionary *selectedData = nil;
+        NSEnumerator *candidateEnumerator = [candidates objectEnumerator];
+        NSDictionary *candidate;
+        while (candidate = [candidateEnumerator nextObject]) {
+            if (![candidate isKindOfClass:[NSDictionary class]]) {
+                continue;
+            }
+            if (!selectedData) {
+                selectedData = candidate;
+            }
+            if ([[candidate objectForKey:@"hit"] boolValue]) {
+                selectedData = candidate;
+                break;
+            }
+        }
+        if (selectedData) {
+            DLMessage *message = [[[DLMessage alloc] initWithDict:selectedData] autorelease];
+            if (![message serverID] && [channel serverID]) {
+                [message setServerID:[channel serverID]];
+            }
+            [results addObject:message];
+        }
+    }
+    id totalValue = [response objectForKey:@"total_results"];
+    NSInteger total = [totalValue respondsToSelector:@selector(integerValue)] ? [totalValue integerValue] : [results count];
+    NSInteger offset = [[context objectForKey:@"offset"] integerValue];
+    [delegate messageSearchResults:results totalResults:total offset:offset forChannel:channel query:query];
+}
+
+-(void)handleMessagesAroundRequestResponse:(AsyncHTTPRequest *)req {
+    if ([req result] != HTTPResultOK) {
+        [self handleHTTPRequestError:req];
+        return;
+    }
+    NSDictionary *context = [req userInfo];
+    DLChannel *channel = [context objectForKey:@"channel"];
+    NSArray *response = [[CJSONDeserializer deserializer] deserializeAsArray:[req responseData] error:nil];
+    NSMutableArray *messages = [NSMutableArray array];
+    NSEnumerator *enumerator = [response objectEnumerator];
+    NSDictionary *messageData;
+    while (messageData = [enumerator nextObject]) {
+        if (![messageData isKindOfClass:[NSDictionary class]]) {
+            continue;
+        }
+        DLMessage *message = [[[DLMessage alloc] initWithDict:messageData] autorelease];
+        if (![message serverID] && [channel serverID]) {
+            [message setServerID:[channel serverID]];
+        }
+        [messages addObject:message];
+    }
+    [delegate messages:messages
+receivedAroundSearchResult:[context objectForKey:@"messageID"]
+             forChannel:channel];
+}
+
+-(void)handleMessagesNewerRequestResponse:(AsyncHTTPRequest *)req {
+    if ([req result] != HTTPResultOK) {
+        [self handleHTTPRequestError:req];
+        return;
+    }
+    DLChannel *channel = [[req userInfo] objectForKey:@"channel"];
+    NSArray *response = [[CJSONDeserializer deserializer] deserializeAsArray:[req responseData] error:nil];
+    NSMutableArray *messages = [NSMutableArray array];
+    NSEnumerator *enumerator = [response objectEnumerator];
+    NSDictionary *messageData;
+    while (messageData = [enumerator nextObject]) {
+        if (![messageData isKindOfClass:[NSDictionary class]]) {
+            continue;
+        }
+        DLMessage *message = [[[DLMessage alloc] initWithDict:messageData] autorelease];
+        if (![message serverID] && [channel serverID]) {
+            [message setServerID:[channel serverID]];
+        }
+        [messages addObject:message];
+    }
+    if ([messages count] > 1 &&
+        [[(DLMessage *)[messages objectAtIndex:0] timestamp] compare:[(DLMessage *)[messages lastObject] timestamp]] == NSOrderedAscending) {
+        [messages setArray:[[messages reverseObjectEnumerator] allObjects]];
+    }
+    [delegate newerMessages:messages receivedForChannel:channel];
+}
+
+-(void)handleChannelPinsRequestResponse:(AsyncHTTPRequest *)req {
+    if ([req result] != HTTPResultOK) {
+        [self handleHTTPRequestError:req];
+        return;
+    }
+    DLChannel *channel = [[req userInfo] objectForKey:@"channel"];
+    id response = [[CJSONDeserializer deserializer] deserialize:[req responseData] error:nil];
+    NSArray *items = [response isKindOfClass:[NSDictionary class]] ? [response objectForKey:@"items"] : response;
+    NSMutableArray *messages = [NSMutableArray array];
+    NSEnumerator *enumerator = [items objectEnumerator];
+    id item;
+    while (item = [enumerator nextObject]) {
+        NSDictionary *messageData = [item isKindOfClass:[NSDictionary class]] ? [item objectForKey:@"message"] : nil;
+        if (!messageData && [item isKindOfClass:[NSDictionary class]] && [item objectForKey:@"id"]) {
+            messageData = item;
+        }
+        if (![messageData isKindOfClass:[NSDictionary class]]) continue;
+        DLMessage *message = [[[DLMessage alloc] initWithDict:messageData] autorelease];
+        if (![message serverID] && [channel serverID]) [message setServerID:[channel serverID]];
+        [messages addObject:message];
+    }
+    [delegate channelPins:messages didLoadForChannel:channel];
+}
+
+-(void)storeThreadData:(NSArray *)threads forServerWithID:(NSString *)serverID replacingExisting:(BOOL)replace {
+    if (!serverID || ![threads isKindOfClass:[NSArray class]]) {
+        return;
+    }
+    if (replace) {
+        NSMutableArray *keysToRemove = [NSMutableArray array];
+        NSEnumerator *keyEnumerator = [[loadedChannels allKeys] objectEnumerator];
+        NSString *channelID;
+        while (channelID = [keyEnumerator nextObject]) {
+            DLChannel *channel = [loadedChannels objectForKey:channelID];
+            if ([channel isThread] && [[channel serverID] isEqualToString:serverID]) {
+                [keysToRemove addObject:channelID];
+            }
+        }
+        [loadedChannels removeObjectsForKeys:keysToRemove];
+    }
+
+    NSEnumerator *threadEnumerator = [threads objectEnumerator];
+    NSDictionary *threadData;
+    while (threadData = [threadEnumerator nextObject]) {
+        if (![threadData isKindOfClass:[NSDictionary class]] || ![threadData objectForKey:@"id"]) {
+            continue;
+        }
+        DLServerChannel *thread = [loadedChannels objectForKey:[threadData objectForKey:@"id"]];
+        if (thread && [thread isThread]) {
+            [thread updateWithDict:threadData];
+            [thread setServerID:serverID];
+        } else {
+            thread = [[[DLServerChannel alloc] initWithDict:threadData] autorelease];
+            [thread setServerID:serverID];
+            [loadedChannels setObject:thread forKey:[thread channelID]];
+        }
+    }
+}
+
+-(void)handleActiveThreadsRequestResponse:(AsyncHTTPRequest *)req {
+    DLServer *server = [[req userInfo] objectForKey:@"server"];
+    if ([req result] != HTTPResultOK) {
+        NSLog(@"Unable to load active threads for server %@.", [server serverID]);
+        return;
+    }
+    NSDictionary *response = [[CJSONDeserializer deserializer] deserializeAsDictionary:[req responseData] error:nil];
+    NSArray *threads = [response objectForKey:@"threads"];
+    [self storeThreadData:threads ? threads : [NSArray array]
+          forServerWithID:[server serverID]
+        replacingExisting:YES];
+    NSEnumerator *memberEnumerator = [[response objectForKey:@"members"] objectEnumerator];
+    NSDictionary *member;
+    while (member = [memberEnumerator nextObject]) {
+        DLServerChannel *thread = [loadedChannels objectForKey:[member objectForKey:@"id"]];
+        if ([thread isThread]) {
+            [thread setJoinedThread:YES];
+        }
+    }
+    [delegate threadsDidUpdateForServer:server];
+}
+
+-(void)handleArchivedThreadsRequestResponse:(AsyncHTTPRequest *)req {
+    if ([req result] != HTTPResultOK) {
+        NSLog(@"Unable to load archived threads for channel %@.",
+              [[[req userInfo] objectForKey:@"channel"] channelID]);
+        return;
+    }
+    NSDictionary *response = [[CJSONDeserializer deserializer] deserializeAsDictionary:[req responseData] error:nil];
+    NSArray *threads = [response objectForKey:@"threads"];
+    DLServer *server = [[req userInfo] objectForKey:@"server"];
+    [self storeThreadData:threads ? threads : [NSArray array]
+          forServerWithID:[server serverID]
+        replacingExisting:NO];
+    NSEnumerator *enumerator = [threads objectEnumerator];
+    NSDictionary *threadData;
+    while (threadData = [enumerator nextObject]) {
+        DLServerChannel *thread = [loadedChannels objectForKey:[threadData objectForKey:@"id"]];
+        [thread setArchivedThread:YES];
+    }
+    DLChannel *channel = [[req userInfo] objectForKey:@"channel"];
+    if ([delegate respondsToSelector:@selector(archivedThreadsDidUpdateForServer:channel:)]) {
+        [delegate archivedThreadsDidUpdateForServer:server channel:channel];
+    }
+}
+
+-(void)handleUserProfileRequestResponse:(AsyncHTTPRequest *)req {
+    if ([req result] == HTTPResultOK && [req responseData]) {
+        NSMutableDictionary *context = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                        [NSData dataWithData:[req responseData]], @"data",
+                                        [[req userInfo] objectForKey:@"user"], @"user", nil];
+        if ([[req userInfo] objectForKey:@"server"]) {
+            [context setObject:[[req userInfo] objectForKey:@"server"] forKey:@"server"];
+        }
+        [self performSelectorInBackground:@selector(parseUserProfileInBackground:) withObject:context];
+        return;
+    } else {
+        NSLog(@"Unable to load optional profile data for user %@.",
+              [[[[req userInfo] objectForKey:@"user"] userID] description]);
+    }
+    if ([delegate respondsToSelector:@selector(userProfile:didLoadForUser:inServer:)]) {
+        [delegate userProfile:nil
+               didLoadForUser:[[req userInfo] objectForKey:@"user"]
+                      inServer:[[req userInfo] objectForKey:@"server"]];
+    }
+}
+
+-(void)parseUserProfileInBackground:(NSDictionary *)context {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    id response = [[CJSONDeserializer deserializer]
+                   deserializeAsDictionary:[context objectForKey:@"data"] error:nil];
+    NSMutableDictionary *result = [NSMutableDictionary dictionaryWithObject:[context objectForKey:@"user"]
+                                                                      forKey:@"user"];
+    if ([context objectForKey:@"server"]) [result setObject:[context objectForKey:@"server"] forKey:@"server"];
+    if ([response isKindOfClass:[NSDictionary class]]) [result setObject:response forKey:@"profile"];
+    [self performSelectorOnMainThread:@selector(finishUserProfileParsing:)
+                           withObject:result waitUntilDone:NO];
+    [pool drain];
+}
+
+-(void)finishUserProfileParsing:(NSDictionary *)result {
+    if ([delegate respondsToSelector:@selector(userProfile:didLoadForUser:inServer:)]) {
+        [delegate userProfile:[result objectForKey:@"profile"]
+               didLoadForUser:[result objectForKey:@"user"]
+                      inServer:[result objectForKey:@"server"]];
+    }
+}
+
 -(void)handleSendMessageRequestResponse:(AsyncHTTPRequest *)req {
     if ([req result] != HTTPResultOK) {
         [self handleHTTPRequestError:req];
+        return;
+    }
+    DLServerChannel *channel = [[req userInfo] objectForKey:@"channel"];
+    if ([channel isThread]) {
+        [channel setJoinedThread:YES];
+        [channel setArchivedThread:NO];
+        DLServer *server = [self loadedServerWithID:[channel serverID]];
+        if (server) {
+            [delegate threadsDidUpdateForServer:server];
+        }
     }
 }
 
@@ -639,6 +1105,27 @@ static DLController* sharedObject = nil;
         case RequestIDMessages:
             [self handleMessagesRequestResponse:request];
             break;
+        case RequestIDSearchMessages:
+            [self handleMessageSearchRequestResponse:request];
+            break;
+        case RequestIDMessagesAround:
+            [self handleMessagesAroundRequestResponse:request];
+            break;
+        case RequestIDMessagesNewer:
+            [self handleMessagesNewerRequestResponse:request];
+            break;
+        case RequestIDActiveThreads:
+            [self handleActiveThreadsRequestResponse:request];
+            break;
+        case RequestIDArchivedThreads:
+            [self handleArchivedThreadsRequestResponse:request];
+            break;
+        case RequestIDUserProfile:
+            [self handleUserProfileRequestResponse:request];
+            break;
+        case RequestIDChannelPins:
+            [self handleChannelPinsRequestResponse:request];
+            break;
         case RequestIDLogout:
             
             break;
@@ -669,6 +1156,13 @@ static DLController* sharedObject = nil;
     DLChannel *c = [self loadedChannelWithID:[m channelID]];
     DLServer *s = [self loadedServerWithID:[c serverID]];
     [c setLastMessage:m];
+    if ([c isThread] && [[m author] isEqual:myUser]) {
+        [(DLServerChannel *)c setJoinedThread:YES];
+        [(DLServerChannel *)c setArchivedThread:NO];
+        if (s) {
+            [delegate threadsDidUpdateForServer:s];
+        }
+    }
     [delegate newMessage:m receivedForChannel:c inServer:s];
 }
 
@@ -703,8 +1197,33 @@ static DLController* sharedObject = nil;
                 [c release];
             }
         }
+        NSArray *threads = [serverData objectForKey:@"threads"];
+        if ([threads isKindOfClass:[NSArray class]]) {
+            [self storeThreadData:threads
+                  forServerWithID:[serverData objectForKey:@"id"]
+                replacingExisting:NO];
+        }
     }
     [loadedServers setObject:[self myServerItem] forKey:[[self myServerItem] serverID]];
+}
+
+-(void)wsDidReceiveThreads:(NSArray *)threads forServerWithID:(NSString *)serverID {
+    [self storeThreadData:threads forServerWithID:serverID replacingExisting:NO];
+    DLServer *server = [self loadedServerWithID:serverID];
+    if (server) {
+        [delegate threadsDidUpdateForServer:server];
+    }
+}
+
+-(void)wsDidDeleteThreadWithID:(NSString *)threadID forServerWithID:(NSString *)serverID {
+    DLChannel *thread = [loadedChannels objectForKey:threadID];
+    if ([thread isThread]) {
+        [loadedChannels removeObjectForKey:threadID];
+    }
+    DLServer *server = [self loadedServerWithID:serverID];
+    if (server) {
+        [delegate threadsDidUpdateForServer:server];
+    }
 }
 
 -(void)wsDidReceiveReadStateData:(NSArray *)data {

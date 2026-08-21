@@ -29,25 +29,24 @@
     }
 }
 -(void)viewDidMoveToWindow {
-    if (eventTrackingRect) {
-        [self removeTrackingRect:eventTrackingRect];
-        eventTrackingRect = 0;
-    }
-    if ([self window]) {
-        eventTrackingRect = [self addTrackingRect:[self bounds] owner:self userData:nil assumeInside:NO];
-    }
+    [self updateTrackingAreas];
     if ([delegate respondsToSelector:@selector(viewMovedToWindow:)]) {
         [delegate viewMovedToWindow:self];
     }
 }
--(void)setFrameSize:(NSSize)newSize {
-    [super setFrameSize:newSize];
-    if (eventTrackingRect) {
-        [self removeTrackingRect:eventTrackingRect];
-        eventTrackingRect = 0;
+-(void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (eventTrackingArea) {
+        [self removeTrackingArea:eventTrackingArea];
+        [eventTrackingArea release];
+        eventTrackingArea = nil;
     }
     if ([self window]) {
-        eventTrackingRect = [self addTrackingRect:[self bounds] owner:self userData:nil assumeInside:NO];
+        NSTrackingAreaOptions options = NSTrackingMouseEnteredAndExited |
+            NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect;
+        eventTrackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
+            options:options owner:self userInfo:nil];
+        [self addTrackingArea:eventTrackingArea];
     }
 }
 -(void)mouseEntered:(NSEvent *)event {
@@ -61,8 +60,9 @@
     }
 }
 -(void)dealloc {
-    if (eventTrackingRect) {
-        [self removeTrackingRect:eventTrackingRect];
+    if (eventTrackingArea) {
+        [self removeTrackingArea:eventTrackingArea];
+        [eventTrackingArea release];
     }
     [super dealloc];
 }

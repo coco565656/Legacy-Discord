@@ -32,7 +32,14 @@ typedef enum {
     RequestIDMessageDelete = 8,
     RequestIDGetFingerprint = 9,
     RequestIDAddReaction = 10,
-    RequestIDRemoveReaction = 11
+    RequestIDRemoveReaction = 11,
+    RequestIDSearchMessages = 12,
+    RequestIDMessagesAround = 13,
+    RequestIDMessagesNewer = 14,
+    RequestIDActiveThreads = 15,
+    RequestIDArchivedThreads = 16,
+    RequestIDUserProfile = 17,
+    RequestIDChannelPins = 18
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -54,6 +61,13 @@ typedef enum {
 -(void)userDidStartTypingInSelectedChannel:(DLUser *)u;
 -(void)members:(NSArray *)members didUpdateForServer:(DLServer *)s;
 -(void)connectionStateDidChange:(DLWSConnectionState)state;
+-(void)messageSearchResults:(NSArray *)messages totalResults:(NSInteger)total offset:(NSInteger)offset forChannel:(DLChannel *)channel query:(NSString *)query;
+-(void)messages:(NSArray *)messages receivedAroundSearchResult:(NSString *)messageID forChannel:(DLChannel *)channel;
+-(void)newerMessages:(NSArray *)messages receivedForChannel:(DLChannel *)channel;
+-(void)threadsDidUpdateForServer:(DLServer *)server;
+-(void)archivedThreadsDidUpdateForServer:(DLServer *)server channel:(DLChannel *)channel;
+-(void)userProfile:(NSDictionary *)profile didLoadForUser:(DLUser *)user inServer:(DLServer *)server;
+-(void)channelPins:(NSArray *)messages didLoadForChannel:(DLChannel *)channel;
 @end
 
 @interface DLController : NSObject <AsyncHTTPRequestDelegate, DLWSControllerDelegate> {
@@ -91,6 +105,9 @@ typedef enum {
 -(void)loginWithEmail:(NSString *)email andPassword:(NSString *)password;
 -(void)loginWithTwoFactorAuthCode:(NSString *)twoFactorCode;
 -(void)loadMessagesForChannel:(DLChannel *)c beforeMessage:(DLMessage *)m quantity:(NSInteger)numMsgs;
+-(void)searchMessagesForChannel:(DLChannel *)c query:(NSString *)query authorID:(NSString *)authorID offset:(NSInteger)offset;
+-(void)loadMessagesAroundMessage:(DLMessage *)m inChannel:(DLChannel *)c;
+-(void)loadMessagesForChannel:(DLChannel *)c afterMessage:(DLMessage *)m quantity:(NSInteger)numMsgs;
 -(void)sendMessage:(DLMessage *)m toChannel:(DLChannel *)c;
 -(void)acknowledgeMessage:(DLMessage *)m;
 -(void)deleteMessage:(DLMessage *)m;
@@ -106,11 +123,17 @@ typedef enum {
 
 -(NSArray *)userServers;
 -(NSArray *)channelsForServer:(DLServer *)s;
+-(NSArray *)activeThreadsForServer:(DLServer *)server parentChannel:(DLChannel *)parentChannel;
 -(NSArray *)directMessageChannels;
 
 -(NSString *)authFingerprint;
 
 -(void)queryServer:(DLServer *)s forMembersContainingUsername:(NSString *)username;
+-(void)requestMembersForChannel:(DLChannel *)c inServer:(DLServer *)s from:(NSInteger)start to:(NSInteger)end;
+-(void)loadActiveThreadsForServer:(DLServer *)server;
+-(void)loadArchivedThreadsForChannel:(DLChannel *)channel;
+-(void)loadProfileForUser:(DLUser *)user inServer:(DLServer *)server;
+-(void)loadPinsForChannel:(DLChannel *)channel;
 
 
 -(DLServer *)myServerItem;

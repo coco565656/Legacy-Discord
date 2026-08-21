@@ -28,6 +28,8 @@
     NSArray *mentionedUsers;
     NSArray *reactions;
     NSArray *embeds;
+    NSArray *stickerItems;
+    NSArray *outgoingStickerIDs;
     BOOL mentionedEveryone;
     DLMessage *referencedMessage;
     id<DLMessageDelegate> delegate;
@@ -50,6 +52,7 @@
 -(NSArray *)mentionedUsers;
 -(NSArray *)reactions;
 -(NSArray *)embeds;
+-(NSArray *)stickerItems;
 -(NSString *)reactionSummary;
 -(void)applyReactionEmoji:(NSDictionary *)emoji added:(BOOL)added byCurrentUser:(BOOL)currentUser;
 -(DLMessage *)referencedMessage;
@@ -60,6 +63,7 @@
 -(void)setMessageID:(NSString *)msgID;
 -(void)setContent:(NSString *)inContent;
 -(void)setAttachments:(NSArray *)inAttachments;
+-(void)setOutgoingStickerIDs:(NSArray *)stickerIDs;
 -(void)setReferencedMessage:(DLMessage *)m;
 -(void)setChannelID:(NSString *)inChannelID;
 -(void)setServerID:(NSString *)inServerID;

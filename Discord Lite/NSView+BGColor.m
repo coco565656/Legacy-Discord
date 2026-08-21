@@ -27,6 +27,10 @@
         NSRect borderRect = NSMakeRect(0.0, 0.0, NSWidth([self bounds]), 1.0);
         NSRectFill(borderRect);
     }
+    if (leftBorderColor) {
+        [leftBorderColor set];
+        NSRectFill(NSMakeRect(0.0, 0.0, 1.0, NSHeight([self bounds])));
+    }
 }
 -(void)setBackgroundColor:(NSColor *)bgColor {
     [backgroundColor release];
@@ -49,11 +53,17 @@
     bottomBorderColor = [borderColor retain];
     [self setNeedsDisplay:YES];
 }
+-(void)setLeftBorderColor:(NSColor *)borderColor {
+    [leftBorderColor release];
+    leftBorderColor = [borderColor retain];
+    [self setNeedsDisplay:YES];
+}
 -(void)dealloc {
     [backgroundColor release];
     [gradientStartColor release];
     [gradientEndColor release];
     [bottomBorderColor release];
+    [leftBorderColor release];
     [super dealloc];
 }
 

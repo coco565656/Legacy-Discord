@@ -19,7 +19,7 @@
 
 @interface NSView_Events : NSView {
     id<NSViewEventDelegate> delegate;
-    NSTrackingRectTag eventTrackingRect;
+    NSTrackingArea *eventTrackingArea;
 }
 
 -(void)setDelegate:(id<NSViewEventDelegate>)inDelegate;

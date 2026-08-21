@@ -14,10 +14,12 @@
     NSColor *gradientStartColor;
     NSColor *gradientEndColor;
     NSColor *bottomBorderColor;
+    NSColor *leftBorderColor;
 }
 
 -(void)setBackgroundColor:(NSColor *)bgColor;
 -(void)setGradientStartColor:(NSColor *)startColor endColor:(NSColor *)endColor;
 -(void)setBottomBorderColor:(NSColor *)borderColor;
+-(void)setLeftBorderColor:(NSColor *)borderColor;
 
 @end

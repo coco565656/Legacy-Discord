@@ -18,6 +18,9 @@
 @interface ChatScrollView : NSScrollView {
     NSMutableArray *content;
     id<ChatScrollViewDelegate> delegate;
+    ChatItemViewController *visibleActionBarItem;
+    NSString *unreadStartMessageID;
+    NSView *unreadSeparatorView;
 }
 
 -(NSArray *)content;
@@ -25,9 +28,12 @@
 -(void)setDelegate:(id<ChatScrollViewDelegate>)inDelegate;
 -(void)setContent:(NSArray *)inContent;
 -(void)appendContent:(NSArray *)inContent;
+-(void)prependContent:(NSArray *)inContent preservingVisiblePosition:(BOOL)preservePosition;
 -(void)prependViewController:(ChatItemViewController *)vc;
 -(void)removeViewController:(ChatItemViewController *)vc;
 -(void)screenResize;
 -(void)endAllChatContentEditing;
+-(void)setUnreadStartMessageID:(NSString *)messageID;
+-(void)clearUnreadSeparator;
 
 @end

@@ -25,6 +25,7 @@
 -(void)chatViewMessageShouldBeDeleted:(ChatItemViewController *)chatView;
 -(void)chatViewMessageWasDeleted:(ChatItemViewController *)chatView;
 -(void)chatView:(ChatItemViewController *)chatView showReactionPickerRelativeToView:(NSView *)anchorView;
+-(void)chatView:(ChatItemViewController *)chatView showProfileForUser:(DLUser *)user relativeToView:(NSView *)anchorView;
 @end
 
 @interface ChatItemViewController : ViewController <DLUserDelegate, NSViewEventDelegate, NSTextViewMenuDelegate, DLMessageDelegate, AsyncHTTPRequestDelegate> {
@@ -35,10 +36,15 @@
     CGFloat baseViewHeight;
     IBOutlet NSTextField *usernameTextField;
     IBOutlet NSImageView *avatarImageView;
+    NSButton *avatarProfileButton;
     IBOutlet NSTextField *timestampTextField;
     NSArray *attachmentViews;
     NSMutableArray *embedViews;
     CGFloat embedsHeight;
+    NSMutableArray *stickerViews;
+    CGFloat stickersHeight;
+    NSTimer *animatedEmojiTimer;
+    BOOL jumboEmojiDisplay;
     IBOutlet NSView *referencedMessageView;
     IBOutlet NSTextField *referencedMessageTextField;
     IBOutlet NSImageView *referencedMessageAvatarImageView;
@@ -61,6 +67,7 @@
 
 -(DLMessage *)representedObject;
 -(CGFloat)expectedHeight;
+-(void)layoutForCurrentViewFrame;
 
 -(void)setDelegate:(id<ChatItemViewControllerDelegate>)inDelegate;
 -(void)setRepresentedObject:(DLMessage *)obj;
@@ -68,6 +75,9 @@
 -(void)setSearchHighlighted:(BOOL)highlighted;
 -(void)setCompactDisplay:(BOOL)compact;
 -(void)setGroupedMessageFollows:(BOOL)follows;
+-(BOOL)isMessageActionBarVisible;
+-(void)hideMessageActionBar;
+-(void)stopAnimatedEmojiPlayback;
 -(void)beginEditingContent;
 -(void)endEditingContent;
 -(BOOL)isBeingEdited;

@@ -13,7 +13,10 @@
 static NSDictionary *superPropertiesDict;
 
 +(NSImage *)imageResize:(NSImage*)anImage newSize:(NSSize)newSize cornerRadius:(CGFloat)radius {
-    
+    if (!anImage || [anImage size].width <= 0.0 || [anImage size].height <= 0.0 ||
+        newSize.width <= 0.0 || newSize.height <= 0.0) {
+        return nil;
+    }
     [anImage setScalesWhenResized:YES];
     NSImage *smallImage = [[NSImage alloc] initWithSize: newSize];
     [smallImage lockFocus];
@@ -115,43 +118,49 @@ static NSDictionary *superPropertiesDict;
 }
 
 +(NSColor *)nativeServerRailColor {
-    return [NSColor colorWithCalibratedWhite:0.20 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.118 green:0.122 blue:0.133 alpha:1.0];
 }
 +(NSColor *)nativeSidebarColor {
-    return [NSColor colorWithCalibratedWhite:0.91 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.169 green:0.176 blue:0.192 alpha:1.0];
 }
 +(NSColor *)nativeContentColor {
-    return [NSColor textBackgroundColor];
+    return [NSColor colorWithCalibratedRed:0.192 green:0.200 blue:0.220 alpha:1.0];
 }
 +(NSColor *)nativeChromeColor {
-    return [NSColor colorWithCalibratedWhite:0.88 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.169 green:0.176 blue:0.192 alpha:1.0];
+}
++(NSColor *)nativeInputColor {
+    return [NSColor colorWithCalibratedRed:0.220 green:0.227 blue:0.247 alpha:1.0];
+}
++(NSColor *)nativeBorderColor {
+    return [NSColor colorWithCalibratedRed:0.125 green:0.129 blue:0.141 alpha:1.0];
 }
 +(NSColor *)nativeHeaderTopColor {
-    return [NSColor colorWithCalibratedWhite:0.98 alpha:1.0];
+    return [self nativeContentColor];
 }
 +(NSColor *)nativeHeaderBottomColor {
-    return [NSColor colorWithCalibratedWhite:0.86 alpha:1.0];
+    return [self nativeContentColor];
 }
 +(NSColor *)nativePrimaryTextColor {
-    return [NSColor controlTextColor];
+    return [NSColor colorWithCalibratedRed:0.949 green:0.953 blue:0.961 alpha:1.0];
 }
 +(NSColor *)nativeSecondaryTextColor {
-    return [NSColor disabledControlTextColor];
+    return [NSColor colorWithCalibratedRed:0.710 green:0.729 blue:0.757 alpha:1.0];
 }
 +(NSColor *)nativeSelectionColor {
-    return [NSColor alternateSelectedControlColor];
+    return [NSColor colorWithCalibratedRed:0.251 green:0.259 blue:0.286 alpha:1.0];
 }
 +(NSColor *)nativeSelectedTextColor {
-    return [NSColor alternateSelectedControlTextColor];
+    return [NSColor colorWithCalibratedRed:0.949 green:0.953 blue:0.961 alpha:1.0];
 }
 +(NSColor *)nativeMentionColor {
-    return [NSColor colorWithCalibratedRed:1.0 green:0.94 blue:0.72 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.250 green:0.257 blue:0.333 alpha:1.0];
 }
 +(NSColor *)nativeTagColor {
-    return [NSColor colorWithCalibratedRed:0.78 green:0.86 blue:0.98 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.255 green:0.275 blue:0.459 alpha:1.0];
 }
 +(NSColor *)nativeLinkColor {
-    return [NSColor colorWithCalibratedRed:0.10 green:0.33 blue:0.70 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.000 green:0.659 blue:0.988 alpha:1.0];
 }
 
 @end

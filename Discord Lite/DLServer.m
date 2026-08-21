@@ -37,6 +37,14 @@
     if ([emojiData isKindOfClass:[NSArray class]]) {
         emojis = [emojiData copy];
     }
+    id stickerData = [d objectForKey:@"stickers"];
+    if ([stickerData isKindOfClass:[NSArray class]]) {
+        stickers = [stickerData copy];
+    }
+    id roleData = [d objectForKey:@"roles"];
+    if ([roleData isKindOfClass:[NSArray class]]) {
+        roles = [roleData copy];
+    }
     [self loadIconData];
     return self;
 }
@@ -75,6 +83,20 @@
 -(NSArray *)emojis {
     return emojis;
 }
+-(NSArray *)stickers {
+    return stickers;
+}
+-(NSArray *)roles {
+    return roles;
+}
+-(NSDictionary *)roleWithID:(NSString *)roleID {
+    NSEnumerator *enumerator = [roles objectEnumerator];
+    NSDictionary *role;
+    while (role = [enumerator nextObject]) {
+        if ([[[role objectForKey:@"id"] description] isEqualToString:[roleID description]]) return role;
+    }
+    return nil;
+}
 -(BOOL)hasUnreadMessages {
     return hasUnreadMessages;
 }
@@ -99,6 +121,12 @@
 }
 
 -(void)addMember:(DLServerMember *)m {
+    [members addObject:m];
+}
+
+-(void)replaceMember:(DLServerMember *)m {
+    DLServerMember *existing = [self memberWithUserID:[[m user] userID]];
+    if (existing) [members removeObjectIdenticalTo:existing];
     [members addObject:m];
 }
 
@@ -146,6 +174,18 @@
         [delegate iconDidUpdateWithData:[request responseData]];
     }
     [request release];
+}
+
+-(void)dealloc {
+    [serverID release];
+    [name release];
+    [iconID release];
+    [iconImageData release];
+    [members release];
+    [emojis release];
+    [stickers release];
+    [roles release];
+    [super dealloc];
 }
 
 @end

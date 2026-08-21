@@ -22,6 +22,13 @@
     serverID = [[d objectForKey:@"guild_id"] retain];
     topic = [[d objectForKey:@"topic"] retain];
     position = [[d objectForKey:@"position"] intValue];
+    if ([d objectForKey:@"member"] && ![[d objectForKey:@"member"] isKindOfClass:[NSNull class]]) {
+        joinedThread = YES;
+    }
+    NSDictionary *threadMetadata = [d objectForKey:@"thread_metadata"];
+    if ([threadMetadata isKindOfClass:[NSDictionary class]]) {
+        archivedThread = [[threadMetadata objectForKey:@"archived"] boolValue];
+    }
 }
 
 -(NSString *)name {
@@ -53,6 +60,12 @@
 -(NSArray *)children {
     return children;
 }
+-(BOOL)joinedThread {
+    return joinedThread;
+}
+-(BOOL)archivedThread {
+    return archivedThread;
+}
 
 -(void)setChildren:(NSArray *)inChildren {
     [children release];
@@ -63,6 +76,29 @@
     [serverID release];
     [inServerID retain];
     serverID = inServerID;
+}
+-(void)setJoinedThread:(BOOL)joined {
+    joinedThread = joined;
+}
+-(void)setArchivedThread:(BOOL)archived {
+    archivedThread = archived;
+}
+
+-(NSComparisonResult)compareThreadRecency:(DLServerChannel *)other {
+    if (archivedThread != [other archivedThread]) {
+        return archivedThread ? NSOrderedDescending : NSOrderedAscending;
+    }
+    NSString *myLastID = [[[self lastMessage] messageID] description];
+    NSString *otherLastID = [[[other lastMessage] messageID] description];
+    unsigned long long mine = myLastID ? [myLastID longLongValue] : [[self channelID] longLongValue];
+    unsigned long long theirs = otherLastID ? [otherLastID longLongValue] : [[other channelID] longLongValue];
+    if (mine > theirs) {
+        return NSOrderedAscending;
+    }
+    if (mine < theirs) {
+        return NSOrderedDescending;
+    }
+    return NSOrderedSame;
 }
 
 -(void)dealloc {

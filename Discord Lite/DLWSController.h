@@ -61,6 +61,8 @@ typedef enum {
 -(void)wsMessageWithID:(NSString *)messageID wasUpdatedWithData:(NSDictionary *)data;
 -(void)wsMessageWithID:(NSString *)messageID reactionEmoji:(NSDictionary *)emoji wasAdded:(BOOL)added byUserID:(NSString *)userID;
 -(void)wsMessageWithIDWasDeleted:(NSString *)messageID;
+-(void)wsDidReceiveThreads:(NSArray *)threads forServerWithID:(NSString *)serverID;
+-(void)wsDidDeleteThreadWithID:(NSString *)threadID forServerWithID:(NSString *)serverID;
 -(void)wsConnectionStateDidChange:(DLWSConnectionState)state;
 @end
 
@@ -91,6 +93,7 @@ typedef enum {
 -(void)updateWSForChannel:(DLChannel *)c inServer:(DLServer *)s;
 
 -(void)queryServer:(DLServer *)s forMembersContainingUsername:(NSString *)username;
+-(void)requestMembersForChannel:(DLChannel *)c inServer:(DLServer *)s from:(NSInteger)start to:(NSInteger)end;
 
 
 //For libcurl callback

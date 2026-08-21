@@ -32,10 +32,13 @@ typedef enum {
 -(void)logoutWasSuccessful;
 @end
 
-@interface DLMainWindowController : NSWindowController <DLControllerDelegate, DLChannelDelegate, DLServerDelegate, ServerItemDelegate, ChannelItemDelegate, DLUserDelegate, DMChannelItemDelegate, PendingAttachmentItemDelegate, DLUserTypingDelegate, TagSelectionItemDelegate, DLMessageEditorDelegate, ChatItemViewControllerDelegate, ChatScrollViewDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate, NSTableViewDataSource, NSTableViewDelegate, NSToolbarDelegate, AsyncHTTPRequestDelegate, NSPopoverDelegate> {
+@interface DLMainWindowController : NSWindowController <DLControllerDelegate, DLChannelDelegate, DLServerDelegate, ServerItemDelegate, ChannelItemDelegate, DLUserDelegate, DMChannelItemDelegate, PendingAttachmentItemDelegate, DLUserTypingDelegate, TagSelectionItemDelegate, DLMessageEditorDelegate, ChatItemViewControllerDelegate, ChatScrollViewDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate, NSTableViewDataSource, NSTableViewDelegate, NSToolbarDelegate, NSSplitViewDelegate, AsyncHTTPRequestDelegate, NSPopoverDelegate> {
     
     BOOL isLoadingViews;
     BOOL isLoadingMessages;
+    BOOL isLoadingNewerMessages;
+    BOOL searchHistoryWindowActive;
+    BOOL hasMoreNewerMessages;
     BOOL isTyping;
     BOOL madeMentionChange;
     
@@ -60,8 +63,89 @@ typedef enum {
     NSArray *serverItems;
     BOOL updatingServerTableSelection;
     NSToolbar *mainToolbar;
+    NSSplitView *mainSplitView;
+    NSView *channelPaneView;
+    NSView *chatPaneView;
     NSSearchField *messageSearchField;
-    NSTextField *connectionStatusField;
+    NSView *connectionStatusField;
+    NSButton *reloadButton;
+    NSButton *threadsButton;
+    NSButton *membersButton;
+    NSButton *pinsButton;
+    NSView_BGColor *memberListPane;
+    NSScrollView *memberListScrollView;
+    NSTableView *memberListTableView;
+    NSArray *memberListItems;
+    NSMutableSet *memberAvatarRequests;
+    BOOL memberListVisible;
+    NSInteger memberRequestedUpperBound;
+    BOOL memberRequestInFlight;
+    NSPopover *profilePopover;
+    NSViewController *profilePopoverController;
+    DLUser *profileUser;
+    DLServer *profileServer;
+    DLServerMember *profileMember;
+    NSPanel *profileDetailPanel;
+    NSButton *profileAvatarButton;
+    NSImageView *profileDetailAvatarView;
+    NSCache *profileAvatarCache;
+    NSMutableSet *profileAvatarRequests;
+    NSCache *profileBannerImageCache;
+    NSMutableSet *profileBannerImageRequests;
+    NSMutableDictionary *profileDataCache;
+    NSMutableSet *profileDataRequests;
+    NSView_BGColor *profileBannerView;
+    NSImageView *profileBannerImageView;
+    NSTextField *profileBioField;
+    NSTextField *profileMetadataField;
+    NSView *profileRoleContainer;
+    NSView *profileStatusBubble;
+    NSTextField *profileStatusField;
+    NSView_BGColor *profileDetailBannerView;
+    NSImageView *profileDetailBannerImageView;
+    NSTextField *profileDetailBioField;
+    NSTextField *profileDetailMetadataField;
+    NSTextField *profileDetailConnectionsField;
+    NSView *profileDetailRoleContainer;
+    NSView *profileDetailStatusBubble;
+    NSTextField *profileDetailStatusField;
+    NSString *profileBannerURL;
+    NSButton *myProfileButton;
+    NSView_BGColor *historyMessageBanner;
+    NSTextField *historyMessageBannerLabel;
+    NSButton *jumpToLatestButton;
+    NSView_BGColor *unreadMessageBanner;
+    NSTextField *unreadMessageBannerLabel;
+    NSButton *markMessagesReadButton;
+    NSInteger pendingNewMessageCount;
+    NSDate *pendingNewMessageStartDate;
+    NSString *firstUnreadMessageID;
+    NSView_BGColor *threadListPane;
+    NSScrollView *threadListScrollView;
+    NSTableView *threadListTableView;
+    NSArray *threadListItems;
+    NSTextField *threadListEmptyField;
+    NSView_BGColor *threadDetailPane;
+    NSTextField *threadDetailTitleField;
+    DLChannel *threadListBaseChannel;
+    BOOL threadListVisible;
+    BOOL threadDetailVisible;
+    NSView_BGColor *searchResultsPane;
+    NSTextField *searchResultsTitleField;
+    NSScrollView *searchResultsScrollView;
+    NSTableView *searchResultsTableView;
+    NSTextField *searchResultsCountField;
+    NSTextField *searchEmptyStateField;
+    NSButton *searchPreviousButton;
+    NSButton *searchNextButton;
+    NSTextField *searchPageField;
+    NSArray *messageSearchResults;
+    BOOL searchResultsPaneVisible;
+    BOOL pinsPaneActive;
+    NSInteger messageSearchOffset;
+    NSInteger messageSearchTotal;
+    NSString *pendingSearchAuthorName;
+    NSInteger pendingSearchAuthorOffset;
     DLWSConnectionState currentConnectionState;
     NSString *lastMessageSearchQuery;
     NSInteger lastMessageSearchIndex;
@@ -79,11 +163,17 @@ typedef enum {
     IBOutlet NSTextField *myDiscTextField;
     IBOutlet NSButton *attachButton;
     NSButton *emojiButton;
+    NSButton *stickerButton;
     NSPopover *emojiPopover;
     NSViewController *emojiPopoverController;
     NSSearchField *emojiPickerSearchField;
     NSScrollView *emojiPickerScrollView;
     NSArray *emojiPickerItems;
+    NSPopover *stickerPopover;
+    NSViewController *stickerPopoverController;
+    NSSearchField *stickerPickerSearchField;
+    NSScrollView *stickerPickerScrollView;
+    NSArray *stickerPickerItems;
     ChatItemViewController *reactionPickerChatView;
     
     
@@ -98,6 +188,7 @@ typedef enum {
     
     
     DLMessage *lastMessage;
+    DLMessage *firstMessage;
     DLMessage *messagePendingDeletion;
     DLMessageEditor *messageEditor;
     NSMutableArray *typingUsers;
@@ -112,6 +203,8 @@ typedef enum {
 - (IBAction)removeReferencedMessage:(id)sender;
 -(void)showEmojiMenu:(id)sender;
 -(void)insertCustomEmoji:(id)sender;
+-(void)showStickerMenu:(id)sender;
+-(void)sendSticker:(id)sender;
 
 -(void)setDelegate:(id<DLMainWindowDelegate>)inDelegate;
 @end

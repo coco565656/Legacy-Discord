@@ -83,6 +83,15 @@
 -(void)dealloc {
     [eventHandlerView setDelegate:nil];
     [eventHandlerView release];
+    if ([attachmentView isKindOfClass:[WebView class]]) {
+        WebView *videoView = (WebView *)attachmentView;
+        [videoView setFrameLoadDelegate:nil];
+        [videoView setResourceLoadDelegate:nil];
+        [videoView setPolicyDelegate:nil];
+        [videoView setUIDelegate:nil];
+        [[videoView mainFrame] stopLoading];
+        [videoView close];
+    }
     [attachmentView release];
     [representedObject setPreviewDelegate:nil];
     [representedObject release];

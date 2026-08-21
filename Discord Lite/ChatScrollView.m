@@ -8,9 +8,55 @@
 
 #import "ChatScrollView.h"
 
+extern NSString * const DLMessageActionBarDidShowNotification;
+extern NSString * const DLMessageActionBarDidHideNotification;
+
+@interface DLUnreadSeparatorView : NSView
+@end
+
+@implementation DLUnreadSeparatorView
+
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = [self bounds];
+    NSColor *red = [NSColor colorWithCalibratedRed:0.88 green:0.20 blue:0.22 alpha:1.0];
+    [red set];
+    NSRectFill(NSMakeRect(0.0, floor(NSMidY(bounds)), NSWidth(bounds) - 38.0, 1.0));
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont boldSystemFontOfSize:9.0], NSFontAttributeName,
+                                red, NSForegroundColorAttributeName, nil];
+    [@"NEW" drawAtPoint:NSMakePoint(MAX(2.0, NSWidth(bounds) - 34.0),
+                                    floor(NSMidY(bounds) - 6.0))
+          withAttributes:attributes];
+}
+
+@end
+
 @implementation ChatScrollView
 
 const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
+
+-(void)updateUnreadSeparatorPosition {
+    BOOL foundUnreadStart = NO;
+    if (unreadStartMessageID) {
+        NSEnumerator *enumerator = [content objectEnumerator];
+        ChatItemViewController *item;
+        while (item = [enumerator nextObject]) {
+            NSString *messageID = [[item representedObject] messageID];
+            if ([[messageID description] isEqualToString:unreadStartMessageID]) {
+                CGFloat separatorY = NSMaxY([[item view] frame]) - 9.0;
+                [unreadSeparatorView setFrame:NSMakeRect(0.0, separatorY,
+                                                          NSWidth([self.documentView bounds]), 18.0)];
+                [unreadSeparatorView setHidden:NO];
+                [self.documentView addSubview:unreadSeparatorView positioned:NSWindowAbove relativeTo:nil];
+                foundUnreadStart = YES;
+                break;
+            }
+        }
+    }
+    if (!foundUnreadStart) {
+        [unreadSeparatorView setHidden:YES];
+    }
+}
 
 -(BOOL)message:(DLMessage *)message canFollowMessageInGroup:(DLMessage *)olderMessage {
     if (!message || !olderMessage || [message referencedMessage] || [olderMessage referencedMessage]) {
@@ -57,9 +103,30 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
 }
 -(void)awakeFromNib {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenResize) name:NSWindowDidResizeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageActionBarDidShow:) name:DLMessageActionBarDidShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageActionBarDidHide:) name:DLMessageActionBarDidHideNotification object:nil];
     NSRect frame = [self.contentView frame];
     frame.size.height = 100;
     [self.documentView setFrame: frame];
+    unreadSeparatorView = [[DLUnreadSeparatorView alloc] initWithFrame:NSMakeRect(0.0, 0.0, NSWidth(frame), 18.0)];
+    [unreadSeparatorView setAutoresizingMask:NSViewWidthSizable];
+    [unreadSeparatorView setHidden:YES];
+    [self.documentView addSubview:unreadSeparatorView];
+}
+-(void)messageActionBarDidShow:(NSNotification *)notification {
+    ChatItemViewController *item = [notification object];
+    if (![content containsObject:item]) {
+        return;
+    }
+    if (visibleActionBarItem && visibleActionBarItem != item) {
+        [visibleActionBarItem hideMessageActionBar];
+    }
+    visibleActionBarItem = item;
+}
+-(void)messageActionBarDidHide:(NSNotification *)notification {
+    if (visibleActionBarItem == [notification object]) {
+        visibleActionBarItem = nil;
+    }
 }
 -(void)setDelegate:(id<ChatScrollViewDelegate>)inDelegate {
     delegate = inDelegate;
@@ -85,15 +152,20 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
         itemFrame.size.height = [item expectedHeight];
         itemFrame.origin.y = currentHeight;
         item.view.frame = itemFrame;
+        [item layoutForCurrentViewFrame];
         [item.view setNeedsDisplay:YES];
         currentHeight += [item expectedHeight];
     }
+    [self updateUnreadSeparatorPosition];
     [self.documentView setNeedsDisplay:YES];
 }
 -(void)setContent:(NSArray *)inContent {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(screenResize) object:nil];
+    visibleActionBarItem = nil;
     NSEnumerator *e = [content objectEnumerator];
     ChatItemViewController *item;
     while (item = [e nextObject]) {
+        [item stopAnimatedEmojiPlayback];
         [item.view removeFromSuperview];
     }
     [content release];
@@ -109,6 +181,7 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
         itemFrame.size.width = [self.documentView frame].size.width;
         itemFrame.origin.y = [self.documentView frame].size.height - height;
         item.view.frame = itemFrame;
+        [item layoutForCurrentViewFrame];
         [self.documentView addSubview:item.view];
         [item.view setNeedsDisplay:YES];
     }
@@ -118,9 +191,9 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     frame.size.height = height;
     [self.documentView setFrame: frame];
     [self.documentView setNeedsDisplay:YES];
-    [self performSelector:@selector(screenResize) withObject:nil afterDelay:0.5];
 }
 -(void)appendContent:(NSArray *)inContent {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(screenResize) object:nil];
     [content addObjectsFromArray:inContent];
     [self updateMessageGroups];
     CGFloat height = [self.documentView frame].size.height;
@@ -134,6 +207,7 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
         itemFrame.size.width = [self.documentView frame].size.width;
         itemFrame.origin.y = [self.documentView frame].size.height - height;
         item.view.frame = itemFrame;
+        [item layoutForCurrentViewFrame];
         [self.documentView addSubview:item.view];
         [item.view setNeedsDisplay:YES];
     }
@@ -145,9 +219,31 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     [self.documentView setFrame: frame];
     [self.documentView setNeedsDisplay:YES];
     [self screenResize];
-    [self performSelector:@selector(screenResize) withObject:nil afterDelay:0.5];
+}
+-(void)prependContent:(NSArray *)inContent preservingVisiblePosition:(BOOL)preservePosition {
+    if ([inContent count] == 0) {
+        return;
+    }
+    NSPoint oldOrigin = [[self contentView] bounds].origin;
+    CGFloat insertedHeight = 0.0;
+    NSEnumerator *enumerator = [inContent objectEnumerator];
+    ChatItemViewController *item;
+    while (item = [enumerator nextObject]) {
+        insertedHeight += [item expectedHeight];
+        [[self documentView] addSubview:[item view]];
+    }
+    NSIndexSet *indexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [inContent count])];
+    [content insertObjects:inContent atIndexes:indexes];
+    [self screenResize];
+    if (preservePosition) {
+        CGFloat maximumY = MAX(0.0, NSHeight([[self documentView] frame]) - NSHeight([[self contentView] bounds]));
+        oldOrigin.y = MIN(maximumY, oldOrigin.y + insertedHeight);
+        [[self contentView] scrollToPoint:oldOrigin];
+        [self reflectScrolledClipView:[self contentView]];
+    }
 }
 -(void)prependViewController:(ChatItemViewController *)vc {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(screenResize) object:nil];
     [content insertObject:vc atIndex:0];
     [self updateMessageGroups];
     CGFloat expectedHeight = [vc expectedHeight];
@@ -156,14 +252,18 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     itemFrame.size.width = [self.contentView frame].size.width;
     itemFrame.origin.y = 0;
     vc.view.frame = itemFrame;
+    [vc layoutForCurrentViewFrame];
     [vc.view setNeedsDisplay:YES];
     NSRect frame = [self.documentView frame];
     frame.size.height += expectedHeight;
     [self.documentView setFrame: frame];
     [self.documentView addSubview:vc.view];
-    [self performSelector:@selector(screenResize) withObject:nil afterDelay:0.5];
+    [self performSelector:@selector(screenResize) withObject:nil afterDelay:0.12];
 }
 -(void)removeViewController:(ChatItemViewController *)vc {
+    if (visibleActionBarItem == vc) {
+        visibleActionBarItem = nil;
+    }
     [vc.view removeFromSuperview];
     [content removeObject:vc];
     [self updateMessageGroups];
@@ -176,8 +276,22 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
         [item endEditingContent];
     }
 }
+-(void)setUnreadStartMessageID:(NSString *)messageID {
+    if (unreadStartMessageID != messageID) {
+        [unreadStartMessageID release];
+        unreadStartMessageID = [messageID copy];
+    }
+    [self updateUnreadSeparatorPosition];
+}
+-(void)clearUnreadSeparator {
+    [unreadStartMessageID release];
+    unreadStartMessageID = nil;
+    [unreadSeparatorView setHidden:YES];
+}
 -(void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [unreadStartMessageID release];
+    [unreadSeparatorView release];
     [super dealloc];
 }
 

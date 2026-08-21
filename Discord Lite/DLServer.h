@@ -27,6 +27,8 @@
     NSInteger mentionCount;
     NSMutableArray *members;
     NSArray *emojis;
+    NSArray *stickers;
+    NSArray *roles;
     id<DLServerDelegate> delegate;
     BOOL hasUnreadMessages;
 }
@@ -41,6 +43,9 @@
 -(NSInteger)mentionCount;
 -(NSArray *)members;
 -(NSArray *)emojis;
+-(NSArray *)stickers;
+-(NSArray *)roles;
+-(NSDictionary *)roleWithID:(NSString *)roleID;
 -(BOOL)hasUnreadMessages;
 
 -(void)setServerID:(NSString *)inId;
@@ -48,6 +53,7 @@
 -(void)setIconImageData:(NSData *)data;
 
 -(void)addMember:(DLServerMember *)m;
+-(void)replaceMember:(DLServerMember *)m;
 
 -(DLServerMember *)memberWithUserID:(NSString *)userID;
 

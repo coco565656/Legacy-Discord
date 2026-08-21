@@ -39,6 +39,7 @@ typedef enum {
     NSFileHandle *downloadingFile;
     int identifier;
     id <AsyncHTTPRequestDelegate> delegate;
+    id userInfo;
     BOOL cached;
     BOOL isFileDownload;
     struct curl_slist *rootHeader;
@@ -52,12 +53,14 @@ typedef enum {
 -(int)identifier;
 -(NSString *)userAgentString;
 -(NSString *)url;
+-(id)userInfo;
 -(NSFileHandle *)downloadingFile;
 
 -(void)setHeaders:(NSDictionary *)inHeaders;
 -(void)setUrl:(NSString *)inUrl;
 -(void)setIdentifier:(int)inIdentifier;
 -(void)setDelegate:(id <AsyncHTTPRequestDelegate>)inDelegate;
+-(void)setUserInfo:(id)inUserInfo;
 -(void)setCached:(BOOL)inCached;
 -(void)setDownloadingFile:(NSFileHandle *)inDownloadingFile;
 

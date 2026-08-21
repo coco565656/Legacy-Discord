@@ -237,8 +237,8 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
     NSMutableDictionary *data = [[NSMutableDictionary alloc] init];
     [data setObject:[s serverID] forKey:@"guild_id"];
     [data setObject:[NSNumber numberWithBool:YES] forKey:@"typing"];
-    [data setObject:[NSNumber numberWithBool:NO] forKey:@"activities"];
-    [data setObject:[NSNumber numberWithBool:NO] forKey:@"threads"];
+    [data setObject:[NSNumber numberWithBool:YES] forKey:@"activities"];
+    [data setObject:[NSNumber numberWithBool:YES] forKey:@"threads"];
     NSArray *channelInfo = [NSArray arrayWithObjects:[NSArray arrayWithObjects:[NSNumber numberWithInt:0], [NSNumber numberWithInt:99], nil], nil];
     NSMutableDictionary *channels = [[NSMutableDictionary alloc] init];
     [channels setObject:channelInfo forKey:[c channelID]];
@@ -254,13 +254,32 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
     NSMutableDictionary *data = [[NSMutableDictionary alloc] init];
     [data setObject:[NSArray arrayWithObject:[s serverID]] forKey:@"guild_id"];
     [data setObject:username forKey:@"query"];
-    [data setObject:[NSNumber numberWithInt:10] forKey:@"limit"];
+    [data setObject:[NSNumber numberWithInt:([username length] == 0 ? 100 : 10)] forKey:@"limit"];
     [data setObject:[NSNumber numberWithBool:YES] forKey:@"presences"];
     NSMutableDictionary *d = [[NSMutableDictionary alloc] init];
     [d setObject:data forKey:@kWSData];
     [d setObject:[NSNumber numberWithInt:OPCodeQueryServerMembers] forKey:@kWSOperation];
     NSData *str = [[CJSONSerializer serializer] serializeDictionary:d error:nil];
     [self sendWSTextData:str];
+}
+
+-(void)requestMembersForChannel:(DLChannel *)c inServer:(DLServer *)s from:(NSInteger)start to:(NSInteger)end {
+    if (!c || !s) return;
+    NSMutableDictionary *data = [NSMutableDictionary dictionary];
+    [data setObject:[s serverID] forKey:@"guild_id"];
+    [data setObject:[NSNumber numberWithBool:NO] forKey:@"typing"];
+    [data setObject:[NSNumber numberWithBool:YES] forKey:@"activities"];
+    [data setObject:[NSNumber numberWithBool:YES] forKey:@"threads"];
+    NSArray *range = [NSArray arrayWithObjects:[NSNumber numberWithInteger:start],
+                                               [NSNumber numberWithInteger:end], nil];
+    NSDictionary *channels = [NSDictionary dictionaryWithObject:[NSArray arrayWithObject:range]
+                                                           forKey:[c channelID]];
+    [data setObject:channels forKey:@"channels"];
+    NSDictionary *packet = [NSDictionary dictionaryWithObjectsAndKeys:
+                            [NSNumber numberWithInt:OPCodeServerMemberOp], @kWSOperation,
+                            data, @kWSData, nil];
+    NSData *serialized = [[CJSONSerializer serializer] serializeDictionary:packet error:nil];
+    [self sendWSTextData:serialized];
 }
 
 #pragma mark Delegated Functions
@@ -307,6 +326,34 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
                 NSArray *memberData = [wsData objectForKey:@"members"];
                 NSString *serverID = [wsData objectForKey:@"guild_id"];
                 [delegate wsDidReceiveMemberData:memberData forServerWithID:serverID];
+            } else if ([type isEqualToString:@"GUILD_MEMBER_LIST_UPDATE"]) {
+                NSDictionary *wsData = [res objectForKey:@kWSData];
+                NSMutableArray *memberData = [NSMutableArray array];
+                NSEnumerator *operationEnumerator = [[wsData objectForKey:@"ops"] objectEnumerator];
+                NSDictionary *operation;
+                while (operation = [operationEnumerator nextObject]) {
+                    NSArray *items = [operation objectForKey:@"items"];
+                    if (![items isKindOfClass:[NSArray class]] && [operation objectForKey:@"item"]) {
+                        items = [NSArray arrayWithObject:[operation objectForKey:@"item"]];
+                    }
+                    NSEnumerator *itemEnumerator = [items objectEnumerator];
+                    NSDictionary *item;
+                    while (item = [itemEnumerator nextObject]) {
+                        NSDictionary *member = [item objectForKey:@"member"];
+                        if ([member isKindOfClass:[NSDictionary class]]) {
+                            NSDictionary *presence = [item objectForKey:@"presence"];
+                            if ([presence isKindOfClass:[NSDictionary class]]) {
+                                NSMutableDictionary *memberWithPresence = [NSMutableDictionary dictionaryWithDictionary:member];
+                                [memberWithPresence setObject:presence forKey:@"presence"];
+                                [memberData addObject:memberWithPresence];
+                            } else {
+                                [memberData addObject:member];
+                            }
+                        }
+                    }
+                }
+                [delegate wsDidReceiveMemberData:memberData
+                                  forServerWithID:[wsData objectForKey:@"guild_id"]];
             } else if ([type isEqualToString:@"MESSAGE_UPDATE"]) {
                 NSDictionary *wsData = [res objectForKey:@kWSData];
                 NSString *messageID = [wsData objectForKey:@"id"];
@@ -317,6 +364,19 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
                             reactionEmoji:[wsData objectForKey:@"emoji"]
                                   wasAdded:[type isEqualToString:@"MESSAGE_REACTION_ADD"]
                                   byUserID:[wsData objectForKey:@"user_id"]];
+            } else if ([type isEqualToString:@"THREAD_CREATE"] || [type isEqualToString:@"THREAD_UPDATE"]) {
+                NSDictionary *wsData = [res objectForKey:@kWSData];
+                [delegate wsDidReceiveThreads:[NSArray arrayWithObject:wsData]
+                              forServerWithID:[wsData objectForKey:@"guild_id"]];
+            } else if ([type isEqualToString:@"THREAD_LIST_SYNC"]) {
+                NSDictionary *wsData = [res objectForKey:@kWSData];
+                NSArray *threads = [wsData objectForKey:@"threads"];
+                [delegate wsDidReceiveThreads:threads ? threads : [NSArray array]
+                              forServerWithID:[wsData objectForKey:@"guild_id"]];
+            } else if ([type isEqualToString:@"THREAD_DELETE"]) {
+                NSDictionary *wsData = [res objectForKey:@kWSData];
+                [delegate wsDidDeleteThreadWithID:[wsData objectForKey:@"id"]
+                                  forServerWithID:[wsData objectForKey:@"guild_id"]];
             } else if ([type isEqualToString:@"RESUMED"]) {
                 didResume = YES;
                 [self notifyConnectionState:DLWSConnectionStateConnected];

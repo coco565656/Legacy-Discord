@@ -12,13 +12,16 @@
 @interface DLServerMember : NSObject {
     DLUser *user;
     NSArray *roles;
+    NSDictionary *presence;
 }
 
 -(id)initWithDict:(NSDictionary *)d;
 
 -(DLUser *)user;
 -(NSArray *)roles;
+-(NSDictionary *)presence;
 
 -(void)setUser:(DLUser *)u;
+-(NSComparisonResult)compareDisplayName:(DLServerMember *)other;
 
 @end

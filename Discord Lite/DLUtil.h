@@ -29,11 +29,13 @@
 +(NSString *)caBundlePath;
 +(NSString *)URLPathEncodedString:(NSString *)string;
 
-// AppKit-native appearance shared by the legacy-compatible UI.
+// Discord-inspired appearance shared by the legacy-compatible AppKit UI.
 +(NSColor *)nativeServerRailColor;
 +(NSColor *)nativeSidebarColor;
 +(NSColor *)nativeContentColor;
 +(NSColor *)nativeChromeColor;
++(NSColor *)nativeInputColor;
++(NSColor *)nativeBorderColor;
 +(NSColor *)nativeHeaderTopColor;
 +(NSColor *)nativeHeaderBottomColor;
 +(NSColor *)nativePrimaryTextColor;

@@ -117,6 +117,9 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
 -(NSString *)url {
     return url;
 }
+-(id)userInfo {
+    return userInfo;
+}
 -(NSFileHandle *)downloadingFile {
     return downloadingFile;
 }
@@ -130,6 +133,12 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
 
 -(void)setDelegate:(id <AsyncHTTPRequestDelegate>)inDelegate {
     delegate = inDelegate;
+}
+-(void)setUserInfo:(id)inUserInfo {
+    if (userInfo != inUserInfo) {
+        [userInfo release];
+        userInfo = [inUserInfo retain];
+    }
 }
 -(void)setIdentifier:(int)inIdentifier {
     identifier = inIdentifier;
@@ -188,6 +197,7 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
 -(void)dealloc {
     [url release];
     [responseData release];
+    [userInfo release];
     [super dealloc];
 }
 

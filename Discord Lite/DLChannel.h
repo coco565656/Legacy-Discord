@@ -15,7 +15,14 @@ typedef enum {
     ChannelTypeGroup = 3,
     ChannelTypeVoice = 2,
     ChannelTypeHeader = 4,
-    ChannelTypeAnnouncements = 5
+    ChannelTypeAnnouncements = 5,
+    ChannelTypeAnnouncementThread = 10,
+    ChannelTypePublicThread = 11,
+    ChannelTypePrivateThread = 12,
+    ChannelTypeStageVoice = 13,
+    ChannelTypeDirectory = 14,
+    ChannelTypeForum = 15,
+    ChannelTypeMedia = 16
 } ChannelType;
 
 @class DLChannel;
@@ -54,6 +61,7 @@ typedef enum {
 -(NSInteger)mentionCount;
 -(NSString *)serverID;
 -(BOOL)hasUnreadMessages;
+-(BOOL)isThread;
 -(DLMessage *)lastMessage;
 
 -(DLUser *)recipientWithUserID:(NSString *)userID;

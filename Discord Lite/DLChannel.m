@@ -74,6 +74,11 @@
 -(BOOL)hasUnreadMessages {
     return hasUnreadMessages;
 }
+-(BOOL)isThread {
+    return type == ChannelTypeAnnouncementThread ||
+           type == ChannelTypePublicThread ||
+           type == ChannelTypePrivateThread;
+}
 -(DLMessage *)lastMessage {
     return lastMessage;
 }
