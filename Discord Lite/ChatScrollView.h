@@ -34,6 +34,7 @@
 -(void)prependViewController:(ChatItemViewController *)vc;
 -(void)removeViewController:(ChatItemViewController *)vc;
 -(void)screenResize;
+-(void)refreshVisibleMessageHeaderLayouts;
 -(void)endAllChatContentEditing;
 -(void)setUnreadStartMessageID:(NSString *)messageID;
 -(void)clearUnreadSeparator;

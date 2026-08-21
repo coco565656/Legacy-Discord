@@ -317,6 +317,17 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     [self updateUnreadSeparatorPosition];
     [self.documentView setNeedsDisplay:YES];
 }
+-(void)refreshVisibleMessageHeaderLayouts {
+    NSRect visibleRect = [[self documentView] convertRect:[[self contentView] bounds]
+                                                 fromView:[self contentView]];
+    NSEnumerator *enumerator = [content objectEnumerator];
+    ChatItemViewController *item;
+    while (item = [enumerator nextObject]) {
+        if (NSIntersectsRect(visibleRect, [[item view] frame])) {
+            [item refreshMessageHeaderLayout];
+        }
+    }
+}
 -(void)setContent:(NSArray *)inContent {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(screenResize) object:nil];
     [self hideSharedMessageActionBar];

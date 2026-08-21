@@ -111,6 +111,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [usernameTextField setFont:[NSFont boldSystemFontOfSize:13 * displayScale]];
     [timestampTextField setTextColor:[DLUtil nativeSecondaryTextColor]];
     [timestampTextField setFont:[NSFont systemFontOfSize:11 * displayScale]];
+    [timestampTextField setAlignment:NSLeftTextAlignment];
     [editedInfoLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
     [editDismissInfoLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
     [referencedMessageTextField setTextColor:[DLUtil nativePrimaryTextColor]];
@@ -197,6 +198,35 @@ const NSInteger ATTACHMENT_SPACING = 15;
 -(CGFloat)headerSpacing {
     CGFloat scale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
     return compactDisplay ? MAX(3.0, round(4.0 * scale)) : MAX(46.0, round(50.0 * scale));
+}
+
+-(void)layoutMessageHeaderFields {
+    if (!usernameTextField || !timestampTextField || compactDisplay) {
+        return;
+    }
+    CGFloat left = NSMinX([usernameTextField frame]);
+    CGFloat availableWidth = MAX(0.0, NSWidth([insetView bounds]) - left - 12.0);
+    NSDictionary *usernameAttributes = [NSDictionary dictionaryWithObject:[usernameTextField font]
+                                                                    forKey:NSFontAttributeName];
+    NSDictionary *timestampAttributes = [NSDictionary dictionaryWithObject:[timestampTextField font]
+                                                                     forKey:NSFontAttributeName];
+    CGFloat usernameWidth = ceil([[usernameTextField stringValue] sizeWithAttributes:usernameAttributes].width) + 5.0;
+    CGFloat timestampWidth = ceil([[timestampTextField stringValue] sizeWithAttributes:timestampAttributes].width) + 5.0;
+    timestampWidth = MIN(timestampWidth, MAX(0.0, availableWidth * 0.48));
+    usernameWidth = MIN(usernameWidth, MAX(0.0, availableWidth - timestampWidth - 5.0));
+
+    NSRect usernameFrame = [usernameTextField frame];
+    usernameFrame.size.width = usernameWidth;
+    [usernameTextField setFrame:usernameFrame];
+
+    NSRect timestampFrame = [timestampTextField frame];
+    timestampFrame.origin.x = NSMaxX(usernameFrame) + 5.0;
+    timestampFrame.size.width = timestampWidth;
+    [timestampTextField setFrame:timestampFrame];
+}
+
+-(void)refreshMessageHeaderLayout {
+    [self layoutMessageHeaderFields];
 }
 
 -(CGFloat)contentBottomPadding {
@@ -994,6 +1024,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     actionFrame.origin.x = MAX(4.0, NSWidth([insetView bounds]) - actionFrame.size.width - 8.0);
     actionFrame.origin.y = MAX(0.0, NSHeight([insetView bounds]) - actionFrame.size.height);
     [messageActionBar setFrame:actionFrame];
+    [self layoutMessageHeaderFields];
     [self syncAvatarProfileButton];
     if (viewHasLoaded) {
         [self layoutDynamicMessageViews];
@@ -1112,6 +1143,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [formatter setDateFormat:dateFormat];
     NSString *timestamp = [formatter stringFromDate:[representedObject timestamp]];
     [timestampTextField setStringValue:[NSString stringWithFormat:@"%@ %@", dateUserString, timestamp]];
+    [self layoutMessageHeaderFields];
     
     [components release];
     

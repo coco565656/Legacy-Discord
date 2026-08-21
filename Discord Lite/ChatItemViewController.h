@@ -68,6 +68,7 @@
 -(DLMessage *)representedObject;
 -(CGFloat)expectedHeight;
 -(void)layoutForCurrentViewFrame;
+-(void)refreshMessageHeaderLayout;
 
 -(void)setDelegate:(id<ChatItemViewControllerDelegate>)inDelegate;
 -(void)setRepresentedObject:(DLMessage *)obj;

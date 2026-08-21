@@ -2431,6 +2431,15 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     return MIN(360.0, NSWidth([splitView bounds]) - 320.0);
 }
 
+-(void)splitViewDidResizeSubviews:(NSNotification *)notification {
+    if ([notification object] != mainSplitView) {
+        return;
+    }
+    [chatScrollView refreshVisibleMessageHeaderLayouts];
+    [NSObject cancelPreviousPerformRequestsWithTarget:chatScrollView selector:@selector(screenResize) object:nil];
+    [chatScrollView performSelector:@selector(screenResize) withObject:nil afterDelay:0.05];
+}
+
 -(void)messageDisplayScaleDidChange:(NSNotification *)notification {
     if ([[DLController sharedInstance] selectedChannel]) {
         [self reloadSelectedChannel:nil];
