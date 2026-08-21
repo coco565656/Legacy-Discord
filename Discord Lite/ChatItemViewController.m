@@ -1128,21 +1128,24 @@ const NSInteger ATTACHMENT_SPACING = 15;
     NSDateComponents *components = [[NSDateComponents alloc] init];
     [components setDay:-1];
     NSDate *yesterday = [cal dateByAddingComponents:components toDate:today options:0];
-    NSString *dateFormat = @"h:mm a";
-    NSString *dateUserString = @"Today at";
+    NSString *dateFormat = @"H:mm";
+    NSString *dateUserString = @"";
     if ([[representedObject timestamp] isGreaterThan:today]) {
-        dateUserString = @"Today at";
+        dateUserString = @"";
     } else if ([[representedObject timestamp] isGreaterThan:yesterday]) {
-        dateUserString = @"Yesterday at";
+        dateUserString = @"Yesterday";
     } else {
         dateUserString = @"";
-        dateFormat = @"M/dd/yyyy";
+        dateFormat = @"M/dd/yyyy H:mm";
     }
     NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
     [formatter setFormatterBehavior:NSDateFormatterBehavior10_4];
     [formatter setDateFormat:dateFormat];
     NSString *timestamp = [formatter stringFromDate:[representedObject timestamp]];
-    [timestampTextField setStringValue:[NSString stringWithFormat:@"%@ %@", dateUserString, timestamp]];
+    NSString *displayTimestamp = [dateUserString length]
+        ? [NSString stringWithFormat:@"%@ %@", dateUserString, timestamp]
+        : timestamp;
+    [timestampTextField setStringValue:displayTimestamp];
     [self layoutMessageHeaderFields];
     
     [components release];
