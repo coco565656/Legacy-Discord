@@ -52,7 +52,12 @@
     } else {
         scaledURL = [scaledURL stringByAppendingString:@"&"];
     }
-    scaledURL = [scaledURL stringByAppendingString:[NSString stringWithFormat:@"width=%ld&height=%ld", (NSInteger)[self scaledWidth], (NSInteger)[self scaledHeight]]];
+    // The media proxy now answers resized requests with WebP, which Snow
+    // Leopard cannot decode (the preview stayed blank). Ask for a format
+    // NSImage reads: JPEG for photos, PNG otherwise.
+    NSString *extension = [[[filename pathExtension] lowercaseString] length] ? [[filename pathExtension] lowercaseString] : @"";
+    NSString *format = ([extension isEqualToString:@"jpg"] || [extension isEqualToString:@"jpeg"]) ? @"jpeg" : @"png";
+    scaledURL = [scaledURL stringByAppendingString:[NSString stringWithFormat:@"width=%ld&height=%ld&format=%@", (NSInteger)[self scaledWidth], (NSInteger)[self scaledHeight], format]];
     [req setUrl:scaledURL];
     [req setCached:NO];
     [req setIdentifier:AttachmentRequestPreview];

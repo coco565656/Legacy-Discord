@@ -56,6 +56,36 @@ static void DLSetSplitHoldingPriorityIfSupported(NSSplitView *splitView, float p
 -(void)openUserSettings:(id)sender;
 @end
 
+// Header icons for threads and forums, matching the channel list glyphs.
+static NSImage *DLHeaderChannelIcon(BOOL forum) {
+    NSImage *image = [[[NSImage alloc] initWithSize:NSMakeSize(24.0, 24.0)] autorelease];
+    [image lockFocus];
+    [[DLUtil nativeSecondaryTextColor] set];
+    if (forum) {
+        NSBezierPath *back = [NSBezierPath bezierPathWithRoundedRect:NSMakeRect(2.0, 10.0, 13.0, 10.0) xRadius:3.0 yRadius:3.0];
+        [back setLineWidth:2.0];
+        [back stroke];
+        [[DLUtil nativeContentColor] set];
+        [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(6.5, 2.5, 16.0, 13.0) xRadius:4.0 yRadius:4.0] fill];
+        [[DLUtil nativeSecondaryTextColor] set];
+        [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(8.0, 4.0, 13.0, 10.0) xRadius:3.0 yRadius:3.0] fill];
+    } else {
+        NSBezierPath *path = [NSBezierPath bezierPath];
+        [path moveToPoint:NSMakePoint(4.0, 18.0)];
+        [path lineToPoint:NSMakePoint(20.0, 18.0)];
+        [path lineToPoint:NSMakePoint(20.0, 12.0)];
+        [path moveToPoint:NSMakePoint(4.0, 6.0)];
+        [path lineToPoint:NSMakePoint(15.0, 6.0)];
+        [path lineToPoint:NSMakePoint(15.0, 12.0)];
+        [path setLineWidth:2.2];
+        [path setLineCapStyle:NSRoundLineCapStyle];
+        [path setLineJoinStyle:NSRoundLineJoinStyle];
+        [path stroke];
+    }
+    [image unlockFocus];
+    return image;
+}
+
 @implementation DLMainWindowController
 
 const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
@@ -406,8 +436,17 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 }
 
 -(void)threadController:(DLThreadController *)controller restoreBaseChannel:(DLChannel *)channel {
-    [[DLController sharedInstance] setSelectedChannel:channel];
-    [DLTwemojiRenderer setText:[channel name] forLabel:chatHeaderLabel];
+    // Closing the thread list shows the channel it was opened from again,
+    // unless that channel is what the chat already shows.
+    if (![[[DLController sharedInstance] selectedChannel] isEqual:channel]) [self selectChannel:channel];
+}
+
+-(void)mainHeaderControllerDidRequestThreadList:(DLMainHeaderController *)controller {
+    if ([threadController isVisible]) {
+        [threadController hideThreadBrowser];
+    } else {
+        [self showThreadList:nil];
+    }
 }
 
 -(void)messageSearchControllerWillShow:(DLMessageSearchController *)controller {
@@ -669,9 +708,13 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [pinsController deactivate];
     [pinsController setEnabled:(channel != nil && [channel type] != ChannelTypeForum && [channel type] != ChannelTypeMedia)];
     [messagePresentationController prepareForChannelChange];
+    BOOL serverTextChannel = [channel isKindOfClass:[DLServerChannel class]] &&
+        ([channel type] == ChannelTypeStandard || [channel type] == ChannelTypeAnnouncements || [channel isThread]);
+    [mainHeaderController setThreadsButtonVisible:serverTextChannel];
     if ([channel type] == ChannelTypeForum || [channel type] == ChannelTypeMedia) {
         [[DLController sharedInstance] setSelectedChannel:channel];
-        [DLTwemojiRenderer setText:[channel name] forLabel:chatHeaderLabel];
+        [mainHeaderController setChannelTitle:[channel name] topic:nil];
+        [chatHeaderImage setImage:DLHeaderChannelIcon(YES)];
         [messageComposerController setEnabledForChannel:nil];
         [messageComposerController reset];
         [self showThreadList:nil];
@@ -681,11 +724,19 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [chatScrollView registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
     [messageComposerController reset];
     NSString *topic = [channel respondsToSelector:@selector(topic)] ? [(DLServerChannel *)channel topic] : nil;
-    [mainHeaderController setChannelTitle:([channel name] ? [channel name] : @"Direct Message")
+    NSString *title = [channel name] ? [channel name] : @"Direct Message";
+    if ([channel isThread]) {
+        // Official breadcrumb: "parent › thread" (forum › post).
+        DLChannel *parent = [[DLController sharedInstance] loadedChannelWithID:[(DLServerChannel *)channel parentID]];
+        if ([parent name]) title = [NSString stringWithFormat:@"%@ \u203A %@", [parent name], title];
+        topic = nil;
+    }
+    [mainHeaderController setChannelTitle:title
                                     topic:([topic isKindOfClass:[NSString class]] ? topic : nil)];
     NSData *headerImageData = ([channel type] == ChannelTypeDM || [channel type] == ChannelTypeGroup)
         ? [channel imageData] : [channel subImageData];
-    [chatHeaderImage setImage:[[[NSImage alloc] initWithData:headerImageData] autorelease]];
+    [chatHeaderImage setImage:([channel isThread] ? DLHeaderChannelIcon(NO)
+                                                    : [[[NSImage alloc] initWithData:headerImageData] autorelease])];
     [messagePresentationController loadInitialMessagesForChannel:channel];
 }
 

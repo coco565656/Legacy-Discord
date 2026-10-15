@@ -222,6 +222,23 @@
     [path stroke];
 }
 
+// Official forum icon: two overlapping speech bubbles.
+-(void)drawForumIconInRect:(NSRect)rect color:(NSColor *)color flipped:(BOOL)flipped {
+    [color set];
+    CGFloat side = MIN(NSWidth(rect), NSHeight(rect));
+    NSRect icon = NSMakeRect(NSMidX(rect) - side / 2.0, NSMidY(rect) - side / 2.0, side, side);
+    CGFloat unit = side / 18.0;
+    NSRect back = NSMakeRect(NSMinX(icon) + 2.0 * unit, NSMinY(icon) + (flipped ? 3.0 : 7.0) * unit, 10.0 * unit, 8.0 * unit);
+    NSRect front = NSMakeRect(NSMinX(icon) + 6.0 * unit, NSMinY(icon) + (flipped ? 7.0 : 3.0) * unit, 10.0 * unit, 8.0 * unit);
+    NSBezierPath *backPath = [NSBezierPath bezierPathWithRoundedRect:back xRadius:2.5 * unit yRadius:2.5 * unit];
+    [backPath setLineWidth:1.6];
+    [backPath stroke];
+    [[DLUtil nativeSidebarColor] set];
+    [[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(front, -1.2, -1.2) xRadius:3.0 * unit yRadius:3.0 * unit] fill];
+    [color set];
+    [[NSBezierPath bezierPathWithRoundedRect:front xRadius:2.5 * unit yRadius:2.5 * unit] fill];
+}
+
 -(void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
     if (!representedChannel) return;
     BOOL isCategory = ([representedChannel type] == ChannelTypeHeader);
@@ -335,6 +352,8 @@
         [self drawVoiceIconInRect:iconRect color:iconColor];
     } else if ([representedChannel isThread]) {
         [self drawThreadIconInRect:iconRect color:iconColor];
+    } else if ([representedChannel type] == ChannelTypeForum || [representedChannel type] == ChannelTypeMedia) {
+        [self drawForumIconInRect:iconRect color:iconColor flipped:[controlView isFlipped]];
     } else {
         [self drawHashIconInRect:iconRect color:iconColor];
     }

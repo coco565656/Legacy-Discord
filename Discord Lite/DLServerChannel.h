@@ -17,6 +17,11 @@
     NSArray *children;
     BOOL joinedThread;
     BOOL archivedThread;
+    NSInteger messageCount;
+    NSString *ownerID;
+    NSArray *appliedTagIDs;
+    NSArray *availableTags;
+    NSDictionary *starterSummary;
 }
 
 -(id)initWithDict:(NSDictionary *)d;
@@ -32,6 +37,17 @@
 -(NSArray *)children;
 -(BOOL)joinedThread;
 -(BOOL)archivedThread;
+// Thread/forum post details (message_count, owner_id, applied_tags).
+-(NSInteger)messageCount;
+-(NSString *)ownerID;
+-(NSArray *)appliedTagIDs;
+// A forum's tags: [{id, name, emoji_name, emoji_id}].
+-(NSArray *)availableTags;
+// A forum post's opening message: {author, text, imageURL}, once loaded.
+-(NSDictionary *)starterSummary;
+-(void)setStarterSummary:(NSDictionary *)summary;
+// When the last message was sent (from its snowflake), else creation time.
+-(NSDate *)lastActivityDate;
 
 - (NSComparisonResult)compare:(DLServerChannel *)o;
 

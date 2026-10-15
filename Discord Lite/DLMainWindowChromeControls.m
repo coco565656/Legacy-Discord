@@ -68,6 +68,41 @@
 }
 @end
 
+@implementation DLThreadsButton
+-(void)drawRect:(NSRect)dirtyRect {
+    [NSGraphicsContext saveGraphicsState];
+    if ([self isFlipped]) {
+        NSAffineTransform *transform = [NSAffineTransform transform];
+        [transform translateXBy:0.0 yBy:NSHeight([self bounds])];
+        [transform scaleXBy:1.0 yBy:-1.0];
+        [transform concat];
+    }
+    NSColor *color = [self isEnabled] ? [DLUtil nativePrimaryTextColor] : [DLUtil nativeSecondaryTextColor];
+    [color setStroke];
+    CGFloat cx = NSMidX([self bounds]) - 2.0;
+    CGFloat cy = NSMidY([self bounds]) + 1.0;
+    NSBezierPath *hash = [NSBezierPath bezierPath];
+    [hash moveToPoint:NSMakePoint(cx - 2.5, cy + 7.0)];
+    [hash lineToPoint:NSMakePoint(cx - 4.5, cy - 7.0)];
+    [hash moveToPoint:NSMakePoint(cx + 3.5, cy + 7.0)];
+    [hash lineToPoint:NSMakePoint(cx + 1.5, cy - 7.0)];
+    [hash moveToPoint:NSMakePoint(cx - 7.0, cy + 3.0)];
+    [hash lineToPoint:NSMakePoint(cx + 6.0, cy + 3.0)];
+    [hash moveToPoint:NSMakePoint(cx - 8.0, cy - 3.0)];
+    [hash lineToPoint:NSMakePoint(cx + 3.0, cy - 3.0)];
+    [hash setLineWidth:1.6];
+    [hash setLineCapStyle:NSRoundLineCapStyle];
+    [hash stroke];
+    // Speech bubble over the lower right of the hash.
+    NSRect bubble = NSMakeRect(cx + 2.0, cy - 9.0, 10.0, 8.0);
+    [[DLUtil nativeContentColor] setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(bubble, -1.5, -1.5) xRadius:4.0 yRadius:4.0] fill];
+    [color setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:bubble xRadius:3.0 yRadius:3.0] fill];
+    [NSGraphicsContext restoreGraphicsState];
+}
+@end
+
 @implementation DLPinsButton
 -(void)drawRect:(NSRect)dirtyRect {
     [NSGraphicsContext saveGraphicsState];

@@ -15,6 +15,10 @@
 @interface DLMemberButton : NSButton
 @end
 
+// Official "Threads" header icon: a hash mark with a speech bubble.
+@interface DLThreadsButton : NSButton
+@end
+
 @interface DLPinsButton : NSButton
 @end
 

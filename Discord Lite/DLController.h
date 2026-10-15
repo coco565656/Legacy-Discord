@@ -22,6 +22,8 @@
 #define DLServerMembersDidUpdateNotification @"DLServerMembersDidUpdateNotification"
 // Posted on the main thread when server/channel mute settings change.
 #define DLNotificationSettingsDidChangeNotification @"DLNotificationSettingsDidChangeNotification"
+// Posted (object: the thread) when a forum post's opening message loaded.
+#define DLThreadStarterDidLoadNotification @"DLThreadStarterDidLoadNotification"
 
 #define kDefaultsToken "token"
 
@@ -48,7 +50,8 @@ typedef enum {
     RequestIDUserNoteLoad = 19,
     RequestIDUserNoteSave = 20,
     RequestIDMyGuildMember = 21,
-    RequestIDNotificationSettings = 22
+    RequestIDNotificationSettings = 22,
+    RequestIDForumStarter = 23
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -94,6 +97,7 @@ typedef enum {
     NSMutableDictionary *friendPresences;
     // user_guild_settings entries keyed by guild ID ("@me" for DMs).
     NSMutableDictionary *guildNotificationSettings;
+    NSMutableSet *pendingStarterRequests;
     id <DLLoginDelegate> loginDelegate;
     NSString *captchaKey;
     DLServer *selectedServer;
@@ -178,6 +182,8 @@ typedef enum {
 -(void)loadNoteForUser:(DLUser *)user;
 -(void)saveNote:(NSString *)note forUser:(DLUser *)user;
 -(void)loadPinsForChannel:(DLChannel *)channel;
+// Fetches a forum post's opening message (same ID as the post) once.
+-(void)loadStarterMessageForThread:(DLServerChannel *)thread;
 
 
 -(DLServer *)myServerItem;

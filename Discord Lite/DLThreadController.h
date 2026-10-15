@@ -10,12 +10,16 @@
 @class DLChannel;
 @class ChatScrollView;
 @class NSView_BGColor;
+@class DLContextTableView;
 
 @protocol DLThreadControllerDelegate <NSObject>
 -(void)threadController:(DLThreadController *)controller selectChannel:(DLChannel *)channel;
 -(void)threadController:(DLThreadController *)controller restoreBaseChannel:(DLChannel *)channel;
 @end
 
+// The official forum post list (a forum or media channel's main view) and the
+// thread list of a text channel. Both show Discord-style cards; opening one
+// shows the post or thread in the regular full-width chat.
 @interface DLThreadController : NSObject <NSTableViewDataSource, NSTableViewDelegate> {
     id<DLThreadControllerDelegate> delegate;
     NSView *hostView;
@@ -23,14 +27,15 @@
     NSView *composerView;
     NSView_BGColor *listPane;
     NSScrollView *listScrollView;
-    NSTableView *listTableView;
+    DLContextTableView *listTableView;
+    NSSearchField *searchField;
+    NSButton *closeButton;
+    NSTextField *titleField;
+    NSArray *allItems;
     NSArray *items;
     NSTextField *emptyField;
-    NSView_BGColor *detailPane;
-    NSTextField *detailTitleField;
     DLChannel *baseChannel;
     BOOL visible;
-    BOOL detailVisible;
 }
 
 -(id)initWithHostView:(NSView *)hostView

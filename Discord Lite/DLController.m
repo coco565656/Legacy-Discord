@@ -426,6 +426,44 @@ static DLController* sharedObject = nil;
     [req start];
 }
 
+-(void)loadStarterMessageForThread:(DLServerChannel *)thread {
+    if (![thread isThread] || [thread starterSummary] || ![[thread channelID] length]) return;
+    if (!pendingStarterRequests) pendingStarterRequests = [[NSMutableSet alloc] init];
+    if ([pendingStarterRequests containsObject:[thread channelID]]) return;
+    [pendingStarterRequests addObject:[thread channelID]];
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDForumStarter];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:thread forKey:@"thread"]];
+    // GET /messages/{id} is bot-only; "around" with limit 1 returns the same
+    // opening message to a user account.
+    [req setUrl:[@API_ROOT stringByAppendingFormat:@"/channels/%@/messages?around=%@&limit=1", [thread channelID], [thread channelID]]];
+    [req start];
+}
+
+-(void)handleForumStarterResponse:(AsyncHTTPRequest *)req {
+    DLServerChannel *thread = [[req userInfo] objectForKey:@"thread"];
+    NSMutableDictionary *summary = [NSMutableDictionary dictionary];
+    if ([req result] == HTTPResultOK) {
+        id response = [[CJSONDeserializer deserializer] deserialize:[req responseData] error:nil];
+        if ([response isKindOfClass:[NSArray class]]) response = [response count] ? [response objectAtIndex:0] : nil;
+        if ([response isKindOfClass:[NSDictionary class]] &&
+            [[[response objectForKey:@"id"] description] isEqualToString:[thread channelID]]) {
+            DLMessage *message = [[[DLMessage alloc] initWithDict:response] autorelease];
+            NSString *author = [[message author] globalName];
+            if (author) [summary setObject:author forKey:@"author"];
+            NSString *text = [[message content] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            text = [[text componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]] componentsJoinedByString:@" "];
+            if (![text length] && [[message attachments] count]) text = @"Sent an attachment";
+            if (text) [summary setObject:text forKey:@"text"];
+        }
+    }
+    // An empty summary still marks the post as fetched (deleted starter).
+    [thread setStarterSummary:summary];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLThreadStarterDidLoadNotification object:thread];
+}
+
 -(void)loadPinsForChannel:(DLChannel *)channel {
     if (!channel) return;
     AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
@@ -1254,6 +1292,9 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
             break;
         case RequestIDChannelPins:
             [self handleChannelPinsRequestResponse:request];
+            break;
+        case RequestIDForumStarter:
+            [self handleForumStarterResponse:request];
             break;
         case RequestIDLogout:
             

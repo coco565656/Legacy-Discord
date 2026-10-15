@@ -201,8 +201,8 @@ userProfileController:(DLUserProfileController *)inUserProfileController {
     [searchController clearHighlight];
     [chatScrollView setContent:views];
     [chatScrollView screenResize];
-    [DLTwemojiRenderer setText:[channel name] forLabel:chatHeaderLabel];
-    [chatHeaderImage setImage:[[[NSImage alloc] initWithData:[channel subImageData]] autorelease]];
+    // The header title (topic, thread breadcrumb) is set when the channel is
+    // selected; repainting the bare name here dropped both.
     [channelNavigationController selectChannelWithoutNotifying:channel];
     [searchController didDisplayMessagesAroundID:messageID];
     searchHistoryWindowActive = YES;
@@ -251,8 +251,6 @@ userProfileController:(DLUserProfileController *)inUserProfileController {
         searchHistoryWindowActive = NO;
         hasMoreNewerMessages = NO;
         isLoadingNewerMessages = NO;
-        [DLTwemojiRenderer setText:[channel name] forLabel:chatHeaderLabel];
-        [chatHeaderImage setImage:[[[NSImage alloc] initWithData:[channel subImageData]] autorelease]];
         [chatScrollView setContent:views];
         [[chatScrollView contentView] scrollToPoint:NSMakePoint([chatScrollView frame].origin.x,
                                                                 [chatScrollView frame].origin.y)];

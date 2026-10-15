@@ -14,6 +14,8 @@
 @protocol DLMainHeaderControllerDelegate <NSObject>
 -(void)mainHeaderControllerDidRequestReload:(DLMainHeaderController *)controller;
 -(void)mainHeaderControllerDidRequestMemberListToggle:(DLMainHeaderController *)controller;
+@optional
+-(void)mainHeaderControllerDidRequestThreadList:(DLMainHeaderController *)controller;
 @end
 
 @interface DLMainHeaderController : NSObject {
@@ -29,6 +31,7 @@
     NSButton *membersButton;
     NSSearchField *messageSearchField;
     NSButton *pinsButton;
+    NSButton *threadsButton;
     DLMessageSearchController *messageSearchController;
     DLPinsController *pinsController;
     DLWSConnectionState connectionState;
@@ -49,6 +52,8 @@
 -(void)setReloadEnabled:(BOOL)enabled;
 // The Friends page has no channel: hide search, pins and the member toggle.
 -(void)setChannelControlsHidden:(BOOL)hidden;
+// The Threads button exists only for server text channels and their threads.
+-(void)setThreadsButtonVisible:(BOOL)visible;
 -(void)setConnectionState:(DLWSConnectionState)state;
 // Channel name with its topic after a divider, like the official header.
 -(void)setChannelTitle:(NSString *)title topic:(NSString *)topic;

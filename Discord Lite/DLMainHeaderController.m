@@ -124,6 +124,18 @@
     [pinsButton setEnabled:NO];
     [chatHeaderView addSubview:pinsButton];
 
+    threadsButton = [[DLThreadsButton alloc] initWithFrame:
+                     NSMakeRect(NSMinX([pinsButton frame]) - 30.0, 8.0, 26.0, 26.0)];
+    [threadsButton setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
+    [threadsButton setBordered:NO];
+    [threadsButton setRefusesFirstResponder:YES];
+    [threadsButton setTitle:@""];
+    [threadsButton setToolTip:@"Threads"];
+    [threadsButton setTarget:self];
+    [threadsButton setAction:@selector(showThreadList:)];
+    [threadsButton setHidden:YES];
+    [chatHeaderView addSubview:threadsButton];
+
     NSRect channelLabelFrame = [chatHeaderLabel frame];
     channelLabelFrame.size.width = MAX(45.0, NSMinX([pinsButton frame]) - channelLabelFrame.origin.x - 8.0);
     [chatHeaderLabel setFrame:channelLabelFrame];
@@ -147,7 +159,9 @@
     [messageSearchField setFrame:NSMakeRect(width - 10.0 - searchWidth, 9.0, searchWidth, 24.0)];
     [membersButton setFrame:NSMakeRect(NSMinX([messageSearchField frame]) - 32.0, 8.0, 26.0, 26.0)];
     [pinsButton setFrame:NSMakeRect(NSMinX([membersButton frame]) - 30.0, 8.0, 26.0, 26.0)];
-    labelFrame.size.width = MAX(0.0, NSMinX([pinsButton frame]) - labelFrame.origin.x - 8.0);
+    [threadsButton setFrame:NSMakeRect(NSMinX([pinsButton frame]) - 30.0, 8.0, 26.0, 26.0)];
+    NSView *leftmost = [threadsButton isHidden] ? pinsButton : threadsButton;
+    labelFrame.size.width = MAX(0.0, NSMinX([leftmost frame]) - labelFrame.origin.x - 8.0);
     [chatHeaderLabel setFrame:labelFrame];
     NSRect serverFrame = [serverLabel frame];
     serverFrame.size.width = MAX(0.0, NSWidth([channelHeaderView bounds]) - serverFrame.origin.x - 38.0);
@@ -178,6 +192,18 @@
     [membersButton setHidden:hidden];
     [pinsButton setHidden:hidden];
     [messageSearchField setHidden:hidden];
+    if (hidden) [self setThreadsButtonVisible:NO];
+}
+
+-(void)setThreadsButtonVisible:(BOOL)visible {
+    [threadsButton setHidden:!visible];
+    [self layoutControls];
+}
+
+-(IBAction)showThreadList:(id)sender {
+    if ([delegate respondsToSelector:@selector(mainHeaderControllerDidRequestThreadList:)]) {
+        [delegate mainHeaderControllerDidRequestThreadList:self];
+    }
 }
 
 -(void)setReloadEnabled:(BOOL)enabled {
@@ -268,6 +294,7 @@
     [pinsController release];
     [messageSearchController release];
     [pinsButton release];
+    [threadsButton release];
     [messageSearchField release];
     [membersButton release];
     [reloadButton release];

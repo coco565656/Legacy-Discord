@@ -60,6 +60,25 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Forum post list, thread list and WebP previews
+
+- Forum and media channels show the official post list: a "Search posts"
+  field and cards with applied tags, title, the opening message as
+  "author: text" (fetched lazily with `messages?around={post}&limit=1`, since
+  `GET /messages/{id}` is bot-only), message count and last activity. Posts
+  open full-width with a "forum › post" header and thread icon.
+- Text channels and threads gained the official Threads header button, which
+  shows the same list with a title, search and close button.
+- Forum channels use the speech-bubble icon in the sidebar and header.
+- The header no longer reverts to the bare channel name when messages load,
+  so channel topics and thread breadcrumbs stay visible.
+- Image previews were blank for many recent uploads: the media proxy answered
+  resized requests with WebP, which 10.6 cannot decode. Previews now request
+  `format=png` (or `jpeg` for photos).
+- Verified on 10.6.8 in a test server: forum cards with tags and opening
+  messages, opening a post, the Threads button and its empty state/close,
+  topic in the header, and previously blank screenshots now visible.
+
 #### Forwarded messages and signed builds
 
 - Forwarded messages (`message_snapshots`) now show a muted "↪ Forwarded"

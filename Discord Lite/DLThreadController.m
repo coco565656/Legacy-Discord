@@ -10,66 +10,177 @@
 #import "NSView+BGColor.h"
 #import "DLUtil.h"
 #import "NSScroller+BGColor.h"
+#import "DLMainWindowChromeControls.h"
+#import "DLTwemojiRenderer.h"
 
-@interface DLThreadListCell : NSCell {
-    DLServerChannel *representedThread;
+static const CGFloat DLForumCardMargin = 16.0;
+static const CGFloat DLForumTagRowHeight = 24.0;
+
+// "5m ago", "3h ago", "2d ago", then the short date, like the post cards.
+static NSString *DLRelativeActivityString(NSDate *date) {
+    if (!date) return @"";
+    NSTimeInterval age = -[date timeIntervalSinceNow];
+    if (age < 60.0) return @"just now";
+    if (age < 3600.0) return [NSString stringWithFormat:@"%ldm ago", (long)(age / 60.0)];
+    if (age < 86400.0) return [NSString stringWithFormat:@"%ldh ago", (long)(age / 3600.0)];
+    if (age < 30.0 * 86400.0) return [NSString stringWithFormat:@"%ldd ago", (long)(age / 86400.0)];
+    NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+    [formatter setDateStyle:NSDateFormatterShortStyle];
+    [formatter setTimeStyle:NSDateFormatterNoStyle];
+    return [formatter stringFromDate:date];
 }
--(void)setRepresentedThread:(DLServerChannel *)thread;
+
+// Names of the forum tags applied to a post, in the forum's tag order.
+static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
+    DLServerChannel *forum = (DLServerChannel *)[[DLController sharedInstance] loadedChannelWithID:[thread parentID]];
+    if (![forum respondsToSelector:@selector(availableTags)]) return [NSArray array];
+    NSArray *applied = [thread appliedTagIDs];
+    NSMutableArray *names = [NSMutableArray array];
+    NSEnumerator *enumerator = [[forum availableTags] objectEnumerator];
+    NSDictionary *tag;
+    while (tag = [enumerator nextObject]) {
+        if (![tag isKindOfClass:[NSDictionary class]]) continue;
+        if (![applied containsObject:[[tag objectForKey:@"id"] description]]) continue;
+        NSString *tagName = [tag objectForKey:@"name"];
+        NSString *emoji = [tag objectForKey:@"emoji_name"];
+        if (![tagName isKindOfClass:[NSString class]]) continue;
+        if ([emoji isKindOfClass:[NSString class]] && [emoji length]) {
+            tagName = [NSString stringWithFormat:@"%@ %@", emoji, tagName];
+        }
+        [names addObject:tagName];
+    }
+    return names;
+}
+
+@interface DLForumPostCell : NSCell {
+    DLServerChannel *representedThread;
+    BOOL forumPost;
+    BOOL hovered;
+}
+-(void)setRepresentedThread:(DLServerChannel *)thread forumPost:(BOOL)isForumPost hovered:(BOOL)isHovered;
 @end
 
-@implementation DLThreadListCell
+@implementation DLForumPostCell
 
--(void)setRepresentedThread:(DLServerChannel *)thread {
+-(void)setRepresentedThread:(DLServerChannel *)thread forumPost:(BOOL)isForumPost hovered:(BOOL)isHovered {
     representedThread = thread;
+    forumPost = isForumPost;
+    hovered = isHovered;
+}
+
+-(NSAttributedString *)lineWithString:(NSString *)string font:(NSFont *)font color:(NSColor *)color {
+    NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
+    [style setLineBreakMode:NSLineBreakByTruncatingTail];
+    NSMutableAttributedString *line = [[[NSMutableAttributedString alloc] initWithString:(string ? string : @"")
+        attributes:[NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, color,
+                    NSForegroundColorAttributeName, style, NSParagraphStyleAttributeName, nil]] autorelease];
+    [DLTwemojiRenderer replaceEmojiInAttributedString:line size:[font pointSize]
+                                   excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
+    return line;
+}
+
+// Speech bubble used for the message count, drawn so it needs no emoji font.
+-(void)drawBubbleInRect:(NSRect)rect color:(NSColor *)color flipped:(BOOL)flipped {
+    NSRect body = NSMakeRect(NSMinX(rect), flipped ? NSMinY(rect) : NSMinY(rect) + 3.0, NSWidth(rect), NSHeight(rect) - 3.0);
+    NSBezierPath *bubble = [NSBezierPath bezierPathWithRoundedRect:body xRadius:3.0 yRadius:3.0];
+    CGFloat tailY = flipped ? NSMaxY(body) : NSMinY(body);
+    CGFloat tipY = flipped ? NSMaxY(rect) : NSMinY(rect);
+    [bubble moveToPoint:NSMakePoint(NSMinX(body) + 3.0, tailY)];
+    [bubble lineToPoint:NSMakePoint(NSMinX(body) + 2.0, tipY)];
+    [bubble lineToPoint:NSMakePoint(NSMinX(body) + 7.0, tailY)];
+    [color setStroke];
+    [bubble setLineWidth:1.3];
+    [bubble stroke];
 }
 
 -(void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
-    if (!representedThread) {
-        return;
-    }
-    BOOL archived = [representedThread archivedThread];
-    NSRect cardRect = NSInsetRect(cellFrame, 6.0, 4.0);
-    NSColor *background = archived ? [DLUtil nativeSidebarColor] : [DLUtil nativeChromeColor];
-    if ([self isHighlighted]) {
-        background = [DLUtil nativeSelectionColor];
-    }
+    if (!representedThread) return;
+    BOOL flipped = [controlView isFlipped];
+    NSRect card = NSInsetRect(cellFrame, DLForumCardMargin, 4.0);
+    NSColor *background = [DLUtil nativeSidebarColor];
+    if (hovered) background = [background blendedColorWithFraction:0.06 ofColor:[NSColor whiteColor]];
     [background set];
-    [[NSBezierPath bezierPathWithRoundedRect:cardRect xRadius:7.0 yRadius:7.0] fill];
-    [[DLUtil nativeBorderColor] set];
-    [[NSBezierPath bezierPathWithRoundedRect:cardRect xRadius:7.0 yRadius:7.0] stroke];
+    [[NSBezierPath bezierPathWithRoundedRect:card xRadius:8.0 yRadius:8.0] fill];
 
-    DLChannel *parent = [[DLController sharedInstance] loadedChannelWithID:[representedThread parentID]];
+    CGFloat x = NSMinX(card) + 16.0;
+    CGFloat width = NSWidth(card) - 32.0;
+    // Lay out from the top of the card in either coordinate system.
+    CGFloat cursor = 12.0;
+    #define DLCardRect(offset, height) NSMakeRect(x, flipped ? NSMinY(card) + (offset) : NSMaxY(card) - (offset) - (height), width, (height))
+
+    NSArray *tags = forumPost ? DLAppliedTagNames(representedThread) : [NSArray array];
+    if ([tags count]) {
+        CGFloat tagX = x;
+        NSEnumerator *enumerator = [tags objectEnumerator];
+        NSString *tag;
+        while ((tag = [enumerator nextObject]) && tagX < NSMaxX(card) - 40.0) {
+            NSAttributedString *label = [self lineWithString:tag font:[NSFont boldSystemFontOfSize:11.0]
+                                                       color:[DLUtil nativePrimaryTextColor]];
+            CGFloat pillWidth = MIN(ceil([label size].width) + 16.0, NSMaxX(card) - 16.0 - tagX);
+            NSRect pill = DLCardRect(cursor, 18.0);
+            pill.origin.x = tagX;
+            pill.size.width = pillWidth;
+            [[DLUtil nativeInputColor] set];
+            [[NSBezierPath bezierPathWithRoundedRect:pill xRadius:9.0 yRadius:9.0] fill];
+            [label drawInRect:NSInsetRect(pill, 8.0, 2.0)];
+            tagX += pillWidth + 6.0;
+        }
+        cursor += DLForumTagRowHeight;
+    }
+
     NSString *title = [representedThread name] ? [representedThread name] : @"Untitled";
-    NSString *detail = [NSString stringWithFormat:@"%@  •  # %@",
-                        archived ? @"Archived" : @"Active thread",
-                        [parent name] ? [parent name] : @"Unknown channel"];
-    NSColor *titleColor = archived ? [DLUtil nativeSecondaryTextColor] : [DLUtil nativePrimaryTextColor];
-    NSDictionary *titleAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                     [NSFont boldSystemFontOfSize:12.0], NSFontAttributeName,
-                                     titleColor, NSForegroundColorAttributeName, nil];
-    NSDictionary *detailAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                      [NSFont systemFontOfSize:10.0], NSFontAttributeName,
-                                      [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName, nil];
-    CGFloat top = [controlView isFlipped] ? NSMinY(cardRect) + 8.0 : NSMaxY(cardRect) - 24.0;
-    NSColor *dotColor = archived ? [NSColor grayColor]
-                                 : [NSColor colorWithCalibratedRed:0.20 green:0.62 blue:0.26 alpha:1.0];
-    [dotColor set];
-    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMinX(cardRect) + 10.0,
-                                                        [controlView isFlipped] ? top + 4.0 : top + 3.0,
-                                                        8.0, 8.0)] fill];
-    [title drawInRect:NSMakeRect(NSMinX(cardRect) + 25.0, top,
-                                  NSWidth(cardRect) - 35.0, 17.0)
-        withAttributes:titleAttributes];
-    CGFloat detailY = [controlView isFlipped] ? top + 22.0 : top - 20.0;
-    [detail drawInRect:NSMakeRect(NSMinX(cardRect) + 25.0, detailY,
-                                   NSWidth(cardRect) - 35.0, 15.0)
-         withAttributes:detailAttributes];
+    NSColor *titleColor = [representedThread archivedThread] ? [DLUtil nativeSecondaryTextColor] : [DLUtil nativePrimaryTextColor];
+    [[self lineWithString:title font:[NSFont boldSystemFontOfSize:15.0] color:titleColor]
+        drawInRect:DLCardRect(cursor, 20.0)];
+    cursor += 24.0;
+
+    // "author: opening message" like the official card; plain status for
+    // text-channel threads, whose starter lives in the parent channel.
+    NSMutableAttributedString *snippet = [[[NSMutableAttributedString alloc] init] autorelease];
+    NSDictionary *summary = [representedThread starterSummary];
+    if (forumPost && summary) {
+        NSString *author = [summary objectForKey:@"author"];
+        if ([author length]) {
+            [snippet appendAttributedString:[self lineWithString:[author stringByAppendingString:@": "]
+                                                            font:[NSFont boldSystemFontOfSize:13.0]
+                                                           color:[DLUtil nativePrimaryTextColor]]];
+        }
+        [snippet appendAttributedString:[self lineWithString:[summary objectForKey:@"text"]
+                                                        font:[NSFont systemFontOfSize:13.0]
+                                                       color:[DLUtil nativeSecondaryTextColor]]];
+    } else if (!forumPost) {
+        [snippet appendAttributedString:[self lineWithString:([representedThread archivedThread] ? @"Archived thread" : @"Active thread")
+                                                        font:[NSFont systemFontOfSize:13.0]
+                                                       color:[DLUtil nativeSecondaryTextColor]]];
+    }
+    NSMutableParagraphStyle *truncating = [[[NSMutableParagraphStyle alloc] init] autorelease];
+    [truncating setLineBreakMode:NSLineBreakByTruncatingTail];
+    [snippet addAttribute:NSParagraphStyleAttributeName value:truncating range:NSMakeRange(0, [snippet length])];
+    [snippet drawInRect:DLCardRect(cursor, 18.0)];
+    cursor += 24.0;
+
+    NSColor *metaColor = [DLUtil nativeSecondaryTextColor];
+    NSRect bubbleRect = DLCardRect(cursor + 2.0, 12.0);
+    bubbleRect.size.width = 13.0;
+    [self drawBubbleInRect:bubbleRect color:metaColor flipped:flipped];
+    NSString *meta = [NSString stringWithFormat:@"%ld", (long)MAX(0, [representedThread messageCount])];
+    NSString *activity = DLRelativeActivityString([representedThread lastActivityDate]);
+    if ([activity length]) meta = [meta stringByAppendingFormat:@"   •   %@", activity];
+    if ([representedThread archivedThread]) meta = [meta stringByAppendingString:@"   •   Archived"];
+    NSRect metaRect = DLCardRect(cursor, 16.0);
+    metaRect.origin.x += 20.0;
+    metaRect.size.width -= 20.0;
+    [[self lineWithString:meta font:[NSFont systemFontOfSize:12.0] color:metaColor] drawInRect:metaRect];
+    #undef DLCardRect
 }
 
 @end
 
 @interface DLThreadController ()
 -(void)installViews;
+-(BOOL)isForumMode;
+-(void)reloadItems;
+-(void)applySearchFilter;
 @end
 
 @implementation DLThreadController
@@ -83,75 +194,102 @@
         chatScrollView = [inChatScrollView retain];
         composerView = [inComposerView retain];
         [self installViews];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(threadStarterDidLoad:)
+                                                     name:DLThreadStarterDidLoadNotification object:nil];
     }
     return self;
 }
 -(void)setDelegate:(id<DLThreadControllerDelegate>)inDelegate { delegate = inDelegate; }
 -(BOOL)isVisible { return visible; }
 
+-(BOOL)isForumMode {
+    return [baseChannel type] == ChannelTypeForum || [baseChannel type] == ChannelTypeMedia;
+}
+
 -(void)installViews {
     NSRect bounds = [hostView bounds];
     listPane = [[NSView_BGColor alloc] initWithFrame:
-                      NSMakeRect(0.0, 0.0, NSWidth(bounds), NSHeight(bounds) - 42.0)];
+                NSMakeRect(0.0, 0.0, NSWidth(bounds), NSHeight(bounds) - 42.0)];
     [listPane setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [listPane setBackgroundColor:[DLUtil nativeContentColor]];
+    NSRect paneBounds = [listPane bounds];
 
-    NSTextField *title = [[[NSTextField alloc] initWithFrame:
-                           NSMakeRect(16.0, NSHeight([listPane bounds]) - 34.0,
-                                      NSWidth([listPane bounds]) - 60.0, 22.0)] autorelease];
-    [title setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
-    [title setBezeled:NO];
-    [title setDrawsBackground:NO];
-    [title setEditable:NO];
-    [title setSelectable:NO];
-    [title setFont:[NSFont boldSystemFontOfSize:15.0]];
-    [title setTextColor:[DLUtil nativePrimaryTextColor]];
-    [title setStringValue:@"Active Threads"];
-    [listPane addSubview:title];
+    // Text-channel thread list title; forum lists show only the search bar.
+    titleField = [[NSTextField alloc] initWithFrame:
+                  NSMakeRect(DLForumCardMargin, NSHeight(paneBounds) - 40.0, 120.0, 22.0)];
+    [titleField setAutoresizingMask:NSViewMinYMargin];
+    [titleField setBezeled:NO];
+    [titleField setDrawsBackground:NO];
+    [titleField setEditable:NO];
+    [titleField setSelectable:NO];
+    [titleField setFont:[NSFont boldSystemFontOfSize:15.0]];
+    [titleField setTextColor:[DLUtil nativePrimaryTextColor]];
+    [titleField setStringValue:@"Threads"];
+    [listPane addSubview:titleField];
 
-    NSButton *closeListButton = [[[NSButton alloc] initWithFrame:
-                                  NSMakeRect(NSWidth([listPane bounds]) - 35.0,
-                                             NSHeight([listPane bounds]) - 36.0, 26.0, 26.0)] autorelease];
-    [closeListButton setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
-    [closeListButton setBordered:NO];
-    [closeListButton setFont:[NSFont systemFontOfSize:17.0]];
-    [closeListButton setTitle:@"×"];
-    [closeListButton setToolTip:@"Close thread list"];
-    [closeListButton setTarget:self];
-    [closeListButton setAction:@selector(closeThreadList:)];
-    [listPane addSubview:closeListButton];
+    searchField = [[NSSearchField alloc] initWithFrame:
+                   NSMakeRect(DLForumCardMargin, NSHeight(paneBounds) - 42.0,
+                              NSWidth(paneBounds) - DLForumCardMargin * 2.0 - 40.0, 28.0)];
+    DLDarkSearchFieldCell *searchCell = [[DLDarkSearchFieldCell alloc] initTextCell:@""];
+    [searchCell setTextColor:[DLUtil nativePrimaryTextColor]];
+    [searchCell setBackgroundColor:[NSColor clearColor]];
+    [searchCell setDrawsBackground:NO];
+    [searchCell setBezeled:NO];
+    [searchField setCell:searchCell];
+    [searchCell release];
+    [searchField setEditable:YES];
+    [searchField setSelectable:YES];
+    [searchField setFont:[NSFont systemFontOfSize:13.0]];
+    [searchField setBackgroundColor:[DLUtil nativeInputColor]];
+    [searchField setTextColor:[DLUtil nativePrimaryTextColor]];
+    [searchField setFocusRingType:NSFocusRingTypeNone];
+    [searchField setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
+    [searchField setDelegate:(id)self];
+    [listPane addSubview:searchField];
+
+    closeButton = [[NSButton alloc] initWithFrame:
+                   NSMakeRect(NSWidth(paneBounds) - 36.0, NSHeight(paneBounds) - 41.0, 26.0, 26.0)];
+    [closeButton setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
+    [closeButton setBordered:NO];
+    [closeButton setFont:[NSFont systemFontOfSize:17.0]];
+    [closeButton setTitle:@"×"];
+    [closeButton setToolTip:@"Close"];
+    [closeButton setTarget:self];
+    [closeButton setAction:@selector(closeThreadList:)];
+    [listPane addSubview:closeButton];
 
     listScrollView = [[NSScrollView alloc] initWithFrame:
-                            NSMakeRect(10.0, 10.0, NSWidth(bounds) - 20.0, NSHeight(bounds) - 92.0)];
+                      NSMakeRect(0.0, 0.0, NSWidth(paneBounds), NSHeight(paneBounds) - 56.0)];
     [listScrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [listScrollView setBorderType:NSNoBorder];
     [listScrollView setHasVerticalScroller:YES];
     [listScrollView setDrawsBackground:YES];
     [listScrollView setBackgroundColor:[DLUtil nativeContentColor]];
-    NSScroller_BGColor *listScrollViewScroller = [[[NSScroller_BGColor alloc] initWithFrame:NSZeroRect] autorelease];
-    [listScrollViewScroller setBackgroundColor:[DLUtil nativeContentColor]];
-    [listScrollView setVerticalScroller:listScrollViewScroller];
-    NSTableColumn *threadColumn = [[[NSTableColumn alloc] initWithIdentifier:@"thread"] autorelease];
-    [threadColumn setWidth:NSWidth([listScrollView bounds])];
-    [threadColumn setResizingMask:NSTableColumnAutoresizingMask];
-    [threadColumn setDataCell:[[[DLThreadListCell alloc] init] autorelease]];
-    listTableView = [[NSTableView alloc] initWithFrame:[[listScrollView contentView] bounds]];
+    NSScroller_BGColor *scroller = [[[NSScroller_BGColor alloc] initWithFrame:NSZeroRect] autorelease];
+    [scroller setBackgroundColor:[DLUtil nativeContentColor]];
+    [listScrollView setVerticalScroller:scroller];
+    NSTableColumn *column = [[[NSTableColumn alloc] initWithIdentifier:@"post"] autorelease];
+    [column setWidth:NSWidth([listScrollView bounds])];
+    [column setResizingMask:NSTableColumnAutoresizingMask];
+    [column setDataCell:[[[DLForumPostCell alloc] init] autorelease]];
+    listTableView = [[DLContextTableView alloc] initWithFrame:[[listScrollView contentView] bounds]];
     [listTableView setFocusRingType:NSFocusRingTypeNone];
-    [listScrollView setFocusRingType:NSFocusRingTypeNone];
-    [listTableView addTableColumn:threadColumn];
+    [listTableView addTableColumn:column];
+    [listTableView setColumnAutoresizingStyle:NSTableViewUniformColumnAutoresizingStyle];
     [listTableView setHeaderView:nil];
     [listTableView setDataSource:self];
     [listTableView setDelegate:self];
-    [listTableView setRowHeight:64.0];
-    [listTableView setIntercellSpacing:NSMakeSize(0.0, 1.0)];
+    [listTableView setIntercellSpacing:NSMakeSize(0.0, 0.0)];
+    [listTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
+    [listTableView setGridStyleMask:NSTableViewGridNone];
     [listTableView setBackgroundColor:[DLUtil nativeContentColor]];
-    [listTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleRegular];
+    [listTableView setTarget:self];
+    [listTableView setAction:@selector(openClickedPost:)];
     [listScrollView setDocumentView:listTableView];
     [listPane addSubview:listScrollView];
 
     emptyField = [[NSTextField alloc] initWithFrame:
-                            NSMakeRect(20.0, NSMidY([listPane bounds]) - 30.0,
-                                       NSWidth(bounds) - 40.0, 60.0)];
+                  NSMakeRect(20.0, NSMidY(paneBounds) - 30.0, NSWidth(paneBounds) - 40.0, 60.0)];
     [emptyField setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin | NSViewMaxYMargin];
     [emptyField setBezeled:NO];
     [emptyField setDrawsBackground:NO];
@@ -160,45 +298,27 @@
     [emptyField setAlignment:NSCenterTextAlignment];
     [emptyField setFont:[NSFont boldSystemFontOfSize:15.0]];
     [emptyField setTextColor:[DLUtil nativeSecondaryTextColor]];
-    [emptyField setStringValue:@"No active threads in this channel"];
     [listPane addSubview:emptyField];
 
-    CGFloat detailWidth = MAX(300.0, NSWidth(bounds) * 0.58);
-    detailPane = [[NSView_BGColor alloc] initWithFrame:
-                        NSMakeRect(NSWidth(bounds) - detailWidth, 0.0, detailWidth, NSHeight(bounds) - 42.0)];
-    [detailPane setAutoresizingMask:NSViewMinXMargin | NSViewHeightSizable];
-    [detailPane setBackgroundColor:[DLUtil nativeContentColor]];
-    [detailPane setLeftBorderColor:[DLUtil nativeBorderColor]];
-    detailTitleField = [[NSTextField alloc] initWithFrame:
-                              NSMakeRect(12.0, NSHeight([detailPane bounds]) - 32.0,
-                                         detailWidth - 52.0, 20.0)];
-    [detailTitleField setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
-    [detailTitleField setBezeled:NO];
-    [detailTitleField setDrawsBackground:NO];
-    [detailTitleField setEditable:NO];
-    [detailTitleField setSelectable:NO];
-    [detailTitleField setFont:[NSFont boldSystemFontOfSize:13.0]];
-    [detailTitleField setTextColor:[DLUtil nativePrimaryTextColor]];
-    [detailPane addSubview:detailTitleField];
-    NSButton *closeDetailButton = [[[NSButton alloc] initWithFrame:
-                                    NSMakeRect(detailWidth - 35.0,
-                                               NSHeight([detailPane bounds]) - 36.0, 26.0, 26.0)] autorelease];
-    [closeDetailButton setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
-    [closeDetailButton setBordered:NO];
-    [closeDetailButton setFont:[NSFont systemFontOfSize:17.0]];
-    [closeDetailButton setTitle:@"×"];
-    [closeDetailButton setToolTip:@"Close thread"];
-    [closeDetailButton setTarget:self];
-    [closeDetailButton setAction:@selector(closeThreadDetail:)];
-    [detailPane addSubview:closeDetailButton];
-
     [hostView addSubview:listPane];
-    [hostView addSubview:detailPane];
     [listPane setHidden:YES];
-    [detailPane setHidden:YES];
+    allItems = [[NSArray alloc] init];
     items = [[NSArray alloc] init];
     visible = NO;
-    detailVisible = NO;
+}
+
+// Forum mode: full-width search bar. Thread mode: title, search and close.
+-(void)layoutTopBar {
+    NSRect paneBounds = [listPane bounds];
+    BOOL forum = [self isForumMode];
+    [titleField setHidden:forum];
+    [closeButton setHidden:forum];
+    CGFloat left = forum ? DLForumCardMargin : DLForumCardMargin + 90.0;
+    CGFloat right = forum ? DLForumCardMargin : 46.0;
+    [searchField setFrame:NSMakeRect(left, NSHeight(paneBounds) - 42.0,
+                                     MAX(80.0, NSWidth(paneBounds) - left - right), 28.0)];
+    [[searchField cell] setPlaceholderString:(forum ? @"Search posts" : @"Search threads")];
+    [emptyField setStringValue:(forum ? @"There are no posts yet." : @"There are no threads here yet.")];
 }
 
 -(void)showThreadList {
@@ -218,100 +338,71 @@
     }
     [baseChannel release];
     baseChannel = [parentChannel retain];
-    [items release];
-    items = [[[DLController sharedInstance] activeThreadsForServer:server
-                                                               parentChannel:parentChannel] retain];
+    [searchField setStringValue:@""];
+    [self layoutTopBar];
+    [self reloadItems];
     [[DLController sharedInstance] loadArchivedThreadsForChannel:parentChannel];
-    [listTableView reloadData];
-    [listTableView deselectAll:self];
-    [emptyField setHidden:([items count] != 0)];
+    [listTableView scrollRowToVisible:0];
     [chatScrollView setHidden:YES];
     [composerView setHidden:YES];
-    [detailPane setHidden:YES];
     [listPane setHidden:NO];
     visible = YES;
-    detailVisible = NO;
 }
 
--(void)openThreadDetail:(DLChannel *)thread {
-    if (!thread || !visible) {
-        return;
-    }
-    [NSObject cancelPreviousPerformRequestsWithTarget:chatScrollView selector:@selector(screenResize) object:nil];
-    [chatScrollView setHidden:YES];
-    [chatScrollView setContent:[NSArray array]];
-    NSRect bounds = [hostView bounds];
-    CGFloat detailWidth = MIN(NSWidth(bounds) - 180.0, MAX(300.0, NSWidth(bounds) * 0.58));
-    NSRect detailFrame = NSMakeRect(NSWidth(bounds) - detailWidth, 0.0,
-                                    detailWidth, NSHeight(bounds) - 42.0);
-    [detailPane setFrame:detailFrame];
-    [detailTitleField setStringValue:[NSString stringWithFormat:@"↳ %@", [thread name]]];
-    [detailPane setHidden:NO];
+-(void)reloadItems {
+    DLServer *server = [[DLController sharedInstance] selectedServer];
+    NSArray *threads = (server && baseChannel)
+        ? [[DLController sharedInstance] activeThreadsForServer:server parentChannel:baseChannel]
+        : [NSArray array];
+    [allItems release];
+    allItems = [threads retain];
+    [self applySearchFilter];
+}
 
-    [chatScrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-    [composerView setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
-    [chatScrollView setFrame:NSMakeRect(0.0, 56.0, detailWidth,
-                                        MAX(80.0, NSHeight(bounds) - 140.0))];
-    [composerView setFrame:NSMakeRect(0.0, 0.0, detailWidth, 56.0)];
-    [chatScrollView retain];
-    if ([chatScrollView superview] != detailPane) {
-        [chatScrollView removeFromSuperviewWithoutNeedingDisplay];
-        [detailPane addSubview:chatScrollView];
+-(void)applySearchFilter {
+    NSString *query = [[searchField stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+    NSArray *filtered = allItems;
+    if ([query length]) {
+        NSMutableArray *matches = [NSMutableArray array];
+        NSEnumerator *enumerator = [allItems objectEnumerator];
+        DLServerChannel *thread;
+        while (thread = [enumerator nextObject]) {
+            NSString *haystack = [NSString stringWithFormat:@"%@ %@ %@", [thread name] ? [thread name] : @"",
+                                  [[thread starterSummary] objectForKey:@"text"] ? [[thread starterSummary] objectForKey:@"text"] : @"",
+                                  [DLAppliedTagNames(thread) componentsJoinedByString:@" "]];
+            if ([haystack rangeOfString:query options:NSCaseInsensitiveSearch].location != NSNotFound) {
+                [matches addObject:thread];
+            }
+        }
+        filtered = matches;
     }
-    [chatScrollView release];
-    [composerView retain];
-    if ([composerView superview] != detailPane) {
-        [composerView removeFromSuperviewWithoutNeedingDisplay];
-        [detailPane addSubview:composerView];
-    }
-    [composerView release];
-    [chatScrollView setHidden:NO];
-    [composerView setHidden:NO];
-    detailVisible = YES;
+    [items release];
+    items = [filtered retain];
+    [listTableView noteNumberOfRowsChanged];
+    [listTableView reloadData];
+    [emptyField setHidden:([items count] != 0)];
+}
+
+-(void)controlTextDidChange:(NSNotification *)notification {
+    if ([notification object] == searchField) [self applySearchFilter];
+}
+
+-(void)openClickedPost:(id)sender {
+    NSInteger row = [listTableView clickedRow];
+    if (row < 0 || row >= (NSInteger)[items count]) return;
+    DLChannel *thread = [[[items objectAtIndex:row] retain] autorelease];
+    [self hideThreadBrowser];
     [delegate threadController:self selectChannel:thread];
-}
-
--(IBAction)closeThreadDetail:(id)sender {
-    if (!visible) {
-        return;
-    }
-    [chatScrollView setHidden:YES];
-    [composerView setHidden:YES];
-    [detailPane setHidden:YES];
-    detailVisible = NO;
-    if (baseChannel) {
-        [delegate threadController:self restoreBaseChannel:baseChannel];
-    }
-    [listTableView deselectAll:self];
 }
 
 -(void)hideThreadBrowser {
     if (!visible) {
         return;
     }
-    NSRect bounds = [hostView bounds];
     [listPane setHidden:YES];
-    [detailPane setHidden:YES];
-    [chatScrollView retain];
-    if ([chatScrollView superview] != hostView) {
-        [chatScrollView removeFromSuperviewWithoutNeedingDisplay];
-        [hostView addSubview:chatScrollView];
-    }
-    [chatScrollView release];
-    [composerView retain];
-    if ([composerView superview] != hostView) {
-        [composerView removeFromSuperviewWithoutNeedingDisplay];
-        [hostView addSubview:composerView];
-    }
-    [composerView release];
-    [chatScrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-    [composerView setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
-    [chatScrollView setFrame:NSMakeRect(0.0, 56.0, NSWidth(bounds), NSHeight(bounds) - 98.0)];
-    [composerView setFrame:NSMakeRect(0.0, 0.0, NSWidth(bounds), 56.0)];
     [chatScrollView setHidden:NO];
     [composerView setHidden:NO];
     visible = NO;
-    detailVisible = NO;
     [chatScrollView screenResize];
 }
 
@@ -319,22 +410,23 @@
     DLChannel *channel = [baseChannel retain];
     [self hideThreadBrowser];
     if (channel) {
-        [delegate threadController:self selectChannel:channel];
+        [delegate threadController:self restoreBaseChannel:channel];
     }
     [channel release];
+}
+
+-(void)threadStarterDidLoad:(NSNotification *)notification {
+    if (!visible) return;
+    NSUInteger index = [items indexOfObjectIdenticalTo:[notification object]];
+    if (index == NSNotFound) return;
+    [listTableView setNeedsDisplayInRect:[listTableView rectOfRow:(NSInteger)index]];
 }
 
 -(void)refreshForServer:(DLServer *)server {
     if (!server || ![server isEqual:[[DLController sharedInstance] selectedServer]]) {
         return;
     }
-    if (visible && baseChannel) {
-        [items release];
-        items = [[[DLController sharedInstance] activeThreadsForServer:server
-                                                                   parentChannel:baseChannel] retain];
-        [listTableView reloadData];
-        [emptyField setHidden:([items count] != 0)];
-    }
+    if (visible && baseChannel) [self reloadItems];
 }
 
 -(void)threadsDidUpdateForServer:(DLServer *)server {
@@ -360,11 +452,7 @@
         ![server isEqual:[[DLController sharedInstance] selectedServer]]) {
         return;
     }
-    [items release];
-    items = [[[DLController sharedInstance] activeThreadsForServer:server
-                                                               parentChannel:baseChannel] retain];
-    [listTableView reloadData];
-    [emptyField setHidden:([items count] != 0)];
+    [self reloadItems];
 }
 
 -(void)archivedThreadsDidUpdateForServer:(DLServer *)server channel:(DLChannel *)channel {
@@ -378,48 +466,65 @@
                         waitUntilDone:NO];
 }
 
-
-
 -(void)applyCurrentTheme {
     [(NSView_BGColor *)listPane setBackgroundColor:[DLUtil nativeContentColor]];
-    [(NSView_BGColor *)detailPane setBackgroundColor:[DLUtil nativeContentColor]];
-    [(NSView_BGColor *)detailPane setLeftBorderColor:[DLUtil nativeBorderColor]];
     [listScrollView setBackgroundColor:[DLUtil nativeContentColor]];
     [(NSScroller_BGColor *)[listScrollView verticalScroller] setBackgroundColor:[DLUtil nativeContentColor]];
     [listTableView setBackgroundColor:[DLUtil nativeContentColor]];
+    [searchField setBackgroundColor:[DLUtil nativeInputColor]];
+    [titleField setTextColor:[DLUtil nativePrimaryTextColor]];
     [emptyField setTextColor:[DLUtil nativeSecondaryTextColor]];
-    [detailTitleField setTextColor:[DLUtil nativePrimaryTextColor]];
     [listTableView reloadData];
 }
--(NSInteger)numberOfRowsInTableView:(NSTableView *)tableView { return [items count]; }
+
+-(NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
+    return [items count];
+}
+
 -(id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)column row:(NSInteger)row {
-    DLServerChannel *thread = [items objectAtIndex:row];
-    DLChannel *parent = [[DLController sharedInstance] loadedChannelWithID:[thread parentID]];
-    return [NSString stringWithFormat:@"↳ %@    # %@", [thread name] ? [thread name] : @"Untitled",
-            [parent name] ? [parent name] : @"Unknown channel"];
+    return [[items objectAtIndex:row] name];
 }
+
+-(CGFloat)tableView:(NSTableView *)tableView heightOfRow:(NSInteger)row {
+    if (row < 0 || row >= (NSInteger)[items count]) return 96.0;
+    BOOL hasTags = [self isForumMode] && [DLAppliedTagNames([items objectAtIndex:row]) count] > 0;
+    return 96.0 + (hasTags ? DLForumTagRowHeight : 0.0);
+}
+
+-(BOOL)tableView:(NSTableView *)tableView shouldSelectRow:(NSInteger)row {
+    return NO;
+}
+
 -(void)tableView:(NSTableView *)tableView willDisplayCell:(id)cell forTableColumn:(NSTableColumn *)column row:(NSInteger)row {
-    if ([cell isKindOfClass:[DLThreadListCell class]]) [(DLThreadListCell *)cell setRepresentedThread:[items objectAtIndex:row]];
+    if (![cell isKindOfClass:[DLForumPostCell class]] || row >= (NSInteger)[items count]) return;
+    DLServerChannel *thread = [items objectAtIndex:row];
+    BOOL forum = [self isForumMode];
+    [(DLForumPostCell *)cell setRepresentedThread:thread forumPost:forum
+                                          hovered:(row == [listTableView hoveredRow])];
+    // Opening messages load lazily for the posts actually on screen.
+    if (forum) [[DLController sharedInstance] loadStarterMessageForThread:thread];
 }
+
 -(NSString *)tableView:(NSTableView *)tableView toolTipForCell:(NSCell *)cell rect:(NSRectPointer)rect tableColumn:(NSTableColumn *)column row:(NSInteger)row mouseLocation:(NSPoint)mouseLocation {
-    return (row >= 0 && row < (NSInteger)[items count]) ? [[items objectAtIndex:row] name] : nil;
+    return nil;
 }
--(void)tableViewSelectionDidChange:(NSNotification *)notification {
-    NSInteger row = [listTableView selectedRow];
-    if (row >= 0 && row < (NSInteger)[items count]) [self openThreadDetail:[items objectAtIndex:row]];
-}
+
 -(void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
     [self hideThreadBrowser];
     [listTableView setDelegate:nil];
     [listTableView setDataSource:nil];
+    [searchField setDelegate:nil];
     [baseChannel release];
+    [allItems release];
     [items release];
     [emptyField release];
-    [detailTitleField release];
+    [titleField release];
+    [closeButton release];
+    [searchField release];
     [listTableView release];
     [listScrollView release];
-    [detailPane release];
     [listPane release];
     [composerView release];
     [chatScrollView release];
