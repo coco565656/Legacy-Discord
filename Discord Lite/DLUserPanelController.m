@@ -31,6 +31,7 @@ static const CGFloat DLUserPanelStatusDotSize = 14.0;
         nameField = [inNameField retain];
         usernameField = [inUsernameField retain];
         settingsButton = [[self findSettingsButton] retain];
+        [settingsButton setToolTip:@"User Settings"];
         connectionState = DLWSConnectionStateDisconnected;
         [self installControls];
         [self applyCurrentTheme];

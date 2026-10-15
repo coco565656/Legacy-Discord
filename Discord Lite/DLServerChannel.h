@@ -12,6 +12,7 @@
     NSString *parentID;
     NSString *serverID;
     NSString *topic;
+    NSArray *permissionOverwrites;
     NSInteger position;
     NSArray *children;
     BOOL joinedThread;
@@ -22,6 +23,8 @@
 -(void)updateWithDict:(NSDictionary *)d;
 
 -(NSString *)name;
+// Raw permission_overwrites from the API (array of {id, type, allow, deny}).
+-(NSArray *)permissionOverwrites;
 -(NSString *)parentID;
 -(NSString *)serverID;
 -(NSString *)topic;

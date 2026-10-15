@@ -50,6 +50,10 @@ static DLController* sharedObject = nil;
     return self;
 }
 
++(DLController *)existingInstance {
+    return sharedObject;
+}
+
 +(DLController *)sharedInstance {
     if (!sharedObject) {
         sharedObject = [[[super allocWithZone: NULL] init] retain];
@@ -579,7 +583,40 @@ static DLController* sharedObject = nil;
     }
     return servers;
 }
+// READY does not always include merged_members, so the own member object
+// (for role-based channel visibility) is fetched when a server is opened.
+-(void)loadMyMemberForServer:(DLServer *)server {
+    if (![self isLoggedIn] || !server || [server hasKnownMemberRoles] || [server myRolesUnavailable]) return;
+    if (!pendingMemberRequests) pendingMemberRequests = [[NSMutableSet alloc] init];
+    NSString *serverID = [[server serverID] description];
+    if ([pendingMemberRequests containsObject:serverID]) return;
+    [pendingMemberRequests addObject:serverID];
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDMyGuildMember];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:server forKey:@"server"]];
+    [req setUrl:[@API_ROOT stringByAppendingFormat:@"/users/@me/guilds/%@/member", serverID]];
+    [req start];
+}
+
+-(void)handleMyGuildMemberResponse:(AsyncHTTPRequest *)req {
+    DLServer *server = [[req userInfo] objectForKey:@"server"];
+    [pendingMemberRequests removeObject:[[server serverID] description]];
+    NSDictionary *member = ([req result] == HTTPResultOK && [req responseData])
+        ? [[CJSONDeserializer deserializer] deserializeAsDictionary:[req responseData] error:nil] : nil;
+    NSArray *roles = [member objectForKey:@"roles"];
+    if ([roles isKindOfClass:[NSArray class]]) [server setMyRoleIDs:roles];
+    else [server setMyRolesUnavailable:YES];
+    if ([delegate respondsToSelector:@selector(memberPermissionsDidLoadForServer:)]) {
+        [delegate memberPermissionsDidLoadForServer:server];
+    }
+}
+
 -(NSArray *)channelsForServer:(DLServer *)s {
+    if (![s hasKnownMemberRoles] && ![s myRolesUnavailable] && ![s isEqual:[self myServerItem]]) {
+        [self performSelectorOnMainThread:@selector(loadMyMemberForServer:) withObject:s waitUntilDone:NO];
+    }
     [selectedServer release];
     [s retain];
     selectedServer = s;
@@ -589,7 +626,8 @@ static DLController* sharedObject = nil;
     NSString *channelKey;
     while (channelKey = [e nextObject]) {
         DLServerChannel *c = [loadedChannels objectForKey:channelKey];
-        if ([[c serverID] isEqualToString:[s serverID]]) {
+        if ([[c serverID] isEqualToString:[s serverID]] &&
+            [s canUserWithID:[[self myUser] userID] viewChannelWithOverwrites:[c permissionOverwrites]]) {
             [channels addObject:c];
         }
     }
@@ -650,7 +688,11 @@ static DLController* sharedObject = nil;
     }
     
     NSMutableArray *result = [NSMutableArray arrayWithArray:sortedUncategorizedChannels];
-    [result addObjectsFromArray:sortedParentChannels];
+    // Categories whose channels are all hidden are not shown either.
+    e = [sortedParentChannels objectEnumerator];
+    while (c = [e nextObject]) {
+        if ([[c children] count] > 0) [result addObject:c];
+    }
     
     [channels release];
     [uncategorizedChannels release];
@@ -1178,6 +1220,9 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
             break;
         case RequestIDUserProfile:
             [self handleUserProfileRequestResponse:request];
+            break;
+        case RequestIDMyGuildMember:
+            [self handleMyGuildMemberResponse:request];
             break;
         case RequestIDUserNoteLoad:
         case RequestIDUserNoteSave:

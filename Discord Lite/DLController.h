@@ -44,7 +44,8 @@ typedef enum {
     RequestIDUserProfile = 17,
     RequestIDChannelPins = 18,
     RequestIDUserNoteLoad = 19,
-    RequestIDUserNoteSave = 20
+    RequestIDUserNoteSave = 20,
+    RequestIDMyGuildMember = 21
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -59,6 +60,9 @@ typedef enum {
 @protocol DLControllerDelegate <NSObject>
 @optional
 -(void)requestDidFailWithError:(DLError *)e;
+// The signed-in user's roles for a server arrived (or failed); channel
+// visibility for it may have changed.
+-(void)memberPermissionsDidLoadForServer:(DLServer *)server;
 -(void)initialDataWasReceived;
 -(void)messages:(NSArray *)messages receivedForChannel:(DLChannel *)c;
 -(void)newMessage:(DLMessage *)m receivedForChannel:(DLChannel *)c inServer:(DLServer *)s;
@@ -81,6 +85,7 @@ typedef enum {
     NSString *token;
     NSString *twoFactorTicket;
     id <DLControllerDelegate> delegate;
+    NSMutableSet *pendingMemberRequests;
     id <DLLoginDelegate> loginDelegate;
     NSString *captchaKey;
     DLServer *selectedServer;
@@ -95,6 +100,9 @@ typedef enum {
 }
 
 -(DLServer *)selectedServer;
+// The shared controller if it already exists, without creating it. Rendering
+// code uses this so offline replay never reads the Keychain.
++(DLController *)existingInstance;
 -(DLChannel *)selectedChannel;
 
 -(void)setSelectedChannel:(DLChannel *)c;

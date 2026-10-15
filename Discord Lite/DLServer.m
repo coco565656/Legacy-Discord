@@ -24,6 +24,13 @@
     serverID = [[d objectForKey:@"id"] retain];
     name = [[d objectForKey:@"name"] retain];
     iconID = [[d objectForKey:@"icon"] retain];
+    id owner = [d objectForKey:@"owner_id"];
+    if ([owner isKindOfClass:[NSString class]]) ownerID = [owner copy];
+    // Own member entry injected from READY merged_members by DLWSController.
+    NSDictionary *myMember = [d objectForKey:@"legacy_my_member"];
+    if ([myMember isKindOfClass:[NSDictionary class]] && [[myMember objectForKey:@"roles"] isKindOfClass:[NSArray class]]) {
+        myRoleIDs = [[myMember objectForKey:@"roles"] copy];
+    }
     NSMutableArray *membersList = [[NSMutableArray alloc] init];
     NSEnumerator *e = [[d objectForKey:@"members"] objectEnumerator];
     NSDictionary *memberData;
@@ -176,7 +183,75 @@
     [request release];
 }
 
+-(BOOL)hasKnownMemberRoles {
+    return myRoleIDs != nil;
+}
+-(void)setMyRoleIDs:(NSArray *)roleIDs {
+    [myRoleIDs release];
+    myRoleIDs = [roleIDs copy];
+}
+-(BOOL)myRolesUnavailable {
+    return myRolesUnavailable;
+}
+-(void)setMyRolesUnavailable:(BOOL)unavailable {
+    myRolesUnavailable = unavailable;
+}
+
+static unsigned long long DLPermissionValue(id value) {
+    if ([value isKindOfClass:[NSString class]]) return strtoull([value UTF8String], NULL, 10);
+    if ([value isKindOfClass:[NSNumber class]]) return [value unsignedLongLongValue];
+    return 0;
+}
+
+-(BOOL)canUserWithID:(NSString *)userID viewChannelWithOverwrites:(NSArray *)overwrites {
+    static const unsigned long long DLPermissionAdministrator = 1ULL << 3;
+    static const unsigned long long DLPermissionViewChannel = 1ULL << 10;
+    if (!myRoleIDs || !userID) return YES;
+    if (ownerID && [[ownerID description] isEqualToString:[userID description]]) return YES;
+    NSString *guildID = [serverID description];
+    unsigned long long permissions = DLPermissionValue([[self roleWithID:guildID] objectForKey:@"permissions"]);
+    NSEnumerator *roleEnumerator = [myRoleIDs objectEnumerator];
+    id roleID;
+    while (roleID = [roleEnumerator nextObject]) {
+        permissions |= DLPermissionValue([[self roleWithID:[roleID description]] objectForKey:@"permissions"]);
+    }
+    if (permissions & DLPermissionAdministrator) return YES;
+    unsigned long long roleAllow = 0, roleDeny = 0;
+    NSDictionary *everyoneOverwrite = nil, *memberOverwrite = nil;
+    NSEnumerator *overwriteEnumerator = [overwrites objectEnumerator];
+    NSDictionary *overwrite;
+    while (overwrite = [overwriteEnumerator nextObject]) {
+        if (![overwrite isKindOfClass:[NSDictionary class]]) continue;
+        NSString *targetID = [[overwrite objectForKey:@"id"] description];
+        int type = [[overwrite objectForKey:@"type"] intValue];
+        if (type == 0 && [targetID isEqualToString:guildID]) { everyoneOverwrite = overwrite; continue; }
+        if (type == 1) { if ([targetID isEqualToString:[userID description]]) memberOverwrite = overwrite; continue; }
+        NSEnumerator *mine = [myRoleIDs objectEnumerator];
+        id myRole;
+        while (myRole = [mine nextObject]) {
+            if ([[myRole description] isEqualToString:targetID]) {
+                roleAllow |= DLPermissionValue([overwrite objectForKey:@"allow"]);
+                roleDeny |= DLPermissionValue([overwrite objectForKey:@"deny"]);
+                break;
+            }
+        }
+    }
+    if (everyoneOverwrite) {
+        permissions &= ~DLPermissionValue([everyoneOverwrite objectForKey:@"deny"]);
+        permissions |= DLPermissionValue([everyoneOverwrite objectForKey:@"allow"]);
+    }
+    permissions &= ~roleDeny;
+    permissions |= roleAllow;
+    if (memberOverwrite) {
+        permissions &= ~DLPermissionValue([memberOverwrite objectForKey:@"deny"]);
+        permissions |= DLPermissionValue([memberOverwrite objectForKey:@"allow"]);
+    }
+    return (permissions & DLPermissionViewChannel) != 0;
+}
+
 -(void)dealloc {
+    [ownerID release];
+    [myRoleIDs release];
     [serverID release];
     [name release];
     [iconID release];

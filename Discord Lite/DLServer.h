@@ -29,6 +29,9 @@
     NSArray *emojis;
     NSArray *stickers;
     NSArray *roles;
+    NSString *ownerID;
+    NSArray *myRoleIDs;
+    BOOL myRolesUnavailable;
     id<DLServerDelegate> delegate;
     BOOL hasUnreadMessages;
 }
@@ -46,6 +49,15 @@
 -(NSArray *)stickers;
 -(NSArray *)roles;
 -(NSDictionary *)roleWithID:(NSString *)roleID;
+// Whether the signed-in user may view a channel, computed like the official
+// client (base role permissions, then @everyone/role/member overwrites).
+// Returns YES when the user's roles are unknown so nothing is hidden wrongly.
+-(BOOL)canUserWithID:(NSString *)userID viewChannelWithOverwrites:(NSArray *)overwrites;
+-(BOOL)hasKnownMemberRoles;
+-(void)setMyRoleIDs:(NSArray *)roleIDs;
+// Set when the own-member request failed; channels are then shown unfiltered.
+-(BOOL)myRolesUnavailable;
+-(void)setMyRolesUnavailable:(BOOL)unavailable;
 -(BOOL)hasUnreadMessages;
 
 -(void)setServerID:(NSString *)inId;

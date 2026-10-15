@@ -333,6 +333,38 @@ static DLWSController* sharedObject = nil;
     [self sendWSTextData:serialized];
 }
 
+// READY lists the signed-in user's member object per guild in merged_members
+// (same order as guilds). Attach it so DLServer can evaluate permissions.
+-(NSArray *)guildsWithOwnMembersFromReady:(NSDictionary *)ready {
+    NSArray *guilds = [ready objectForKey:@"guilds"];
+    NSArray *mergedMembers = [ready objectForKey:@"merged_members"];
+    NSString *myID = [[[ready objectForKey:@"user"] objectForKey:@"id"] description];
+    if (![guilds isKindOfClass:[NSArray class]] || ![mergedMembers isKindOfClass:[NSArray class]] ||
+        [mergedMembers count] != [guilds count] || !myID) return guilds;
+    NSMutableArray *result = [NSMutableArray arrayWithCapacity:[guilds count]];
+    for (NSUInteger index = 0; index < [guilds count]; index++) {
+        NSDictionary *guild = [guilds objectAtIndex:index];
+        NSArray *members = [mergedMembers objectAtIndex:index];
+        NSDictionary *mine = nil;
+        if ([members isKindOfClass:[NSArray class]]) {
+            NSEnumerator *enumerator = [members objectEnumerator];
+            NSDictionary *member;
+            while ((member = [enumerator nextObject]) && !mine) {
+                if ([member isKindOfClass:[NSDictionary class]] &&
+                    [[[member objectForKey:@"user_id"] description] isEqualToString:myID]) mine = member;
+            }
+        }
+        if (mine && [guild isKindOfClass:[NSDictionary class]]) {
+            NSMutableDictionary *copy = [NSMutableDictionary dictionaryWithDictionary:guild];
+            [copy setObject:mine forKey:@"legacy_my_member"];
+            [result addObject:copy];
+        } else {
+            [result addObject:guild];
+        }
+    }
+    return result;
+}
+
 #pragma mark Delegated Functions
 
 -(void)wsTextDataReceived:(NSData *)textData {
@@ -351,7 +383,7 @@ static DLWSController* sharedObject = nil;
             } else if ([type isEqualToString:@"READY"]) {
                 NSDictionary *wsData = [res objectForKey:@kWSData];
                 sessionID = [[wsData objectForKey:@"session_id"] retain];
-                [delegate wsDidReceiveServerData:[wsData objectForKey:@"guilds"]];
+                [delegate wsDidReceiveServerData:[self guildsWithOwnMembersFromReady:wsData]];
                 [delegate wsDidReceiveUserSettingsData:[wsData objectForKey:@"user_settings"]];
                 [delegate wsDidReceiveUserData:[wsData objectForKey:@"user"]];
                 [delegate wsDidReceivePrivateChannelData:[wsData objectForKey:@"private_channels"]];

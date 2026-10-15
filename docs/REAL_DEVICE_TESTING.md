@@ -47,6 +47,27 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### User-reported UI fixes and channel visibility
+
+- Author names no longer truncate in a wide chat (width measured with the
+  text field cell, re-laid out when the name changes).
+- Message context menu: read-only message text now shows only the Discord
+  items (Add Reaction, Reply, Copy Text, Copy Message Link; Edit/Delete for own
+  messages; Copy IDs with Developer Mode) instead of AppKit's Spotlight, Font,
+  Spelling and Speech items. The gear opens Settings directly.
+- New-messages / older-messages banners rebuilt like the official client
+  (blurple top bar with Mark As Read, dark bottom bar with Jump To Present).
+  Not verified on the device: needs a new incoming message or a long history.
+- Found on the device: opening a server auto-selected a channel the account
+  cannot view ("Missing Access"), and such channels were listed at all.
+  Channel visibility is now computed from base role permissions and
+  @everyone/role/member overwrites using the account's roles, fetched from
+  `/users/@me/guilds/{id}/member` because READY lacked `merged_members`.
+  Verified: ticket/admin channels disappear and the first visible text channel
+  opens without an error.
+- Offline replay no longer creates DLController (it read the Keychain and
+  stalled a regression fixture).
+
 #### Gateway thread-safety crash fix
 
 - Crash reports from 2026-10-02 (heap corruption in NSMutableData realloc),

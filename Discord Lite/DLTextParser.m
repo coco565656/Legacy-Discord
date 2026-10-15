@@ -57,7 +57,7 @@ static NSAttributedString *DLMentionPill(NSString *string, NSDictionary *baseAtt
 // <#channel_id>
 static NSAttributedString *DLRenderChannelMention(NSArray *captures, NSDictionary *baseAttributes, NSDictionary *context) {
     if ([captures count] < 2) return nil;
-    DLChannel *channel = [[DLController sharedInstance] loadedChannelWithID:[captures objectAtIndex:1]];
+    DLChannel *channel = [[DLController existingInstance] loadedChannelWithID:[captures objectAtIndex:1]];
     NSString *name = [channel name];
     return DLMentionPill([NSString stringWithFormat:@"#%@", ([name length] ? name : @"unknown")], baseAttributes, context, nil, nil);
 }
@@ -352,8 +352,8 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
             DLApplyQuoteStyling(as);
         }
 
-        DLServer *server = [m serverID] ? [[DLController sharedInstance] loadedServerWithID:[m serverID]] : nil;
-        if (!server) server = [[DLController sharedInstance] selectedServer];
+        DLServer *server = [m serverID] ? [[DLController existingInstance] loadedServerWithID:[m serverID]] : nil;
+        if (!server) server = [[DLController existingInstance] selectedServer];
         NSMutableDictionary *tokenContext = [NSMutableDictionary dictionaryWithObject:[NSNumber numberWithDouble:messageFontSize] forKey:@"fontSize"];
         if (server) [tokenContext setObject:server forKey:@"server"];
         DLReplaceTokens(as, @"<#([0-9]+)>", DLRenderChannelMention, tokenContext);

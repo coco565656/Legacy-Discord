@@ -47,62 +47,65 @@
     delegate = inDelegate;
 }
 
+// Borderless text button used in the Discord-style banners.
+static NSButton *DLBannerTextButton(NSString *title, NSColor *color, NSRect frame, id target, SEL action) {
+    NSButton *button = [[[NSButton alloc] initWithFrame:frame] autorelease];
+    [button setBordered:NO];
+    [button setButtonType:NSMomentaryChangeButton];
+    [button setAlignment:NSRightTextAlignment];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont boldSystemFontOfSize:11.0], NSFontAttributeName,
+                                color, NSForegroundColorAttributeName, nil];
+    [button setAttributedTitle:[[[NSAttributedString alloc] initWithString:title attributes:attributes] autorelease]];
+    [button setTarget:target];
+    [button setAction:action];
+    return button;
+}
+
+static NSTextField *DLBannerLabel(NSRect frame, NSColor *color, BOOL bold) {
+    NSTextField *label = [[NSTextField alloc] initWithFrame:frame];
+    [label setBezeled:NO];
+    [label setDrawsBackground:NO];
+    [label setEditable:NO];
+    [label setSelectable:NO];
+    [label setFont:(bold ? [NSFont boldSystemFontOfSize:11.0] : [NSFont systemFontOfSize:11.0])];
+    [label setTextColor:color];
+    [[label cell] setLineBreakMode:NSLineBreakByTruncatingTail];
+    return label;
+}
+
+// Matches the official client: a blurple "new messages" bar across the top of
+// the chat with Mark As Read, and a dark "viewing older messages" bar at the
+// bottom, just above the composer, with Jump To Present.
 -(void)installMessageStateBanners {
     NSRect bounds = [chatScrollView bounds];
-    unreadMessageBanner = [[NSView_BGColor alloc] initWithFrame:
-                           NSMakeRect(0.0, 0.0, NSWidth(bounds), 28.0)];
-    [unreadMessageBanner setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
+    CGFloat width = MAX(120.0, NSWidth(bounds) - [NSScroller scrollerWidth]);
+
+    unreadMessageBanner = [[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, NSHeight(bounds) - 26.0, width, 26.0)];
+    [unreadMessageBanner setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
     [(NSView_BGColor *)unreadMessageBanner setBackgroundColor:
-     [NSColor colorWithCalibratedRed:0.345 green:0.396 blue:0.949 alpha:0.98]];
-    [(NSView_BGColor *)unreadMessageBanner setBottomBorderColor:[DLUtil nativeBorderColor]];
-
-    unreadMessageBannerLabel = [[NSTextField alloc] initWithFrame:
-                                NSMakeRect(10.0, 5.0, MAX(80.0, NSWidth(bounds) - 112.0), 18.0)];
+     [NSColor colorWithCalibratedRed:0.345 green:0.396 blue:0.949 alpha:1.0]];
+    unreadMessageBannerLabel = DLBannerLabel(NSMakeRect(12.0, 4.0, MAX(40.0, width - 130.0), 17.0), [NSColor whiteColor], YES);
     [unreadMessageBannerLabel setAutoresizingMask:NSViewWidthSizable];
-    [unreadMessageBannerLabel setBezeled:NO];
-    [unreadMessageBannerLabel setDrawsBackground:NO];
-    [unreadMessageBannerLabel setEditable:NO];
-    [unreadMessageBannerLabel setSelectable:NO];
-    [unreadMessageBannerLabel setFont:[NSFont boldSystemFontOfSize:10.0]];
-    [unreadMessageBannerLabel setTextColor:[NSColor whiteColor]];
     [unreadMessageBanner addSubview:unreadMessageBannerLabel];
-
-    markMessagesReadButton = [[NSButton alloc] initWithFrame:
-                              NSMakeRect(MAX(0.0, NSWidth(bounds) - 98.0), 3.0, 92.0, 22.0)];
+    markMessagesReadButton = [DLBannerTextButton(@"Mark As Read", [NSColor whiteColor],
+                                                 NSMakeRect(width - 112.0, 3.0, 100.0, 20.0),
+                                                 self, @selector(markLatestMessagesRead:)) retain];
     [markMessagesReadButton setAutoresizingMask:NSViewMinXMargin];
-    [markMessagesReadButton setBezelStyle:NSRoundedBezelStyle];
-    [markMessagesReadButton setFont:[NSFont boldSystemFontOfSize:10.0]];
-    [markMessagesReadButton setTitle:@"既読にする"];
-    [markMessagesReadButton setTarget:self];
-    [markMessagesReadButton setAction:@selector(markLatestMessagesRead:)];
     [unreadMessageBanner addSubview:markMessagesReadButton];
     [chatScrollView addSubview:unreadMessageBanner positioned:NSWindowAbove relativeTo:nil];
 
-    CGFloat historyWidth = MIN(310.0, MAX(210.0, NSWidth(bounds) - 24.0));
-    historyMessageBanner = [[NSView_BGColor alloc] initWithFrame:
-                            NSMakeRect(floor((NSWidth(bounds) - historyWidth) / 2.0),
-                                       MAX(0.0, NSHeight(bounds) - 37.0),
-                                       historyWidth, 30.0)];
-    [historyMessageBanner setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin];
-    [(NSView_BGColor *)historyMessageBanner setBackgroundColor:
-     [NSColor colorWithCalibratedWhite:0.17 alpha:0.94]];
-    historyMessageBannerLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(10.0, 6.0, 132.0, 18.0)];
-    [historyMessageBannerLabel setBezeled:NO];
-    [historyMessageBannerLabel setDrawsBackground:NO];
-    [historyMessageBannerLabel setEditable:NO];
-    [historyMessageBannerLabel setSelectable:NO];
-    [historyMessageBannerLabel setFont:[NSFont systemFontOfSize:10.0]];
-    [historyMessageBannerLabel setTextColor:[NSColor whiteColor]];
-    [historyMessageBannerLabel setStringValue:@"古いメッセージを表示中"];
+    historyMessageBanner = [[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, 0.0, width, 30.0)];
+    [historyMessageBanner setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
+    [(NSView_BGColor *)historyMessageBanner setBackgroundColor:[DLUtil nativeSidebarColor]];
+    historyMessageBannerLabel = DLBannerLabel(NSMakeRect(12.0, 6.0, MAX(40.0, width - 150.0), 17.0), [DLUtil nativeSecondaryTextColor], NO);
+    [historyMessageBannerLabel setAutoresizingMask:NSViewWidthSizable];
+    [historyMessageBannerLabel setStringValue:@"You're Viewing Older Messages"];
     [historyMessageBanner addSubview:historyMessageBannerLabel];
-
-    jumpToLatestButton = [[NSButton alloc] initWithFrame:NSMakeRect(historyWidth - 151.0, 4.0, 143.0, 22.0)];
+    jumpToLatestButton = [DLBannerTextButton(@"Jump To Present", [DLUtil nativePrimaryTextColor],
+                                             NSMakeRect(width - 132.0, 5.0, 120.0, 20.0),
+                                             self, @selector(jumpToLatestMessages:)) retain];
     [jumpToLatestButton setAutoresizingMask:NSViewMinXMargin];
-    [jumpToLatestButton setBezelStyle:NSRoundedBezelStyle];
-    [jumpToLatestButton setFont:[NSFont boldSystemFontOfSize:10.0]];
-    [jumpToLatestButton setTitle:@"最新メッセージへ"];
-    [jumpToLatestButton setTarget:self];
-    [jumpToLatestButton setAction:@selector(jumpToLatestMessages:)];
     [historyMessageBanner addSubview:jumpToLatestButton];
     [chatScrollView addSubview:historyMessageBanner positioned:NSWindowAbove relativeTo:nil];
 
@@ -120,9 +123,13 @@
 
 -(void)refreshMessageBannerVisibility {
     BOOL hasPending = [self hasPendingMessages];
+    // Like the official client, the bottom bar appears once the reader is more
+    // than a screen away from the newest messages, or has unread ones below.
+    CGFloat scrolledUp = NSMinY([[chatScrollView contentView] bounds]);
+    BOOL farFromPresent = scrolledUp > NSHeight([[chatScrollView contentView] bounds]);
     [unreadMessageBanner setHidden:!hasPending];
-    [historyMessageBanner setHidden:(!hasPending || [self isViewingLatestMessages])];
-    if (hasPending) {
+    [historyMessageBanner setHidden:([self isViewingLatestMessages] || !(hasPending || farFromPresent))];
+    if (hasPending || farFromPresent) {
         [chatScrollView addSubview:unreadMessageBanner positioned:NSWindowAbove relativeTo:nil];
         [chatScrollView addSubview:historyMessageBanner positioned:NSWindowAbove relativeTo:nil];
     }
@@ -153,8 +160,8 @@
                                          timeStyle:NSDateFormatterShortStyle]
         : @"--:--";
     [unreadMessageBannerLabel setStringValue:
-     [NSString stringWithFormat:@"%@から %ld件+の新着メッセージ",
-      timeText, (long)pendingNewMessageCount]];
+     [NSString stringWithFormat:@"%ld new message%@ since %@",
+      (long)pendingNewMessageCount, (pendingNewMessageCount == 1 ? @"" : @"s"), timeText]];
     [self refreshMessageBannerVisibility];
 }
 

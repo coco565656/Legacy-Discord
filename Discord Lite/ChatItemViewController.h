@@ -56,6 +56,7 @@
     NSMenuItem *editItem;
     NSMenuItem *deleteItem;
     BOOL isEditing;
+    BOOL isMyContent;
     BOOL usesMentionBackground;
     BOOL searchHighlighted;
     BOOL compactDisplay;

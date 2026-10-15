@@ -37,18 +37,32 @@
 }
 
 - (NSMenu *)menuForEvent:(NSEvent *)event {
-    NSMenu *menu = [super menuForEvent:event];
-    if ([menuDelegate respondsToSelector:@selector(textViewContextMenu)]) {
-        NSMenu *textViewContextMenu = [menuDelegate textViewContextMenu];
-        if (textViewContextMenu) {
+    NSMenu *ownerMenu = [menuDelegate respondsToSelector:@selector(textViewContextMenu)]
+        ? [menuDelegate textViewContextMenu] : nil;
+    // While editing, keep the standard text menu (cut, paste, spelling...).
+    if ([self isEditable] || !ownerMenu) {
+        NSMenu *menu = [super menuForEvent:event];
+        if (ownerMenu) {
             [menu addItem:[NSMenuItem separatorItem]];
-            NSEnumerator *e = [[textViewContextMenu itemArray] objectEnumerator];
+            NSEnumerator *e = [[ownerMenu itemArray] objectEnumerator];
             NSMenuItem *item;
-            while (item = [e nextObject]) {
-                [menu addItem:[[item copy] autorelease]];
-            }
+            while (item = [e nextObject]) [menu addItem:[[item copy] autorelease]];
         }
+        return menu;
     }
+    // Read-only message text shows only the message menu, like the official
+    // client, instead of AppKit's Spotlight/Font/Speech items. A selection
+    // adds Copy at the top.
+    NSMenu *menu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    if ([self selectedRange].length > 0) {
+        NSMenuItem *copyItem = [[[NSMenuItem alloc] initWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@""] autorelease];
+        [copyItem setTarget:self];
+        [menu addItem:copyItem];
+        [menu addItem:[NSMenuItem separatorItem]];
+    }
+    NSEnumerator *e = [[ownerMenu itemArray] objectEnumerator];
+    NSMenuItem *item;
+    while (item = [e nextObject]) [menu addItem:[[item copy] autorelease]];
     return menu;
 }
 -(void)setShouldShowBorder:(BOOL)isBordered {

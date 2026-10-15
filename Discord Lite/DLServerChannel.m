@@ -21,6 +21,11 @@
     parentID = [[d objectForKey:@"parent_id"] retain];
     serverID = [[d objectForKey:@"guild_id"] retain];
     topic = [[d objectForKey:@"topic"] retain];
+    id overwrites = [d objectForKey:@"permission_overwrites"];
+    if ([overwrites isKindOfClass:[NSArray class]]) {
+        [permissionOverwrites release];
+        permissionOverwrites = [overwrites copy];
+    }
     position = [[d objectForKey:@"position"] intValue];
     if ([d objectForKey:@"member"] && ![[d objectForKey:@"member"] isKindOfClass:[NSNull class]]) {
         joinedThread = YES;
@@ -101,7 +106,12 @@
     return NSOrderedSame;
 }
 
+-(NSArray *)permissionOverwrites {
+    return permissionOverwrites;
+}
+
 -(void)dealloc {
+    [permissionOverwrites release];
     [children release];
     [serverID release];
     [super dealloc];

@@ -542,6 +542,37 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     if (showingDirectMessages && !selectedChannel) {
         [directMessageController showFriendsHomeWithChannels:items];
     }
+#if !LEGACY_DISCORD_LOCAL_DEV
+    // Like the official client, opening a server shows its first readable
+    // text channel instead of an empty "Select a channel" pane.
+    DLServer *openedServer = [[DLController sharedInstance] selectedServer];
+    BOOL visibilitySettled = [openedServer hasKnownMemberRoles] || [openedServer myRolesUnavailable];
+    if (!showingDirectMessages && !selectedChannel && visibilitySettled && ![[DLController sharedInstance] selectedChannel]) {
+        DLChannel *first = [self firstTextChannelInItems:items];
+        if (first) {
+            [channelNavigationController selectChannelWithoutNotifying:first];
+            [self selectChannel:first];
+        }
+    }
+#endif
+}
+
+-(void)memberPermissionsDidLoadForServer:(DLServer *)server {
+    if (![server isEqual:[[DLController sharedInstance] selectedServer]]) return;
+    [channelNavigationController displayChannelItems:[[DLController sharedInstance] channelsForServer:server]];
+}
+
+-(DLChannel *)firstTextChannelInItems:(NSArray *)items {
+    NSEnumerator *enumerator = [items objectEnumerator];
+    DLChannel *channel;
+    while (channel = [enumerator nextObject]) {
+        if ([channel type] == ChannelTypeStandard || [channel type] == ChannelTypeAnnouncements) return channel;
+        if ([channel type] == ChannelTypeHeader) {
+            DLChannel *child = [self firstTextChannelInItems:[channel children]];
+            if (child) return child;
+        }
+    }
+    return nil;
 }
 
 -(void)channelNavigationController:(DLChannelNavigationController *)controller
@@ -704,14 +735,10 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [messageComposerController showFileOpenDialog];
 }
 
+// The gear opens User Settings directly like the official client; Log Out
+// lives at the bottom of the Settings sidebar.
 - (IBAction)showSettingsMenu:(id)sender {
-    NSMenu *contextMenu = [[NSMenu alloc] init];
-    NSMenuItem *settingsItem = [contextMenu addItemWithTitle:@"User Settings…" action:@selector(openUserSettings:) keyEquivalent:@""];
-    [settingsItem setTarget:self];
-    [contextMenu addItem:[NSMenuItem separatorItem]];
-    [contextMenu addItemWithTitle:@"Log Out" action:@selector(logOutUser) keyEquivalent:@""];
-    [NSMenu popUpContextMenu:contextMenu withEvent:[NSApp currentEvent] forView:(NSButton *)sender];
-    [contextMenu release];
+    [self openUserSettings:sender];
 }
 
 -(void)openUserSettings:(id)sender {

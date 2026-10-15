@@ -220,13 +220,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [messageActionBar setHidden:YES];
     [self rebuildMessageActionBar];
 
-    reactionMenu = [[NSMenu alloc] initWithTitle:@"Reactions"];
-    NSMenuItem *reactionRootItem = [[NSMenuItem alloc] initWithTitle:@"Reactions" action:NULL keyEquivalent:@""];
-    [reactionRootItem setSubmenu:reactionMenu];
-    [contextMenu addItem:reactionRootItem];
-    [reactionRootItem release];
-
-    [contextMenu addItem:[NSMenuItem separatorItem]];
+    reactionMenu = [[NSMenu alloc] initWithTitle:@"Add Reaction"];
     
     /*NSMenuItem *copySelectionItem = [[NSMenuItem alloc] initWithTitle:@"Copy" action:@selector(copySelectedMessageContent) keyEquivalent:@""];
     [copySelectionItem setTarget:self];
@@ -234,11 +228,6 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [copySelectionItem release];
     
     [contextMenu addItem:[NSMenuItem separatorItem]];*/
-    
-    NSMenuItem *replyItem = [[NSMenuItem alloc] initWithTitle:@"Reply" action:@selector(addReply) keyEquivalent:@""];
-    [replyItem setTarget:self];
-    [contextMenu addItem:replyItem];
-    [replyItem release];
     
     editItem = [[NSMenuItem alloc] initWithTitle:@"Edit Message" action:@selector(beginEditingContent) keyEquivalent:@""];
     [editItem setTarget:self];
@@ -261,7 +250,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
     CGFloat availableWidth = MAX(0.0, NSWidth([insetView bounds]) - left - 12.0);
     NSDictionary *timestampAttributes = [NSDictionary dictionaryWithObject:[timestampTextField font]
                                                                      forKey:NSFontAttributeName];
-    CGFloat usernameWidth = ceil([[usernameTextField attributedStringValue] size].width) + 5.0;
+    // Measure with the cell so its internal text inset and inline Twemoji
+    // attachments are included; the plain string size was a few points short
+    // and truncated names that fit.
+    CGFloat usernameWidth = ceil([[usernameTextField cell] cellSizeForBounds:NSMakeRect(0.0, 0.0, 10000.0, NSHeight([usernameTextField frame]))].width) + 2.0;
     CGFloat timestampWidth = ceil([[timestampTextField stringValue] sizeWithAttributes:timestampAttributes].width) + 5.0;
     // A partial date is misleading. Preserve space for the author and show the
     // timestamp only when its complete text fits alongside that name.
@@ -1462,13 +1454,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
 }
 
 -(void)setIsMyContent:(BOOL)mine {
-    if (mine) {
-        [contextMenu addItem:editItem];
-        [contextMenu addItem:deleteItem];
-    } else {
-        [contextMenu removeItem:editItem];
-        [contextMenu removeItem:deleteItem];
-    }
+    isMyContent = mine;
 }
 
 -(void)beginEditingContent {
@@ -1542,9 +1528,6 @@ const NSInteger ATTACHMENT_SPACING = 15;
 #endif
 }
 
-// Developer Mode (Settings > Advanced) adds Discord's "Copy ID" items.
-static const NSInteger DLDeveloperMenuItemTag = 9001;
-
 -(void)copyStringToPasteboard:(NSString *)string {
     if (![string length]) return;
     NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
@@ -1560,31 +1543,60 @@ static const NSInteger DLDeveloperMenuItemTag = 9001;
     [self copyStringToPasteboard:[[[representedObject author] userID] description]];
 }
 
--(void)syncDeveloperMenuItems {
-    NSMenuItem *existing;
-    while ((existing = [contextMenu itemWithTag:DLDeveloperMenuItemTag])) [contextMenu removeItem:existing];
-    if (![[DLPreferencesHandler sharedInstance] developerMode]) return;
-    NSMenuItem *separator = [NSMenuItem separatorItem];
-    [separator setTag:DLDeveloperMenuItemTag];
-    [contextMenu addItem:separator];
-    NSMenuItem *messageItem = [[[NSMenuItem alloc] initWithTitle:@"Copy Message ID" action:@selector(copyMessageID:) keyEquivalent:@""] autorelease];
-    [messageItem setTarget:self];
-    [messageItem setTag:DLDeveloperMenuItemTag];
-    [contextMenu addItem:messageItem];
-    NSMenuItem *authorItem = [[[NSMenuItem alloc] initWithTitle:@"Copy User ID" action:@selector(copyAuthorID:) keyEquivalent:@""] autorelease];
-    [authorItem setTarget:self];
-    [authorItem setTag:DLDeveloperMenuItemTag];
-    [contextMenu addItem:authorItem];
+-(void)copyMessageText:(id)sender {
+    [self copyStringToPasteboard:[representedObject content]];
+}
+
+-(void)copyMessageLink:(id)sender {
+    DLController *controller = [DLController existingInstance];
+    DLServer *server = [self authorServer];
+    BOOL isDirect = !server || [server isEqual:[controller myServerItem]];
+    NSString *guild = isDirect ? @"@me" : [[server serverID] description];
+    NSString *channelID = [representedObject channelID] ? [[representedObject channelID] description]
+                                                       : [[[controller selectedChannel] channelID] description];
+    [self copyStringToPasteboard:[NSString stringWithFormat:@"https://discord.com/channels/%@/%@/%@",
+                                  guild, channelID, [[representedObject messageID] description]]];
+}
+
+-(NSMenuItem *)contextItemWithTitle:(NSString *)title action:(SEL)action {
+    NSMenuItem *item = [[[NSMenuItem alloc] initWithTitle:title action:action keyEquivalent:@""] autorelease];
+    [item setTarget:self];
+    return item;
+}
+
+// Rebuilt before every display, in the official client's order. Developer
+// Mode (Settings > Advanced) adds the Copy ID items at the end.
+-(void)rebuildContextMenu {
+    [contextMenu removeAllItems];
+    NSMenuItem *reactionRootItem = [[[NSMenuItem alloc] initWithTitle:@"Add Reaction" action:NULL keyEquivalent:@""] autorelease];
+    [reactionRootItem setSubmenu:reactionMenu];
+    [contextMenu addItem:reactionRootItem];
+    if (isMyContent) [contextMenu addItem:editItem];
+    [contextMenu addItem:[self contextItemWithTitle:@"Reply" action:@selector(addReply)]];
+    [contextMenu addItem:[NSMenuItem separatorItem]];
+    if ([[representedObject content] length]) {
+        [contextMenu addItem:[self contextItemWithTitle:@"Copy Text" action:@selector(copyMessageText:)]];
+    }
+    [contextMenu addItem:[self contextItemWithTitle:@"Copy Message Link" action:@selector(copyMessageLink:)]];
+    if (isMyContent) {
+        [contextMenu addItem:[NSMenuItem separatorItem]];
+        [contextMenu addItem:deleteItem];
+    }
+    if ([[DLPreferencesHandler sharedInstance] developerMode]) {
+        [contextMenu addItem:[NSMenuItem separatorItem]];
+        [contextMenu addItem:[self contextItemWithTitle:@"Copy Message ID" action:@selector(copyMessageID:)]];
+        [contextMenu addItem:[self contextItemWithTitle:@"Copy User ID" action:@selector(copyAuthorID:)]];
+    }
 }
 
 -(void)mouseWasDepressedWithEvent:(NSEvent *)event {
     if ((event.modifierFlags & NSControlKeyMask) == NSControlKeyMask) {
-        [self syncDeveloperMenuItems];
+        [self rebuildContextMenu];
         [NSMenu popUpContextMenu:contextMenu withEvent:event forView:nil];
     }
 }
 -(void)mouseRightButtonWasDepressedWithEvent:(NSEvent *)event {
-    [self syncDeveloperMenuItems];
+    [self rebuildContextMenu];
     [NSMenu popUpContextMenu:contextMenu withEvent:event forView:nil];
 }
 -(void)mouseEnteredView:(NSView *)hoveredView {
@@ -1599,7 +1611,7 @@ static const NSInteger DLDeveloperMenuItemTag = 9001;
 }
 
 -(NSMenu *)textViewContextMenu {
-    [self syncDeveloperMenuItems];
+    [self rebuildContextMenu];
     return contextMenu;
 }
 -(void)escapeKeyWasPressed {
@@ -1626,7 +1638,7 @@ static const NSInteger DLDeveloperMenuItemTag = 9001;
 }
 
 -(DLServer *)authorServer {
-    DLController *controller = [DLController sharedInstance];
+    DLController *controller = [DLController existingInstance];
     DLServer *server = [representedObject serverID] ? [controller loadedServerWithID:[representedObject serverID]] : nil;
     return server ? server : [controller selectedServer];
 }
@@ -1648,6 +1660,7 @@ static const NSInteger DLDeveloperMenuItemTag = 9001;
     if ([color isEqual:[usernameTextField textColor]]) return;
     [usernameTextField setTextColor:color];
     [DLTwemojiRenderer setText:[[representedObject author] globalName] forLabel:usernameTextField];
+    [self layoutMessageHeaderFields];
 }
 
 -(void)cachedEmojiDidUpdate:(NSNotification *)notification {
