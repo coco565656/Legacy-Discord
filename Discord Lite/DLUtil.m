@@ -7,6 +7,7 @@
 //
 
 #import "DLUtil.h"
+#import "DLServer.h"
 #import "DLPreferencesHandler.h"
 
 @implementation DLUtil
@@ -150,6 +151,42 @@ static NSDictionary *superPropertiesDict;
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.045 green:0.047 blue:0.063 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.060 green:0.110 blue:0.105 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.125 green:0.129 blue:0.141 alpha:1.0];
+}
++(NSColor *)nativeScrollerKnobColor {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.035 green:0.038 blue:0.050 alpha:1.0];
+    if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.045 green:0.075 blue:0.072 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.102 green:0.106 blue:0.118 alpha:1.0];
+}
+// Discord stores colors as 0xRRGGBB integers; 0 means "no color".
++(NSColor *)colorFromDiscordColorValue:(id)value {
+    if (![value isKindOfClass:[NSNumber class]]) return nil;
+    unsigned long color = [value unsignedLongValue];
+    if (color == 0) return nil;
+    return [NSColor colorWithCalibratedRed:((color >> 16) & 0xff) / 255.0
+                                     green:((color >> 8) & 0xff) / 255.0
+                                      blue:(color & 0xff) / 255.0 alpha:1.0];
+}
+// The displayed name color is the color of the highest-positioned role that
+// has one, matching the official client. Returns nil when no role is colored.
++(NSColor *)roleColorForRoleIDs:(NSArray *)roleIDs inServer:(DLServer *)server {
+    if (![roleIDs isKindOfClass:[NSArray class]] || !server) return nil;
+    NSColor *bestColor = nil;
+    NSInteger bestPosition = NSIntegerMin;
+    NSEnumerator *enumerator = [roleIDs objectEnumerator];
+    id roleID;
+    while (roleID = [enumerator nextObject]) {
+        NSDictionary *role = [server roleWithID:[roleID description]];
+        NSColor *color = [self colorFromDiscordColorValue:[role objectForKey:@"color"]];
+        if (!color) continue;
+        id positionValue = [role objectForKey:@"position"];
+        NSInteger position = [positionValue isKindOfClass:[NSNumber class]] ? [positionValue integerValue] : 0;
+        if (position >= bestPosition) {
+            bestPosition = position;
+            bestColor = color;
+        }
+    }
+    return bestColor;
 }
 +(NSColor *)nativeHeaderTopColor {
     if ([[[DLPreferencesHandler sharedInstance] appearanceTheme] isEqualToString:@"aurora"]) {

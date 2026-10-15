@@ -17,6 +17,9 @@
 #import "DLWSController.h"
 
 #define API_ROOT "https://discord.com/api/v10"
+// Posted on the main thread after newly received members are stored in their
+// DLServer. The object is the DLServer.
+#define DLServerMembersDidUpdateNotification @"DLServerMembersDidUpdateNotification"
 
 #define kDefaultsToken "token"
 

@@ -36,9 +36,50 @@ static NSString *DLStickerURL(NSDictionary *sticker) {
 
 @interface ChatItemViewController ()
 -(NSAttributedString *)displayAttributedContent;
+-(DLServer *)authorServer;
+-(CGFloat)messageContentHeight;
+-(CGFloat)dateDividerHeight;
+-(NSColor *)authorNameColor;
 @end
 
 @interface DLMessageActionButton : NSButton
+@end
+
+@interface DLDateDividerView : NSView {
+    NSString *title;
+}
+-(void)setTitle:(NSString *)inTitle;
+@end
+
+@implementation DLDateDividerView
+-(void)setTitle:(NSString *)inTitle {
+    if (title == inTitle) return;
+    [title release];
+    title = [inTitle copy];
+    [self setNeedsDisplay:YES];
+}
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = [self bounds];
+    CGFloat scale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont boldSystemFontOfSize:MAX(9.0, round(10.0 * scale))], NSFontAttributeName,
+                                [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName, nil];
+    NSSize textSize = [title length] ? [title sizeWithAttributes:attributes] : NSZeroSize;
+    CGFloat lineY = floor(NSMidY(bounds));
+    CGFloat left = 16.0;
+    CGFloat right = NSWidth(bounds) - 14.0;
+    CGFloat textX = floor(NSMidX(bounds) - textSize.width / 2.0);
+    CGFloat gap = textSize.width > 0.0 ? 4.0 : 0.0;
+    [[DLUtil nativeSelectionColor] set];
+    NSRectFill(NSMakeRect(left, lineY, MAX(0.0, textX - gap - left), 1.0));
+    CGFloat rightStart = textX + textSize.width + gap;
+    NSRectFill(NSMakeRect(rightStart, lineY, MAX(0.0, right - rightStart), 1.0));
+    if ([title length]) [title drawAtPoint:NSMakePoint(textX, floor(NSMidY(bounds) - textSize.height / 2.0)) withAttributes:attributes];
+}
+-(void)dealloc {
+    [title release];
+    [super dealloc];
+}
 @end
 
 @implementation DLMessageActionButton
@@ -141,6 +182,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     stickerViews = [[NSMutableArray alloc] init];
     stickersHeight = 0.0;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(cachedEmojiDidUpdate:) name:HTTPCacheDataDidUpdateNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(serverMembersDidUpdate:) name:DLServerMembersDidUpdateNotification object:nil];
     viewHasLoaded = NO;
     isEditing = NO;
     compactDisplay = NO;
@@ -276,7 +318,17 @@ const NSInteger ATTACHMENT_SPACING = 15;
     return height;
 }
 
+-(CGFloat)dateDividerHeight {
+    return dateDividerDate ? MAX(24.0, round(28.0 * [[DLPreferencesHandler sharedInstance] messageDisplayScale])) : 0.0;
+}
+
 -(CGFloat)expectedHeight {
+    return [self messageContentHeight] + [self dateDividerHeight];
+}
+
+// Height of the message itself, excluding the day divider above it. Layout
+// inside insetView is computed from this value.
+-(CGFloat)messageContentHeight {
     CGFloat textViewHeight = 0;
     if (![[representedObject content] isEqualToString:@""]) {
         textViewHeight = chatTextView.frame.size.height;
@@ -1026,7 +1078,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         }
         AttachmentPreviewViewController *attachmentVC = [attachmentViews objectAtIndex:attachmentIndex];
         NSRect frame = [[attachmentVC attachmentView] frame];
-        frame.origin.y = ((([self expectedHeight] - attachmentsHeight) - [self headerSpacing]) - chatTextView.frame.size.height) - frame.size.height;
+        frame.origin.y = ((([self messageContentHeight] - attachmentsHeight) - [self headerSpacing]) - chatTextView.frame.size.height) - frame.size.height;
         if ([representedObject referencedMessage]) {
             frame.origin.y -= referencedMessageView.frame.size.height;
         }
@@ -1069,8 +1121,14 @@ const NSInteger ATTACHMENT_SPACING = 15;
     insetFrame.origin.x = 0.0;
     insetFrame.origin.y = compactDisplay ? [self headerSpacing] : 6.0;
     insetFrame.size.width = NSWidth([view bounds]);
-    insetFrame.size.height = MAX(0.0, NSHeight([view bounds]) - insetFrame.origin.y);
+    CGFloat dividerHeight = [self dateDividerHeight];
+    insetFrame.size.height = MAX(0.0, NSHeight([view bounds]) - insetFrame.origin.y - dividerHeight);
     [insetView setFrame:insetFrame];
+    if (dateDividerView) {
+        [dateDividerView setHidden:(dividerHeight <= 0.0)];
+        [dateDividerView setFrame:NSMakeRect(0.0, NSHeight([view bounds]) - dividerHeight,
+                                             NSWidth([view bounds]), dividerHeight)];
+    }
     NSRect actionFrame = [messageActionBar frame];
     actionFrame.origin.x = MAX(4.0, NSWidth([insetView bounds]) - actionFrame.size.width - 8.0);
     actionFrame.origin.y = MAX(0.0, NSHeight([insetView bounds]) - actionFrame.size.height);
@@ -1183,6 +1241,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         return;
     }
 
+    [usernameTextField setTextColor:[self authorNameColor]];
     [DLTwemojiRenderer setText:[[representedObject author] globalName] forLabel:usernameTextField];
     [avatarImageView setImage:[DLUtil imageResize:[[[NSImage alloc] initWithData:[[representedObject author] avatarImageData]] autorelease] newSize:avatarImageView.frame.size cornerRadius:[ChatItemViewController AVATAR_RADIUS]]];
     [[representedObject author] loadAvatarData];
@@ -1225,7 +1284,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         AttachmentPreviewViewController *attachmentVC = [[AttachmentPreviewViewController alloc] initWithNibNamed:@"AttachmentPreviewViewController" bundle:nil];
         [attachmentVC setRepresentedObject:attachment];
         NSRect frame = [attachmentVC attachmentView].frame;
-        frame.origin.y = ((([self expectedHeight] - attachmentsHeight) - [self headerSpacing]) - chatTextView.frame.size.height) - frame.size.height;
+        frame.origin.y = ((([self messageContentHeight] - attachmentsHeight) - [self headerSpacing]) - chatTextView.frame.size.height) - frame.size.height;
         if ([representedObject referencedMessage]) {
             frame.origin.y -= referencedMessageView.frame.size.height;
         }
@@ -1330,6 +1389,24 @@ const NSInteger ATTACHMENT_SPACING = 15;
     }
 }
 
+-(void)setDateDividerDate:(NSDate *)date {
+    if (date == dateDividerDate || (date && dateDividerDate && [date isEqualToDate:dateDividerDate])) return;
+    [dateDividerDate release];
+    dateDividerDate = [date retain];
+    if (date) {
+        if (!dateDividerView) {
+            dateDividerView = [[DLDateDividerView alloc] initWithFrame:NSZeroRect];
+            [dateDividerView setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
+            [view addSubview:dateDividerView];
+        }
+        NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+        [formatter setDateStyle:NSDateFormatterLongStyle];
+        [formatter setTimeStyle:NSDateFormatterNoStyle];
+        [(DLDateDividerView *)dateDividerView setTitle:[formatter stringFromDate:date]];
+    }
+    [self layoutForCurrentViewFrame];
+}
+
 -(void)setGroupedMessageFollows:(BOOL)follows {
     if (groupedMessageFollows == follows) {
         return;
@@ -1432,6 +1509,8 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [editItem release];
     [deleteItem release];
     [representedObject release];
+    [dateDividerDate release];
+    [dateDividerView release];
     [self.view release];
     [super dealloc];
 }
@@ -1498,6 +1577,31 @@ const NSInteger ATTACHMENT_SPACING = 15;
         [[HTTPCache sharedInstance] endLoadingURL:[request url]];
     }
     [request release];
+}
+
+-(DLServer *)authorServer {
+    DLController *controller = [DLController sharedInstance];
+    DLServer *server = [representedObject serverID] ? [controller loadedServerWithID:[representedObject serverID]] : nil;
+    return server ? server : [controller selectedServer];
+}
+
+// Gateway messages carry the author's roles; REST history does not, so fall
+// back to the server's member cache, which fills as member data arrives.
+-(NSColor *)authorNameColor {
+    DLServer *server = [self authorServer];
+    NSArray *roles = [representedObject memberRoles];
+    if (!roles) roles = [[server memberWithUserID:[[representedObject author] userID]] roles];
+    NSColor *roleColor = [DLUtil roleColorForRoleIDs:roles inServer:server];
+    return roleColor ? roleColor : [DLUtil nativePrimaryTextColor];
+}
+
+-(void)serverMembersDidUpdate:(NSNotification *)notification {
+    if (!viewHasLoaded || !usernameTextField || [representedObject memberRoles]) return;
+    if ([notification object] != [self authorServer]) return;
+    NSColor *color = [self authorNameColor];
+    if ([color isEqual:[usernameTextField textColor]]) return;
+    [usernameTextField setTextColor:color];
+    [DLTwemojiRenderer setText:[[representedObject author] globalName] forLabel:usernameTextField];
 }
 
 -(void)cachedEmojiDidUpdate:(NSNotification *)notification {

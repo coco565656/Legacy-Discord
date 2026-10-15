@@ -808,6 +808,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 
 -(void)members:(NSArray *)members didUpdateForServer:(DLServer *)server {
     [memberListController members:members didUpdateForServer:server];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLServerMembersDidUpdateNotification object:server];
     [userProfileController members:members didUpdateForServer:server];
     [messageSearchController members:members didUpdateForServer:server];
     [messageComposerController membersDidUpdate:members];

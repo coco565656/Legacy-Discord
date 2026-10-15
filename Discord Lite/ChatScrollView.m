@@ -131,6 +131,16 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     }
 }
 
+-(BOOL)date:(NSDate *)date isSameDayAsDate:(NSDate *)otherDate {
+    NSCalendar *calendar = [NSCalendar currentCalendar];
+    NSUInteger units = NSYearCalendarUnit | NSMonthCalendarUnit | NSDayCalendarUnit;
+    NSDateComponents *components = [calendar components:units fromDate:date];
+    NSDateComponents *otherComponents = [calendar components:units fromDate:otherDate];
+    return [components year] == [otherComponents year] &&
+           [components month] == [otherComponents month] &&
+           [components day] == [otherComponents day];
+}
+
 -(BOOL)message:(DLMessage *)message canFollowMessageInGroup:(DLMessage *)olderMessage {
     if (!message || !olderMessage || [message referencedMessage] || [olderMessage referencedMessage]) {
         return NO;
@@ -167,6 +177,14 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
             groupedFollower = [self message:[newerItem representedObject] canFollowMessageInGroup:[item representedObject]];
         }
         [item setGroupedMessageFollows:groupedFollower];
+        NSDate *dividerDate = nil;
+        if (index + 1 < count) {
+            NSDate *date = [(DLMessage *)[item representedObject] timestamp];
+            ChatItemViewController *olderItem = [content objectAtIndex:index + 1];
+            NSDate *olderDate = [(DLMessage *)[olderItem representedObject] timestamp];
+            if (date && olderDate && ![self date:date isSameDayAsDate:olderDate]) dividerDate = date;
+        }
+        [item setDateDividerDate:dividerDate];
     }
 }
 

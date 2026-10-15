@@ -11,6 +11,7 @@
 #import "ChatItemViewController.h"
 #import "NSView+BGColor.h"
 #import "DLUtil.h"
+#import "NSScroller+BGColor.h"
 
 @interface DLSearchResultCell : NSCell {
     DLMessage *representedMessage;
@@ -197,6 +198,9 @@
     [resultsScrollView setHasVerticalScroller:YES];
     [resultsScrollView setDrawsBackground:YES];
     [resultsScrollView setBackgroundColor:[DLUtil nativeSidebarColor]];
+    NSScroller_BGColor *resultsScrollViewScroller = [[[NSScroller_BGColor alloc] initWithFrame:NSZeroRect] autorelease];
+    [resultsScrollViewScroller setBackgroundColor:[DLUtil nativeSidebarColor]];
+    [resultsScrollView setVerticalScroller:resultsScrollViewScroller];
 
     NSTableColumn *column = [[[NSTableColumn alloc] initWithIdentifier:@"searchResult"] autorelease];
     [column setWidth:paneWidth];
@@ -674,6 +678,7 @@
     [countField setTextColor:[DLUtil nativeSecondaryTextColor]];
     [emptyStateField setTextColor:[DLUtil nativeSecondaryTextColor]];
     [resultsScrollView setBackgroundColor:[DLUtil nativeSidebarColor]];
+    [(NSScroller_BGColor *)[resultsScrollView verticalScroller] setBackgroundColor:[DLUtil nativeSidebarColor]];
     [resultsTableView setBackgroundColor:[DLUtil nativeSidebarColor]];
     [resultsTableView reloadData];
 }

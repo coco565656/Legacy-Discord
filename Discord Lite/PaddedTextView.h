@@ -8,6 +8,11 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface PaddedTextView : NSTextView
+@interface PaddedTextView : NSTextView {
+    NSString *placeholderString;
+}
+
+// Drawn in the secondary text color while the view is empty.
+-(void)setPlaceholderString:(NSString *)placeholder;
 
 @end

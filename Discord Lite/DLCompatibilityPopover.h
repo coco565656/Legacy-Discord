@@ -1,14 +1,17 @@
 #import <Cocoa/Cocoa.h>
 
-// NSPopover was introduced in OS X 10.7. This wrapper keeps the native
-// implementation on Lion and later and uses a small utility panel on 10.6.
+// Discord-style popout: a borderless, rounded, shadowed panel attached to the
+// parent window. The same AppKit panel is used on every supported OS so that
+// Snow Leopard and Lion+ look identical (NSPopover's arrow and system chrome
+// do not match the Discord look and do not exist on 10.6).
 enum {
     DLCompatibilityPopoverBehaviorTransient = 1
 };
 
 @interface DLCompatibilityPopover : NSObject <NSWindowDelegate> {
-    id nativePopover;
     NSPanel *fallbackPanel;
+    NSView *panelContainerView;
+    NSView *panelCornerView;
     NSViewController *contentViewController;
     NSWindow *parentWindow;
     id delegate;

@@ -9,6 +9,7 @@
 #import "ChatScrollView.h"
 #import "NSView+BGColor.h"
 #import "DLUtil.h"
+#import "NSScroller+BGColor.h"
 
 @interface DLThreadListCell : NSCell {
     DLServerChannel *representedThread;
@@ -127,6 +128,9 @@
     [listScrollView setHasVerticalScroller:YES];
     [listScrollView setDrawsBackground:YES];
     [listScrollView setBackgroundColor:[DLUtil nativeContentColor]];
+    NSScroller_BGColor *listScrollViewScroller = [[[NSScroller_BGColor alloc] initWithFrame:NSZeroRect] autorelease];
+    [listScrollViewScroller setBackgroundColor:[DLUtil nativeContentColor]];
+    [listScrollView setVerticalScroller:listScrollViewScroller];
     NSTableColumn *threadColumn = [[[NSTableColumn alloc] initWithIdentifier:@"thread"] autorelease];
     [threadColumn setWidth:NSWidth([listScrollView bounds])];
     [threadColumn setResizingMask:NSTableColumnAutoresizingMask];
@@ -379,6 +383,7 @@
     [(NSView_BGColor *)detailPane setBackgroundColor:[DLUtil nativeContentColor]];
     [(NSView_BGColor *)detailPane setLeftBorderColor:[DLUtil nativeBorderColor]];
     [listScrollView setBackgroundColor:[DLUtil nativeContentColor]];
+    [(NSScroller_BGColor *)[listScrollView verticalScroller] setBackgroundColor:[DLUtil nativeContentColor]];
     [listTableView setBackgroundColor:[DLUtil nativeContentColor]];
     [emptyField setTextColor:[DLUtil nativeSecondaryTextColor]];
     [detailTitleField setTextColor:[DLUtil nativePrimaryTextColor]];

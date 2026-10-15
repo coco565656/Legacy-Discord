@@ -60,6 +60,8 @@
     BOOL searchHighlighted;
     BOOL compactDisplay;
     BOOL groupedMessageFollows;
+    NSDate *dateDividerDate;
+    NSView *dateDividerView;
     NSView *messageActionBar;
     IBOutlet NSTextField *editDismissInfoLabel;
     IBOutlet NSTextField *editedInfoLabel;
@@ -76,6 +78,8 @@
 -(void)setSearchHighlighted:(BOOL)highlighted;
 -(void)setCompactDisplay:(BOOL)compact;
 -(void)setGroupedMessageFollows:(BOOL)follows;
+// Shows a Discord-style day divider above this row when date is non-nil.
+-(void)setDateDividerDate:(NSDate *)date;
 #if LEGACY_DISCORD_UI_DIAGNOSTICS
 -(BOOL)isCompactDisplay;
 -(CGFloat)diagnosticAvailableMessageWidth;

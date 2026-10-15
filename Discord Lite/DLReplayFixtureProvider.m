@@ -73,7 +73,11 @@
     [groupNewer setValue:[NSArray arrayWithObject:[self unicodeReaction]] forKey:@"reactions"];
 
     if ([fixtureName isEqualToString:@"channel-message-states"]) {
-        return [NSArray arrayWithObjects:groupNewer, groupOlder, reply, first, nil];
+        NSDictionary *nextDay = [self messageWithID:@"local-message-005"
+                                             author:avery
+                                            content:@"A message on the following day tests the date divider."
+                                          timestamp:@"2024-06-11T10:00:00.000000+00:00"];
+        return [NSArray arrayWithObjects:nextDay, groupNewer, groupOlder, reply, first, nil];
     }
     if ([fixtureName isEqualToString:@"channel-layout"] ||
         [fixtureName isEqualToString:@"channel-layout-text"]) {

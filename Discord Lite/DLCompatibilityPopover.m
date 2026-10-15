@@ -1,4 +1,66 @@
 #import "DLCompatibilityPopover.h"
+#import "DLUtil.h"
+
+static const CGFloat DLPopoutCornerRadius = 8.0;
+static const CGFloat DLPopoutAnchorGap = 6.0;
+static const CGFloat DLPopoutScreenMargin = 8.0;
+
+// Borderless panels refuse key status by default; the pickers need it for
+// their search fields. Escape closes the popout like Discord.
+@interface DLPopoutPanel : NSPanel {
+    DLCompatibilityPopover *owner;
+}
+- (void)setOwner:(DLCompatibilityPopover *)inOwner;
+@end
+
+@implementation DLPopoutPanel
+- (void)setOwner:(DLCompatibilityPopover *)inOwner {
+    owner = inOwner;
+}
+- (BOOL)canBecomeKeyWindow {
+    return YES;
+}
+- (void)cancelOperation:(id)sender {
+    [owner close];
+}
+@end
+
+// Drawn above the content. Without layers, 10.6 cannot clip subviews to a
+// rounded path, so the corners outside the path are cleared to transparent
+// after the content has drawn, then a 1-pixel border is stroked.
+@interface DLPopoutCornerView : NSView
+@end
+
+@implementation DLPopoutCornerView
+- (BOOL)isOpaque {
+    return NO;
+}
+- (NSView *)hitTest:(NSPoint)point {
+    return nil;
+}
+- (void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = [self bounds];
+    NSBezierPath *rounded = [NSBezierPath bezierPathWithRoundedRect:bounds
+                                                            xRadius:DLPopoutCornerRadius
+                                                            yRadius:DLPopoutCornerRadius];
+    NSBezierPath *corners = [NSBezierPath bezierPathWithRect:bounds];
+    [corners appendBezierPath:rounded];
+    [corners setWindingRule:NSEvenOddWindingRule];
+    [NSGraphicsContext saveGraphicsState];
+    [[NSGraphicsContext currentContext] setCompositingOperation:NSCompositeCopy];
+    [[NSColor clearColor] setFill];
+    [corners fill];
+    [NSGraphicsContext restoreGraphicsState];
+
+    NSBezierPath *border = [NSBezierPath bezierPathWithRoundedRect:NSInsetRect(bounds, 0.5, 0.5)
+                                                           xRadius:DLPopoutCornerRadius - 0.5
+                                                           yRadius:DLPopoutCornerRadius - 0.5];
+    [border setLineWidth:1.0];
+    [[DLUtil nativeBorderColor] setStroke];
+    [border stroke];
+    [[self window] invalidateShadow];
+}
+@end
 
 @implementation DLCompatibilityPopover
 
@@ -6,58 +68,67 @@
     self = [super init];
     if (self) {
         contentSize = NSMakeSize(320.0, 320.0);
-        Class popoverClass = NSClassFromString(@"NSPopover");
-        if (popoverClass) {
-            nativePopover = [[popoverClass alloc] init];
-            [nativePopover setDelegate:self];
-        }
     }
     return self;
 }
 
 - (void)setBehavior:(NSInteger)behavior {
-    if (nativePopover) {
-        SEL selector = NSSelectorFromString(@"setBehavior:");
-        typedef void (*DLSetBehaviorFunction)(id, SEL, NSInteger);
-        DLSetBehaviorFunction function = (DLSetBehaviorFunction)[nativePopover methodForSelector:selector];
-        if (function) function(nativePopover, selector, behavior);
-    }
+    // Popouts are always transient: they close when they lose key status.
 }
 
 - (void)setDelegate:(id)inDelegate {
     delegate = inDelegate;
 }
 
+- (void)installContentView {
+    if (!panelContainerView) return;
+    NSArray *existing = [[[panelContainerView subviews] copy] autorelease];
+    for (NSView *subview in existing) {
+        if (subview != panelCornerView) [subview removeFromSuperview];
+    }
+    NSView *content = [contentViewController view];
+    if (!content) return;
+    [content setFrame:[panelContainerView bounds]];
+    [content setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [panelContainerView addSubview:content positioned:NSWindowBelow relativeTo:panelCornerView];
+}
+
 - (void)setContentViewController:(NSViewController *)controller {
     if (controller == contentViewController) return;
     [contentViewController release];
     contentViewController = [controller retain];
-    if (nativePopover) {
-        [nativePopover setContentViewController:controller];
-    } else if (fallbackPanel) {
-        [fallbackPanel setContentView:[controller view]];
-    }
+    [self installContentView];
 }
 
 - (void)setContentSize:(NSSize)size {
     contentSize = size;
-    if (nativePopover) [nativePopover setContentSize:size];
     if (fallbackPanel) [fallbackPanel setContentSize:size];
 }
 
 - (void)ensureFallbackPanel {
     if (fallbackPanel) return;
-    NSUInteger style = NSTitledWindowMask | NSClosableWindowMask | NSUtilityWindowMask;
-    fallbackPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0.0, 0.0, contentSize.width, contentSize.height)
-                                               styleMask:style
-                                                 backing:NSBackingStoreBuffered
-                                                   defer:NO];
+    DLPopoutPanel *panel = [[DLPopoutPanel alloc] initWithContentRect:NSMakeRect(0.0, 0.0, contentSize.width, contentSize.height)
+                                                            styleMask:NSBorderlessWindowMask
+                                                              backing:NSBackingStoreBuffered
+                                                                defer:NO];
+    [panel setOwner:self];
+    fallbackPanel = panel;
     [fallbackPanel setReleasedWhenClosed:NO];
     [fallbackPanel setFloatingPanel:YES];
     [fallbackPanel setHidesOnDeactivate:YES];
-    [fallbackPanel setTitle:@"Legacy Discord"];
+    [fallbackPanel setOpaque:NO];
+    [fallbackPanel setBackgroundColor:[NSColor clearColor]];
+    [fallbackPanel setHasShadow:YES];
     [fallbackPanel setDelegate:self];
-    if (contentViewController) [fallbackPanel setContentView:[contentViewController view]];
+
+    NSRect bounds = NSMakeRect(0.0, 0.0, contentSize.width, contentSize.height);
+    panelContainerView = [[NSView alloc] initWithFrame:bounds];
+    [panelContainerView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    panelCornerView = [[DLPopoutCornerView alloc] initWithFrame:bounds];
+    [panelCornerView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [panelContainerView addSubview:panelCornerView];
+    [fallbackPanel setContentView:panelContainerView];
+    [self installContentView];
 }
 
 - (NSPoint)fallbackOriginForRect:(NSRect)rect view:(NSView *)view edge:(NSRectEdge)edge {
@@ -65,23 +136,29 @@
     NSPoint anchor = [[view window] convertBaseToScreen:windowRect.origin];
     CGFloat width = contentSize.width;
     CGFloat height = contentSize.height;
+    NSPoint origin;
     if (edge == NSMinXEdge) {
-        return NSMakePoint(anchor.x - width, anchor.y + NSHeight(windowRect) / 2.0 - height / 2.0);
+        origin = NSMakePoint(anchor.x - width - DLPopoutAnchorGap, anchor.y + NSHeight(windowRect) / 2.0 - height / 2.0);
+    } else if (edge == NSMaxXEdge) {
+        origin = NSMakePoint(anchor.x + NSWidth(windowRect) + DLPopoutAnchorGap, anchor.y + NSHeight(windowRect) / 2.0 - height / 2.0);
+    } else if (edge == NSMinYEdge) {
+        origin = NSMakePoint(anchor.x + NSWidth(windowRect) / 2.0 - width / 2.0, anchor.y - height - DLPopoutAnchorGap);
+    } else {
+        origin = NSMakePoint(anchor.x + NSWidth(windowRect) / 2.0 - width / 2.0, anchor.y + NSHeight(windowRect) + DLPopoutAnchorGap);
     }
-    if (edge == NSMaxXEdge) {
-        return NSMakePoint(anchor.x + NSWidth(windowRect), anchor.y + NSHeight(windowRect) / 2.0 - height / 2.0);
+
+    NSScreen *screen = [[view window] screen] ? [[view window] screen] : [NSScreen mainScreen];
+    if (screen) {
+        NSRect visible = NSInsetRect([screen visibleFrame], DLPopoutScreenMargin, DLPopoutScreenMargin);
+        if (origin.x + width > NSMaxX(visible)) origin.x = NSMaxX(visible) - width;
+        if (origin.x < NSMinX(visible)) origin.x = NSMinX(visible);
+        if (origin.y + height > NSMaxY(visible)) origin.y = NSMaxY(visible) - height;
+        if (origin.y < NSMinY(visible)) origin.y = NSMinY(visible);
     }
-    if (edge == NSMinYEdge) {
-        return NSMakePoint(anchor.x + NSWidth(windowRect) / 2.0 - width / 2.0, anchor.y - height);
-    }
-    return NSMakePoint(anchor.x + NSWidth(windowRect) / 2.0 - width / 2.0, anchor.y + NSHeight(windowRect));
+    return NSMakePoint(round(origin.x), round(origin.y));
 }
 
 - (void)showRelativeToRect:(NSRect)rect ofView:(NSView *)view preferredEdge:(NSRectEdge)edge {
-    if (nativePopover) {
-        [nativePopover showRelativeToRect:rect ofView:view preferredEdge:edge];
-        return;
-    }
     if (!view || ![view window]) return;
     [self ensureFallbackPanel];
     parentWindow = [view window];
@@ -90,6 +167,7 @@
     [parentWindow addChildWindow:fallbackPanel ordered:NSWindowAbove];
     fallbackShown = YES;
     [fallbackPanel makeKeyAndOrderFront:nil];
+    [fallbackPanel invalidateShadow];
 }
 
 - (void)notifyDidClose {
@@ -101,10 +179,6 @@
 }
 
 - (void)close {
-    if (nativePopover) {
-        [nativePopover close];
-        return;
-    }
     if (!fallbackShown) return;
     if (parentWindow) [parentWindow removeChildWindow:fallbackPanel];
     [fallbackPanel orderOut:nil];
@@ -114,12 +188,7 @@
 }
 
 - (BOOL)isShown {
-    if (nativePopover) return [nativePopover isShown];
     return fallbackShown && [fallbackPanel isVisible];
-}
-
-- (void)popoverDidClose:(NSNotification *)notification {
-    [self notifyDidClose];
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
@@ -135,11 +204,12 @@
 }
 
 - (void)dealloc {
-    [nativePopover setDelegate:nil];
-    [nativePopover release];
+    [(DLPopoutPanel *)fallbackPanel setOwner:nil];
     [fallbackPanel setDelegate:nil];
     [fallbackPanel close];
     [fallbackPanel release];
+    [panelCornerView release];
+    [panelContainerView release];
     [contentViewController release];
     [super dealloc];
 }

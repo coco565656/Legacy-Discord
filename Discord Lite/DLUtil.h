@@ -12,6 +12,8 @@
 #import "NSString+Base64.h"
 #import "CJSONSerializer.h"
 
+@class DLServer;
+
 @interface DLUtil : NSObject
 
 +(NSImage *)imageResize:(NSImage*)anImage newSize:(NSSize)newSize cornerRadius:(CGFloat)radius;
@@ -36,6 +38,9 @@
 +(NSColor *)nativeChromeColor;
 +(NSColor *)nativeInputColor;
 +(NSColor *)nativeBorderColor;
++(NSColor *)nativeScrollerKnobColor;
++(NSColor *)colorFromDiscordColorValue:(id)value;
++(NSColor *)roleColorForRoleIDs:(NSArray *)roleIDs inServer:(DLServer *)server;
 +(NSColor *)nativeHeaderTopColor;
 +(NSColor *)nativeHeaderBottomColor;
 +(NSColor *)nativePrimaryTextColor;

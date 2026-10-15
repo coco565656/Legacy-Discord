@@ -93,13 +93,24 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
         entryFrame.origin.x += 6.0;
         entryFrame.size.width -= 62.0;
         [textScrollView setFrame:entryFrame];
-        NSRect backgroundFrame = NSMakeRect(MAX(4.0, NSMinX(entryFrame) - 10.0),
+        // Like Discord, the attach "+" sits inside the rounded input field.
+        CGFloat backgroundLeft = MAX(4.0, NSMinX(entryFrame) - 10.0);
+        if (attachButton && [attachButton superview] == containerView) {
+            backgroundLeft = MAX(4.0, MIN(backgroundLeft, NSMinX([attachButton frame]) - 8.0));
+        }
+        NSRect backgroundFrame = NSMakeRect(backgroundLeft,
                                              MAX(4.0, NSMinY(entryFrame) - 8.0),
-                                             NSWidth([containerView bounds]) - MAX(4.0, NSMinX(entryFrame) - 10.0) - 7.0,
+                                             NSWidth([containerView bounds]) - backgroundLeft - 7.0,
                                              NSHeight(entryFrame) + 16.0);
         backgroundView = [[DLMessageComposerBackgroundView alloc] initWithFrame:backgroundFrame];
         [backgroundView setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
         [containerView addSubview:backgroundView positioned:NSWindowBelow relativeTo:textScrollView];
+        if (attachButton && [attachButton superview] == containerView) {
+            [attachButton retain];
+            [attachButton removeFromSuperview];
+            [containerView addSubview:attachButton positioned:NSWindowAbove relativeTo:backgroundView];
+            [attachButton release];
+        }
 
         NSButton *stickerButton = [[DLStickerButton alloc] initWithFrame:NSMakeRect(NSWidth([containerView bounds]) - 63, 15, 28, 26)];
         [stickerButton setAutoresizingMask:NSViewMinXMargin | NSViewMaxYMargin];
@@ -158,9 +169,17 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
     [textView setEditable:NO];
     [textView setSelectable:NO];
     [textView setToolTip:@"Offline replay: message input is disabled"];
+    [textView setPlaceholderString:@"Message #replay"];
     [attachButton setEnabled:NO];
     [emojiPickerController setEnabled:NO];
     [stickerPickerController setEnabled:NO];
+}
+
+-(NSString *)placeholderForChannel:(DLChannel *)channel {
+    NSString *name = [channel name];
+    if (![name length]) return nil;
+    BOOL isDirectMessage = [channel type] == ChannelTypeDM || [channel type] == ChannelTypeGroup;
+    return [NSString stringWithFormat:(isDirectMessage ? @"Message @%@" : @"Message #%@"), name];
 }
 
 -(void)setEnabledForChannel:(DLChannel *)channel {
@@ -169,6 +188,7 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
     [attachButton setEnabled:enabled];
     [emojiPickerController setEnabled:enabled];
     [textView setEditable:enabled];
+    [textView setPlaceholderString:[self placeholderForChannel:(enabled ? channel : nil)]];
     if (!enabled) {
         [stickerPickerController setEnabled:NO];
         return;

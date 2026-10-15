@@ -22,6 +22,7 @@
     NSString *channelID;
     NSString *serverID;
     DLUser *author;
+    NSArray *memberRoles;
     NSArray *attachments;
     NSDate *timestamp;
     NSDate *editedTimestamp;
@@ -46,6 +47,8 @@
 -(NSString *)channelID;
 -(NSString *)serverID;
 -(DLUser *)author;
+// Role IDs from the message's "member" object (Gateway messages only).
+-(NSArray *)memberRoles;
 -(NSArray *)attachments;
 -(NSDate *)timestamp;
 -(NSDate *)editedTimestamp;

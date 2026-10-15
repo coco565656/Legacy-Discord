@@ -41,6 +41,11 @@
         [author release];
         author = [[DLUser alloc] initWithDict:value];
     }
+    value = [d objectForKey:@"member"];
+    if ([value isKindOfClass:[NSDictionary class]] && [[value objectForKey:@"roles"] isKindOfClass:[NSArray class]]) {
+        [memberRoles release];
+        memberRoles = [[value objectForKey:@"roles"] copy];
+    }
     value = [d objectForKey:@"attachments"];
     if ([value isKindOfClass:[NSArray class]]) {
         NSMutableArray *attachmentData = [[NSMutableArray alloc] init];
@@ -136,6 +141,9 @@
 }
 -(DLUser *)author {
     return author;
+}
+-(NSArray *)memberRoles {
+    return memberRoles;
 }
 -(NSArray *)attachments {
     return attachments;
@@ -300,6 +308,7 @@
     [messageID release];
     [channelID release];
     [serverID release];
+    [memberRoles release];
     [timestamp release];
     [editedTimestamp release];
     [super dealloc];

@@ -17,8 +17,10 @@
 
 @interface DLMemberListCell : NSCell {
     DLServerMember *representedMember;
+    DLServer *representedServer;
 }
 -(void)setRepresentedMember:(DLServerMember *)member;
+-(void)setRepresentedServer:(DLServer *)server;
 @end
 
 @implementation DLMemberListCell
@@ -27,7 +29,21 @@
     representedMember = member;
 }
 
+-(void)setRepresentedServer:(DLServer *)server {
+    representedServer = server;
+}
+
 -(void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
+    // The table uses NSTableViewSelectionHighlightStyleNone: the Aqua
+    // highlight turns light gray whenever the table is not key, which made
+    // white member names unreadable. Draw the same rounded selection as the
+    // channel list instead.
+    NSInteger row = [(NSTableView *)controlView rowAtPoint:NSMakePoint(NSMidX(cellFrame), NSMidY(cellFrame))];
+    if (row >= 0 && [[(NSTableView *)controlView selectedRowIndexes] containsIndex:(NSUInteger)row]) {
+        NSRect selectionRect = NSInsetRect(NSIntersectionRect(cellFrame, [controlView visibleRect]), 6.0, 2.0);
+        [[DLUtil nativeSelectionColor] set];
+        [[NSBezierPath bezierPathWithRoundedRect:selectionRect xRadius:5.0 yRadius:5.0] fill];
+    }
     cellFrame = NSIntersectionRect(cellFrame, [controlView visibleRect]);
     DLUser *user = [representedMember user];
     if (!user) return;
@@ -41,11 +57,12 @@
         [NSGraphicsContext restoreGraphicsState];
     }
     NSString *name = [user globalName] ? [user globalName] : [user username];
+    NSColor *nameColor = [DLUtil roleColorForRoleIDs:[representedMember roles] inServer:representedServer];
     NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
     [style setLineBreakMode:NSLineBreakByTruncatingTail];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSFont systemFontOfSize:11.0], NSFontAttributeName,
-                                [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName,
+                                (nameColor ? nameColor : [DLUtil nativePrimaryTextColor]), NSForegroundColorAttributeName,
                                 style, NSParagraphStyleAttributeName, nil];
     NSMutableAttributedString *displayName = [[[NSMutableAttributedString alloc]
         initWithString:(name ? name : @"") attributes:attributes] autorelease];
@@ -141,7 +158,7 @@
     [tableView setRowHeight:40.0];
     [tableView setIntercellSpacing:NSMakeSize(0.0, 0.0)];
     [tableView setAllowsEmptySelection:YES];
-    [tableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleRegular];
+    [tableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
     [tableView setBackgroundColor:[DLUtil nativeSidebarColor]];
     [scrollView setDocumentView:tableView];
     [[scrollView contentView] setPostsBoundsChangedNotifications:YES];
@@ -263,6 +280,7 @@
   forTableColumn:(NSTableColumn *)column row:(NSInteger)row {
     if ([cell isKindOfClass:[DLMemberListCell class]]) {
         [(DLMemberListCell *)cell setRepresentedMember:[items objectAtIndex:row]];
+        [(DLMemberListCell *)cell setRepresentedServer:displayedServer];
     }
 }
 
