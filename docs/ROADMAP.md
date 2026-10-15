@@ -39,7 +39,7 @@
 - [x] Thread navigation and thread message composer (Threads list, full-width threads with breadcrumb)
 - [x] Forum channel post list (official cards, search, New Post draft)
 - [x] Channel message search (official result cards, highlights, paging)
-- [x] Pins and improved attachment handling (pin cards, payload_json uploads, 10 MB limit, spoilers; sending an attachment still to be confirmed on a device)
+- [x] Pins and improved attachment handling (pin cards, payload_json uploads, 10 MB limit, spoilers; reply + spoiler image sent on 10.6.8)
 - [x] Notification and per-channel mute controls (server/channel/category/DM mute with durations, Dock badge and bounce; badge verified on 10.6.8)
 
 ## Milestone 3: voice

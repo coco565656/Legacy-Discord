@@ -107,8 +107,11 @@ the DevLocal view capture remains useful for deterministic local regression.
   blurred with a "SPOILER" pill until clicked.
 - Verified on 10.6.8: pasting an image adds it to the tray, Mark as Spoiler
   dims it and labels it, an 11 MB file shows the alert, and removing the item
-  clears the tray. Actually sending an attachment and viewing a received
-  spoiler image were not exercised yet.
+  clears the tray.
+- End-to-end on the user's own server (with permission): sent a reply with
+  text and a spoiler image in one message. It arrived with the reply
+  reference, the text and the image blurred under a "SPOILER" pill; one click
+  revealed it. The message was then deleted.
 
 #### Image disk cache
 
