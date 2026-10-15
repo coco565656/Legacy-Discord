@@ -47,6 +47,18 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Clipped message text and avatars
+
+- Row heights were measured before the message text had been laid out at the
+  row's real width (the text view still reported the nib's one-line height or
+  width), so wrapped messages were clipped by the next row. Rows now get their
+  width first, and the text is laid out and sized before measuring.
+- Messages without text (here an apparently forwarded message with empty
+  content) were only as tall as the header spacing, cutting off the avatar;
+  non-compact rows now always leave room for the avatar.
+- Verified on 10.6.8 in the two channels where it was seen. Forwarded message
+  content (`message_snapshots`) is not rendered yet.
+
 #### Crashes when sending emoji
 
 - Crash 1 (`-[NSControl _setWindow:]` from `populateMessageActionBar:` in

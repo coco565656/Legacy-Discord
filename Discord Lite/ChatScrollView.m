@@ -375,11 +375,15 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     CGFloat height = 0;
     e = [content reverseObjectEnumerator];
     while (item = [e nextObject]) {
-        CGFloat expectedHeight = [item expectedHeight];
+        // Give the row its real width first so its text wraps as it will be
+        // shown; measuring at the nib's width under-counted wrapped lines.
         NSRect itemFrame = item.view.frame;
+        itemFrame.size.width = [self.documentView frame].size.width;
+        item.view.frame = itemFrame;
+        [item layoutForCurrentViewFrame];
+        CGFloat expectedHeight = [item expectedHeight];
         height += expectedHeight;
         itemFrame.size.height = expectedHeight;
-        itemFrame.size.width = [self.documentView frame].size.width;
         itemFrame.origin.y = [self.documentView frame].size.height - height;
         item.view.frame = itemFrame;
         [item layoutForCurrentViewFrame];
@@ -404,11 +408,15 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     NSEnumerator *e = [inContent objectEnumerator];
     ChatItemViewController *item;
     while (item = [e nextObject]) {
-        CGFloat expectedHeight = [item expectedHeight];
+        // Give the row its real width first so its text wraps as it will be
+        // shown; measuring at the nib's width under-counted wrapped lines.
         NSRect itemFrame = item.view.frame;
+        itemFrame.size.width = [self.documentView frame].size.width;
+        item.view.frame = itemFrame;
+        [item layoutForCurrentViewFrame];
+        CGFloat expectedHeight = [item expectedHeight];
         height += expectedHeight;
         itemFrame.size.height = expectedHeight;
-        itemFrame.size.width = [self.documentView frame].size.width;
         itemFrame.origin.y = [self.documentView frame].size.height - height;
         item.view.frame = itemFrame;
         [item layoutForCurrentViewFrame];
@@ -458,10 +466,12 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(screenResize) object:nil];
     [content insertObject:vc atIndex:0];
     [self updateMessageGroups];
-    CGFloat expectedHeight = [vc expectedHeight];
     NSRect itemFrame = vc.view.frame;
-    itemFrame.size.height = expectedHeight;
     itemFrame.size.width = [self.contentView frame].size.width;
+    vc.view.frame = itemFrame;
+    [vc layoutForCurrentViewFrame];
+    CGFloat expectedHeight = [vc expectedHeight];
+    itemFrame.size.height = expectedHeight;
     itemFrame.origin.y = 0;
     vc.view.frame = itemFrame;
     [vc layoutForCurrentViewFrame];

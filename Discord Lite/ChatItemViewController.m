@@ -330,6 +330,13 @@ const NSInteger ATTACHMENT_SPACING = 15;
 -(CGFloat)messageContentHeight {
     CGFloat textViewHeight = 0;
     if (![[representedObject content] isEqualToString:@""]) {
+        // Lay the text out at the current width before measuring. A text view
+        // that had not laid out yet (or still had the nib's width) reported a
+        // one-line height, and the row clipped the rest of the message.
+        if (!jumboEmojiDisplay) {
+            [[chatTextView layoutManager] ensureLayoutForTextContainer:[chatTextView textContainer]];
+            [chatTextView sizeToFit];
+        }
         textViewHeight = chatTextView.frame.size.height;
     }
     CGFloat height = [self headerSpacing];
@@ -353,6 +360,12 @@ const NSInteger ATTACHMENT_SPACING = 15;
     height += stickersHeight;
     if ([representedObject referencedMessage]) {
         height += referencedMessageView.frame.size.height;
+    }
+    if (!compactDisplay) {
+        // A message without text (an attachment-only or empty message) still
+        // needs room for the avatar beside its header.
+        CGFloat scale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
+        height = MAX(height, [self headerSpacing] + round(18.0 * scale));
     }
     return height;
 }
