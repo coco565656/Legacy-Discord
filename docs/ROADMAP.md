@@ -12,10 +12,10 @@
 - [x] Verify Gateway reconnect after a Wi-Fi interruption on 10.8.5
 - [x] Build on Xcode 5.0.2 with the Mountain Lion SDK
 - [x] Smoke-test login, Keychain session restoration, server sync and messaging on 10.8.5
-- [ ] Build and smoke-test the 10.6-targeted binary on Mac OS X 10.6.8
-- [ ] Smoke-test the same binary on Mac OS X 10.7.5 and OS X 10.8.5
+- [x] Build and smoke-test the 10.6-targeted binary on Mac OS X 10.6.8 (Xcode 4.2, signed; daily use since 2026-10)
+- [ ] Smoke-test the same binary on Mac OS X 10.7.5 and OS X 10.8.5 (10.8.5 will be re-checked when the Mountain Lion Mac is set up for voice)
 - [ ] Best-effort smoke-test login, server sync and message display on OS X 10.9.5
-- [ ] Record current Gateway payload differences and fix initial sync
+- [x] Record current Gateway payload differences and fix initial sync (READY without merged_members, user_guild_settings entries, read state; see REAL_DEVICE_TESTING)
 
 ## Milestone 1: daily text client
 
@@ -32,14 +32,14 @@
 - [x] Member/profile inspector (official popout, Message @user, full profile window)
 - [x] Link embed cards with a strict native renderer (official card style, accent colour, PNG media)
 - [x] Image cache with bounded disk usage (32 MB memory + 200 MB disk LRU, Clear Cache in Settings)
-- [ ] Connection state and reconnect indicator
+- [x] Connection state and reconnect indicator (header status dot, stall watchdog, reconnect on unexpected close)
 
 ## Milestone 2: modern channel features
 
 - [x] Thread navigation and thread message composer (Threads list, full-width threads with breadcrumb)
 - [x] Forum channel post list (official cards, search, New Post draft)
 - [x] Channel message search (official result cards, highlights, paging)
-- [ ] Pins and improved attachment handling
+- [x] Pins and improved attachment handling (pin cards, payload_json uploads, 10 MB limit, spoilers; sending an attachment still to be confirmed on a device)
 - [x] Notification and per-channel mute controls (server/channel/category/DM mute with durations, Dock badge and bounce; badge verified on 10.6.8)
 
 ## Milestone 3: voice
