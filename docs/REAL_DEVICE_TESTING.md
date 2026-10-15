@@ -47,6 +47,20 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Removing Discord Lite styling from the channel list and header
+
+- Header: the reload button is hidden (the official client has none), the
+  connection dot is shown only while not connected, and the channel topic is
+  shown after the name ("name │ topic", full text in the tooltip).
+- Channel list: AppKit disclosure triangles replaced by Discord's chevron;
+  clicking a category toggles it (handled in mouseDown because Snow Leopard
+  asks shouldSelectItem: more than once per click, which toggled twice);
+  channels align with their category (threads stay indented); rows keep
+  8-point side margins; the unread pill sits on the list's left edge.
+- Verified on 10.6.8: chevrons, flush channels, margins, edge unread pills,
+  hidden reload and connection dot, and collapse/expand of a category by click.
+  The topic display was not verified (the opened channel has no topic).
+
 #### User-reported UI fixes and channel visibility
 
 - Author names no longer truncate in a wide chat (width measured with the

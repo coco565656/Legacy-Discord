@@ -9,6 +9,7 @@
 #import "DLPinsController.h"
 #import "ChatScrollView.h"
 #import "DLUtil.h"
+#import "DLTwemojiRenderer.h"
 
 @interface DLMainHeaderController ()
 -(void)installHeaderControls;
@@ -75,6 +76,9 @@
     [reloadButton setTarget:self];
     [reloadButton setAction:@selector(reloadSelectedChannel:)];
     [chatHeaderView addSubview:reloadButton];
+    // The official client has no reload button; the object stays for the
+    // presentation controller's enable/disable calls but is not shown.
+    [reloadButton setHidden:YES];
 
     messageSearchField = [[NSSearchField alloc] initWithFrame:
                           NSMakeRect(NSMinX([reloadButton frame]) - searchWidth - 6.0, 9.0, searchWidth, 24.0)];
@@ -140,8 +144,7 @@
     CGFloat width = NSWidth([chatHeaderView bounds]);
     NSRect labelFrame = [chatHeaderLabel frame];
     CGFloat searchWidth = MIN(190.0, MAX(80.0, width - labelFrame.origin.x - 210.0));
-    [reloadButton setFrame:NSMakeRect(width - 34.0, 8.0, 26.0, 26.0)];
-    [messageSearchField setFrame:NSMakeRect(width - 40.0 - searchWidth, 9.0, searchWidth, 24.0)];
+    [messageSearchField setFrame:NSMakeRect(width - 10.0 - searchWidth, 9.0, searchWidth, 24.0)];
     [membersButton setFrame:NSMakeRect(NSMinX([messageSearchField frame]) - 32.0, 8.0, 26.0, 26.0)];
     [pinsButton setFrame:NSMakeRect(NSMinX([membersButton frame]) - 30.0, 8.0, 26.0, 26.0)];
     labelFrame.size.width = MAX(0.0, NSMinX([pinsButton frame]) - labelFrame.origin.x - 8.0);
@@ -175,6 +178,29 @@
     [reloadButton setEnabled:enabled];
 }
 
+-(void)setChannelTitle:(NSString *)title topic:(NSString *)topic {
+    NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
+    [style setLineBreakMode:NSLineBreakByTruncatingTail];
+    NSMutableAttributedString *text = [[[NSMutableAttributedString alloc] initWithString:(title ? title : @"")
+        attributes:[NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSFont boldSystemFontOfSize:14.0], NSFontAttributeName,
+                    [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName,
+                    style, NSParagraphStyleAttributeName, nil]] autorelease];
+    NSString *singleLineTopic = [[topic componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]] componentsJoinedByString:@" "];
+    if ([singleLineTopic length]) {
+        // "name | topic" like the official channel header.
+        [text appendAttributedString:[[[NSAttributedString alloc] initWithString:[@"  │  " stringByAppendingString:singleLineTopic]
+            attributes:[NSDictionary dictionaryWithObjectsAndKeys:
+                        [NSFont systemFontOfSize:12.0], NSFontAttributeName,
+                        [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName,
+                        style, NSParagraphStyleAttributeName, nil]] autorelease]];
+    }
+    [DLTwemojiRenderer replaceEmojiInAttributedString:text size:14.0
+                                   excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
+    [chatHeaderLabel setAttributedStringValue:text];
+    [chatHeaderLabel setToolTip:([singleLineTopic length] ? singleLineTopic : nil)];
+}
+
 -(void)setConnectionState:(DLWSConnectionState)state {
     connectionState = state;
     [self updateConnectionStatusField];
@@ -195,10 +221,13 @@
     }
     [(DLConnectionIndicatorView *)connectionStatusField setIndicatorColor:statusColor];
     [connectionStatusField setToolTip:statusDescription];
+    // Like the official client, connection state is only surfaced while the
+    // Gateway is not connected.
+    [connectionStatusField setHidden:(connectionState == DLWSConnectionStateConnected)];
 }
 
 -(void)applyCurrentTheme {
-    for (NSTextField *label in [NSArray arrayWithObjects:serverLabel, chatHeaderLabel, nil]) {
+    for (NSTextField *label in [NSArray arrayWithObjects:serverLabel, nil]) {
         [label setTextColor:[DLUtil nativePrimaryTextColor]];
         NSMutableAttributedString *text = [[[label attributedStringValue] mutableCopy] autorelease];
         [text addAttribute:NSForegroundColorAttributeName value:[DLUtil nativePrimaryTextColor]

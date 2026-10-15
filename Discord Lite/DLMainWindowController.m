@@ -645,7 +645,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [messageComposerController setEnabledForChannel:channel];
     [chatScrollView registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
     [messageComposerController reset];
-    [DLTwemojiRenderer setText:[channel name] ? [channel name] : @"Direct Message" forLabel:chatHeaderLabel];
+    NSString *topic = [channel respondsToSelector:@selector(topic)] ? [(DLServerChannel *)channel topic] : nil;
+    [mainHeaderController setChannelTitle:([channel name] ? [channel name] : @"Direct Message")
+                                    topic:([topic isKindOfClass:[NSString class]] ? topic : nil)];
     NSData *headerImageData = ([channel type] == ChannelTypeDM || [channel type] == ChannelTypeGroup)
         ? [channel imageData] : [channel subImageData];
     [chatHeaderImage setImage:[[[NSImage alloc] initWithData:headerImageData] autorelease]];

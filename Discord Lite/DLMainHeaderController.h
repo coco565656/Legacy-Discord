@@ -48,6 +48,8 @@
 -(void)setMembersEnabled:(BOOL)enabled;
 -(void)setReloadEnabled:(BOOL)enabled;
 -(void)setConnectionState:(DLWSConnectionState)state;
+// Channel name with its topic after a divider, like the official header.
+-(void)setChannelTitle:(NSString *)title topic:(NSString *)topic;
 -(void)applyCurrentTheme;
 
 @end

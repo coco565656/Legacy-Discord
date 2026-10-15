@@ -35,6 +35,36 @@
     return hoveredRow;
 }
 
+// A click on a category row expands or collapses it. Done here rather than in
+// shouldSelectItem:, which AppKit may ask more than once per click.
+-(void)mouseDown:(NSEvent *)event {
+    NSInteger row = [self rowAtPoint:[self convertPoint:[event locationInWindow] fromView:nil]];
+    id item = row >= 0 ? [self itemAtRow:row] : nil;
+    if ([item isKindOfClass:[DLChannel class]] && [(DLChannel *)item type] == ChannelTypeHeader) {
+        if ([self isItemExpanded:item]) [self collapseItem:item];
+        else [self expandItem:item];
+        return;
+    }
+    [super mouseDown:event];
+}
+
+// No AppKit disclosure triangles: category rows draw Discord's chevron and
+// toggle on click instead.
+-(NSRect)frameOfOutlineCellAtRow:(NSInteger)row {
+    return NSZeroRect;
+}
+
+// Channels sit flush with their category like the official list; only
+// threads (level 2+) keep an indent.
+-(NSRect)frameOfCellAtColumn:(NSInteger)column row:(NSInteger)row {
+    NSRect columnRect = [self rectOfColumn:column];
+    NSRect rowRect = [self rectOfRow:row];
+    NSInteger level = [self levelForRow:row];
+    CGFloat indent = level >= 2 ? (level - 1) * [self indentationPerLevel] : 0.0;
+    return NSMakeRect(NSMinX(columnRect) + indent, NSMinY(rowRect),
+                      MAX(0.0, NSWidth(columnRect) - indent), NSHeight(rowRect));
+}
+
 -(void)viewDidMoveToWindow {
     [super viewDidMoveToWindow];
     [[self window] setAcceptsMouseMovedEvents:YES];
@@ -190,13 +220,15 @@
     // view.  NSTableView can still hand the cell the wider document frame, so
     // keep right-aligned content inside the portion that is actually visible.
     NSRect contentRect = NSIntersectionRect(cellFrame, [controlView visibleRect]);
+    // Rows keep an 8-point margin on both sides of the list like Discord.
+    if (!isCategory) contentRect = NSInsetRect(contentRect, 8.0, 0.0);
 
     if (!isCategory && selected) {
-        NSRect selectionRect = NSInsetRect(cellFrame, 2.0, 2.0);
+        NSRect selectionRect = NSInsetRect(contentRect, 0.0, 2.0);
         [[DLUtil nativeSelectionColor] set];
         [[NSBezierPath bezierPathWithRoundedRect:selectionRect xRadius:5.0 yRadius:5.0] fill];
     } else if (!isCategory && hovered) {
-        NSRect hoverRect = NSInsetRect(cellFrame, 2.0, 2.0);
+        NSRect hoverRect = NSInsetRect(contentRect, 0.0, 2.0);
         [[[DLUtil nativeSelectionColor] colorWithAlphaComponent:0.55] set];
         [[NSBezierPath bezierPathWithRoundedRect:hoverRect xRadius:5.0 yRadius:5.0] fill];
     }
@@ -217,6 +249,29 @@
                                 paragraphStyle, NSParagraphStyleAttributeName, nil];
 
     if (isCategory) {
+        // Chevron: down when expanded, right when collapsed.
+        BOOL expanded = [(NSOutlineView *)controlView isItemExpanded:representedChannel];
+        BOOL flipped = [controlView isFlipped];
+        CGFloat cx = NSMinX(contentRect) + 9.0;
+        CGFloat cy = NSMidY(contentRect);
+        NSBezierPath *chevron = [NSBezierPath bezierPath];
+        if (expanded) {
+            CGFloat dy = flipped ? 2.0 : -2.0;
+            [chevron moveToPoint:NSMakePoint(cx - 3.5, cy - dy)];
+            [chevron lineToPoint:NSMakePoint(cx, cy + dy)];
+            [chevron lineToPoint:NSMakePoint(cx + 3.5, cy - dy)];
+        } else {
+            [chevron moveToPoint:NSMakePoint(cx - 1.5, cy - 3.5)];
+            [chevron lineToPoint:NSMakePoint(cx + 2.0, cy)];
+            [chevron lineToPoint:NSMakePoint(cx - 1.5, cy + 3.5)];
+        }
+        [chevron setLineWidth:1.5];
+        [chevron setLineCapStyle:NSRoundLineCapStyle];
+        [chevron setLineJoinStyle:NSRoundLineJoinStyle];
+        [[DLUtil nativeSecondaryTextColor] setStroke];
+        [chevron stroke];
+        contentRect.origin.x += 14.0;
+        contentRect.size.width -= 14.0;
         NSString *categoryName = [name uppercaseString];
         NSMutableAttributedString *categoryText = [[[NSMutableAttributedString alloc]
             initWithString:categoryName attributes:attributes] autorelease];
@@ -232,8 +287,9 @@
 
     if ([representedChannel hasUnreadMessages] && !selected) {
         [[DLUtil nativePrimaryTextColor] set];
-        NSRect unreadRect = NSMakeRect(NSMinX(contentRect), NSMidY(contentRect) - 4.0, 3.0, 8.0);
-        [[NSBezierPath bezierPathWithRoundedRect:unreadRect xRadius:1.5 yRadius:1.5] fill];
+        // Discord's unread pill hangs off the left edge of the channel list.
+        NSRect unreadRect = NSMakeRect(NSMinX([controlView visibleRect]) - 4.0, NSMidY(contentRect) - 4.0, 8.0, 8.0);
+        [[NSBezierPath bezierPathWithRoundedRect:unreadRect xRadius:4.0 yRadius:4.0] fill];
     }
 
     NSColor *iconColor = emphasized ? [DLUtil nativePrimaryTextColor] : [DLUtil nativeSecondaryTextColor];
@@ -429,15 +485,16 @@
     return NO;
 }
 
--(BOOL)outlineView:(NSOutlineView *)inOutlineView shouldSelectItem:(id)item {
-    return [(DLChannel *)item type] != ChannelTypeHeader;
-}
-
 -(void)outlineView:(NSOutlineView *)inOutlineView willDisplayCell:(id)cell forTableColumn:(NSTableColumn *)tableColumn item:(id)item {
     if ([cell isKindOfClass:[DLChannelTableCell class]]) {
         [(DLChannelTableCell *)cell setRepresentedChannel:(DLChannel *)item];
     }
     [cell setLineBreakMode:NSLineBreakByTruncatingTail];
+}
+
+// Categories are toggled by DLChannelOutlineView's mouseDown and never selected.
+-(BOOL)outlineView:(NSOutlineView *)inOutlineView shouldSelectItem:(id)item {
+    return [(DLChannel *)item type] != ChannelTypeHeader;
 }
 
 -(void)outlineViewSelectionDidChange:(NSNotification *)notification {
