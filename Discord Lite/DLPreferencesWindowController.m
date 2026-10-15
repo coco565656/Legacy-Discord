@@ -9,6 +9,7 @@
 #import "DLPreferencesWindowController.h"
 #import "DLController.h"
 #import "DLUtil.h"
+#import "DLMainWindowChromeControls.h"
 #import "DLTwemojiRenderer.h"
 #import "NSView+BGColor.h"
 
@@ -424,7 +425,8 @@ enum {
 
     CGFloat rowTop = top - 136.0;
     [self sectionHeaderInPane:pane top:rowTop text:@"CHAT FONT SCALING"];
-    chatFontPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft - 2.0, rowTop - 50.0, 220.0, 26.0) pullsDown:NO];
+    chatFontPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft - 2.0, rowTop - 50.0, 220.0, 30.0) pullsDown:NO];
+    [chatFontPopup setCell:[[[DLDarkPopUpButtonCell alloc] initTextCell:@"" pullsDown:NO] autorelease]];
     NSInteger fontSizes[] = { 12, 13, 14, 15, 16, 18, 20 };
     for (NSUInteger index = 0; index < sizeof(fontSizes) / sizeof(fontSizes[0]); index++) {
         NSString *title = fontSizes[index] == 13 ? @"13px (default)" : [NSString stringWithFormat:@"%ldpx", (long)fontSizes[index]];
@@ -438,7 +440,8 @@ enum {
 
     rowTop -= 80.0;
     [self sectionHeaderInPane:pane top:rowTop text:@"ZOOM LEVEL"];
-    displayScalePopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft - 2.0, rowTop - 50.0, 220.0, 26.0) pullsDown:NO];
+    displayScalePopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft - 2.0, rowTop - 50.0, 220.0, 30.0) pullsDown:NO];
+    [displayScalePopup setCell:[[[DLDarkPopUpButtonCell alloc] initTextCell:@"" pullsDown:NO] autorelease]];
     NSArray *titles = [NSArray arrayWithObjects:@"80%", @"90% (default)", @"100%", @"110%", @"125%", nil];
     NSInteger tags[] = { 80, 90, 100, 110, 125 };
     for (NSInteger index = 0; index < (NSInteger)[titles count]; index++) {

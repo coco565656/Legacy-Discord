@@ -164,3 +164,41 @@
     }
 }
 @end
+
+@implementation DLDarkPopUpButtonCell
+-(void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
+    NSRect boxRect = NSInsetRect(cellFrame, 1.5, 1.5);
+    NSBezierPath *box = [NSBezierPath bezierPathWithRoundedRect:boxRect xRadius:4.0 yRadius:4.0];
+    [[DLUtil nativeServerRailColor] setFill];
+    [box fill];
+    [[DLUtil nativeBorderColor] setStroke];
+    [box setLineWidth:1.0];
+    [box stroke];
+
+    NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
+    [style setLineBreakMode:NSLineBreakByTruncatingTail];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont systemFontOfSize:12.0], NSFontAttributeName,
+                                ([self isEnabled] ? [DLUtil nativePrimaryTextColor] : [DLUtil nativeSecondaryTextColor]), NSForegroundColorAttributeName,
+                                style, NSParagraphStyleAttributeName, nil];
+    NSString *title = [self titleOfSelectedItem] ? [self titleOfSelectedItem] : @"";
+    NSSize titleSize = [title sizeWithAttributes:attributes];
+    [title drawInRect:NSMakeRect(NSMinX(boxRect) + 10.0, floor(NSMidY(boxRect) - titleSize.height / 2.0),
+                                 MAX(0.0, NSWidth(boxRect) - 34.0), titleSize.height)
+       withAttributes:attributes];
+
+    BOOL flipped = [controlView isFlipped];
+    CGFloat cx = NSMaxX(boxRect) - 14.0;
+    CGFloat cy = NSMidY(boxRect);
+    CGFloat dy = flipped ? 2.0 : -2.0;
+    NSBezierPath *chevron = [NSBezierPath bezierPath];
+    [chevron moveToPoint:NSMakePoint(cx - 4.0, cy - dy)];
+    [chevron lineToPoint:NSMakePoint(cx, cy + dy)];
+    [chevron lineToPoint:NSMakePoint(cx + 4.0, cy - dy)];
+    [chevron setLineWidth:1.5];
+    [chevron setLineCapStyle:NSRoundLineCapStyle];
+    [chevron setLineJoinStyle:NSRoundLineJoinStyle];
+    [[DLUtil nativeSecondaryTextColor] setStroke];
+    [chevron stroke];
+}
+@end

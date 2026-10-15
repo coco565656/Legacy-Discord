@@ -53,22 +53,30 @@
     if (selected) {
         [[NSColor whiteColor] set];
         NSBezierPath *selectedPath = [NSBezierPath bezierPathWithRoundedRect:
-                                      NSMakeRect(NSMinX(cellFrame), NSMidY(cellFrame) - 18.0, 4.0, 36.0)
-                                                                           xRadius:2.0 yRadius:2.0];
+                                      NSMakeRect(NSMinX([controlView visibleRect]) - 4.0, NSMidY(cellFrame) - 20.0, 8.0, 40.0)
+                                                                           xRadius:4.0 yRadius:4.0];
         [selectedPath fill];
     } else if ([representedServer hasUnreadMessages]) {
         [[NSColor whiteColor] set];
         NSBezierPath *unreadPath = [NSBezierPath bezierPathWithRoundedRect:
-                                    NSMakeRect(NSMinX(cellFrame), NSMidY(cellFrame) - 5.0, 4.0, 10.0)
-                                                                         xRadius:2.0 yRadius:2.0];
+                                    NSMakeRect(NSMinX([controlView visibleRect]) - 4.0, NSMidY(cellFrame) - 4.0, 8.0, 8.0)
+                                                                         xRadius:4.0 yRadius:4.0];
         [unreadPath fill];
     }
 
     NSInteger mentionCount = [representedServer mentionCount];
     if (mentionCount > 0) {
         NSString *badgeText = mentionCount > 99 ? @"99+" : [NSString stringWithFormat:@"%ld", (long)mentionCount];
-        NSRect badgeRect = NSMakeRect(NSMaxX(iconRect) - 13.0, NSMinY(iconRect) - 1.0, 20.0, 16.0);
-        [[NSColor colorWithCalibratedRed:0.82 green:0.08 blue:0.10 alpha:1.0] set];
+        // Discord puts the mention badge at the icon's bottom-right corner,
+        // cut out of the icon by a ring of the rail color.
+        NSDictionary *measureAttributes = [NSDictionary dictionaryWithObject:[NSFont boldSystemFontOfSize:9.0] forKey:NSFontAttributeName];
+        CGFloat badgeWidth = MAX(16.0, ceil([badgeText sizeWithAttributes:measureAttributes].width) + 8.0);
+        BOOL flipped = [controlView isFlipped];
+        NSRect badgeRect = NSMakeRect(NSMaxX(iconRect) - badgeWidth + 3.0,
+                                      flipped ? NSMaxY(iconRect) - 13.0 : NSMinY(iconRect) - 3.0, badgeWidth, 16.0);
+        [[DLUtil nativeServerRailColor] set];
+        [[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(badgeRect, -3.0, -3.0) xRadius:11.0 yRadius:11.0] fill];
+        [[NSColor colorWithCalibratedRed:0.949 green:0.247 blue:0.263 alpha:1.0] set];
         [[NSBezierPath bezierPathWithRoundedRect:badgeRect xRadius:8.0 yRadius:8.0] fill];
 
         NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:

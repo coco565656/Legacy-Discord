@@ -47,6 +47,16 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Server rail and settings dropdowns
+
+- Server rail: selected pill (40pt) and unread dot (8pt) now hang off the
+  rail's left edge instead of overlapping the icon; the mention badge sits at
+  the icon's bottom-right inside a rail-colored ring.
+- Settings: chat font and zoom pop-ups use a dark Discord-style dropdown cell
+  (`DLDarkPopUpButtonCell`); the opened menu stays native.
+- Verified on 10.6.8: rail pills at the edge and dark dropdowns in Appearance.
+  The mention badge was not visible on the device (no mentions at the time).
+
 #### Removing Discord Lite styling from the channel list and header
 
 - Header: the reload button is hidden (the official client has none), the

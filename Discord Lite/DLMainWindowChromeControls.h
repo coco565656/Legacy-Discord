@@ -32,6 +32,11 @@ enum {
     DLUserPanelIconHeadphones = 1
 };
 
+// Discord-style dark dropdown in place of the white Aqua pop-up bezel. The
+// menu itself stays the native AppKit menu.
+@interface DLDarkPopUpButtonCell : NSPopUpButtonCell
+@end
+
 // Microphone / headphone buttons of the account panel.
 @interface DLUserPanelIconButton : NSButton {
     NSInteger iconKind;
