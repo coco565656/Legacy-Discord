@@ -47,6 +47,26 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Gateway thread-safety crash fix
+
+- Crash reports from 2026-10-02 (heap corruption in NSMutableData realloc),
+  2026-10-05 (SSL_write) and 2026-10-15 (bad pointer while rebuilding the hover
+  action bar) are consistent with the Gateway libcurl handle being used from
+  two threads: `curl_ws_send` / `curl_easy_setopt` on the main thread while
+  `curl_easy_perform` ran on the WebSocket thread, and overlapping reconnect
+  threads sharing one static receive buffer.
+- Fix: one connect-only (`CURLOPT_CONNECT_ONLY = 2`) connection per thread run;
+  that thread alone connects, receives, sends queued frames and cleans up.
+  Other threads only enqueue frames. Connections are serialized with a lock
+  and ended through a generation counter instead of cross-thread `setopt`.
+- Also kept the quick-reaction button alive until its click finishes, since
+  the action bar it belongs to is rebuilt from its own action.
+- Verified on 10.6.8: connected (green) after launch and still connected after
+  more than three minutes (several heartbeat intervals), DM list and messages
+  loaded, no "Websocket Closed" log and no new crash report for the new
+  process. Longer soak testing and reconnect after a network drop are not yet
+  verified.
+
 #### Markdown extensions and grouped member list
 
 - Same remote build procedure; read-only navigation only.

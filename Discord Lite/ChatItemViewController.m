@@ -706,6 +706,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
 }
 
 -(void)quickReaction:(NSButton *)sender {
+    // The action bar is rebuilt below, which removes and releases this very
+    // button while AppKit is still tracking its click. Keep it alive until the
+    // current event finishes.
+    [[sender retain] autorelease];
     NSString *identifier = [[sender cell] representedObject];
     NSRange separator = [identifier rangeOfString:@":" options:NSBackwardsSearch];
     NSDictionary *emoji;

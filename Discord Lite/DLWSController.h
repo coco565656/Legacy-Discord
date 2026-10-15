@@ -67,7 +67,12 @@ typedef enum {
 @end
 
 @interface DLWSController : NSObject {
+    // Owned by the WebSocket thread only. libcurl handles are not
+    // thread-safe; other threads queue frames in outgoingFrames instead.
     CURL *curlWebSocketHandle;
+    NSMutableArray *outgoingFrames;
+    NSLock *connectionLock;
+    volatile int32_t connectionGeneration;
     NSString *token;
     NSString *sessionID;
     NSTimer *heartbeatTimer;

@@ -8,10 +8,11 @@
 
 #import "DLWSController.h"
 #import <SystemConfiguration/SystemConfiguration.h>
+#import <libkern/OSAtomic.h>
+#include <sys/select.h>
 
 @implementation DLWSController
 
-static NSMutableData* receivedWSData;
 
 static DLWSController* sharedObject = nil;
 
@@ -66,23 +67,6 @@ static DLWSController* sharedObject = nil;
     [self checkNetworkReachability:reachabilityTimer];
 }
 
-static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
-    if (!receivedWSData) {
-        receivedWSData = [[NSMutableData alloc] init];
-    }
-    CURL *easy = p;
-    const struct curl_ws_frame *frame = curl_ws_meta(easy);
-    
-    [receivedWSData appendBytes:b length:nitems * size];
-    if (frame->bytesleft < 1) {
-        NSData *resData = [NSData dataWithData:receivedWSData];
-        [[DLWSController sharedInstance] performSelectorOnMainThread:@selector(wsTextDataReceived:) withObject:resData waitUntilDone:YES];
-        [receivedWSData release];
-        receivedWSData = nil;
-    }
-    return nitems;
-}
-
 -(id)init {
     self = [super init];
     heartbeatResponseReceived = NO;
@@ -92,6 +76,9 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
     reconnectScheduled = NO;
     sequenceNumber = 0;
     connectionState = DLWSConnectionStateDisconnected;
+    outgoingFrames = [[NSMutableArray alloc] init];
+    connectionLock = [[NSLock alloc] init];
+    connectionGeneration = 0;
     return self;
 }
 
@@ -107,39 +94,110 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
     delegate = inDelegate;
 }
 
--(void)startWebSocketThread {
-    
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    
-    CURLcode res;
-    
-    printf("libcurl version %s\n", curl_version());
-    
-    curlWebSocketHandle = curl_easy_init();
-    if (curlWebSocketHandle) {
-        curl_easy_setopt(curlWebSocketHandle, CURLOPT_URL, WS_GATEWAY_URL);
-        NSString *caBundlePath = [DLUtil caBundlePath];
-        curl_easy_setopt(curlWebSocketHandle, CURLOPT_SSL_VERIFYPEER, 1L);
-        curl_easy_setopt(curlWebSocketHandle, CURLOPT_SSL_VERIFYHOST, 2L);
-        if (caBundlePath) {
-            curl_easy_setopt(curlWebSocketHandle, CURLOPT_CAINFO, [caBundlePath fileSystemRepresentation]);
-        }
-        //curl_easy_setopt(curlWebSocketHandle, CURLOPT_VERBOSE, 1L);
-        curl_easy_setopt(curlWebSocketHandle, CURLOPT_USERAGENT, [[DLUtil userAgentString] UTF8String]);
-        curl_easy_setopt(curlWebSocketHandle, CURLOPT_WRITEFUNCTION, writecb);
-        curl_easy_setopt(curlWebSocketHandle, CURLOPT_WRITEDATA, curlWebSocketHandle);
-        
-        res = curl_easy_perform(curlWebSocketHandle);
-        if (res != CURLE_OK) {
-            printf("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-        }
-        curl_easy_cleanup(curlWebSocketHandle);
-        curlWebSocketHandle = nil;
+// Ends the current connection. Its thread notices within one poll interval;
+// no libcurl call is made from this (main) thread.
+-(void)abortCurrentConnection {
+    OSAtomicIncrement32Barrier(&connectionGeneration);
+}
+
+-(void)sendQueuedFramesOnHandle:(CURL *)handle {
+    NSArray *frames = nil;
+    @synchronized(outgoingFrames) {
+        if ([outgoingFrames count] == 0) return;
+        frames = [[outgoingFrames copy] autorelease];
+        [outgoingFrames removeAllObjects];
     }
+    NSEnumerator *enumerator = [frames objectEnumerator];
+    NSData *frame;
+    while (frame = [enumerator nextObject]) {
+        // Gateway frames are small; libcurl either accepts the whole frame or
+        // asks to retry it unchanged (CURLE_AGAIN).
+        for (int attempt = 0; attempt < 200; attempt++) {
+            size_t sent = 0;
+            CURLcode result = curl_ws_send(handle, [frame bytes], [frame length], &sent, 0, CURLWS_TEXT);
+            if (result == CURLE_AGAIN) { usleep(10000); continue; }
+            if (result != CURLE_OK) return;
+            if (sent < [frame length]) NSLog(@"Gateway frame partially sent (%lu of %lu bytes).", (unsigned long)sent, (unsigned long)[frame length]);
+            break;
+        }
+    }
+}
+
+// One connection per thread run. All libcurl calls for the handle happen
+// here: connect, receive, send queued frames, cleanup. A new thread waits for
+// the previous one to finish (connectionLock) so connections never overlap.
+-(void)startWebSocketThread {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    int32_t generation = connectionGeneration;
+    [connectionLock lock];
+    if (generation != connectionGeneration) {
+        [connectionLock unlock];
+        [pool release];
+        return;
+    }
+    @synchronized(outgoingFrames) {
+        [outgoingFrames removeAllObjects];
+    }
+
+    CURL *handle = curl_easy_init();
+    if (handle) {
+        curl_easy_setopt(handle, CURLOPT_URL, WS_GATEWAY_URL);
+        NSString *caBundlePath = [DLUtil caBundlePath];
+        curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 1L);
+        curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 2L);
+        if (caBundlePath) {
+            curl_easy_setopt(handle, CURLOPT_CAINFO, [caBundlePath fileSystemRepresentation]);
+        }
+        curl_easy_setopt(handle, CURLOPT_USERAGENT, [[DLUtil userAgentString] UTF8String]);
+        curl_easy_setopt(handle, CURLOPT_CONNECT_ONLY, 2L);
+        curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT, 20L);
+        CURLcode res = curl_easy_perform(handle);
+        if (res != CURLE_OK) {
+            printf("WebSocket connect failed: %s\n", curl_easy_strerror(res));
+        } else {
+            curlWebSocketHandle = handle;
+            NSMutableData *message = [[NSMutableData alloc] init];
+            char buffer[16384];
+            BOOL open = YES;
+            while (open && generation == connectionGeneration) {
+                NSAutoreleasePool *loopPool = [[NSAutoreleasePool alloc] init];
+                [self sendQueuedFramesOnHandle:handle];
+                curl_socket_t socket = CURL_SOCKET_BAD;
+                curl_easy_getinfo(handle, CURLINFO_ACTIVESOCKET, &socket);
+                if (socket == CURL_SOCKET_BAD) open = NO;
+                if (open) {
+                    fd_set readSet;
+                    FD_ZERO(&readSet);
+                    FD_SET(socket, &readSet);
+                    struct timeval timeout = { 0, 250000 };
+                    select(socket + 1, &readSet, NULL, NULL, &timeout);
+                }
+                while (open && generation == connectionGeneration) {
+                    size_t received = 0;
+                    const struct curl_ws_frame *meta = NULL;
+                    CURLcode result = curl_ws_recv(handle, buffer, sizeof(buffer), &received, &meta);
+                    if (result == CURLE_AGAIN) break;
+                    if (result != CURLE_OK) { open = NO; break; }
+                    if (meta && (meta->flags & CURLWS_CLOSE)) { open = NO; break; }
+                    if (received > 0) [message appendBytes:buffer length:received];
+                    if (meta && meta->bytesleft == 0 && !(meta->flags & CURLWS_CONT) &&
+                        (meta->flags & (CURLWS_TEXT | CURLWS_BINARY)) && [message length] > 0) {
+                        NSData *complete = [NSData dataWithData:message];
+                        [message setLength:0];
+                        [self performSelectorOnMainThread:@selector(wsTextDataReceived:) withObject:complete waitUntilDone:YES];
+                    }
+                }
+                [loopPool release];
+            }
+            [message release];
+            curlWebSocketHandle = NULL;
+        }
+        curl_easy_cleanup(handle);
+    }
+    [connectionLock unlock];
     [pool release];
-    
-    
-    if (connectionState != DLWSConnectionStateDisconnected) {
+
+    if (generation == connectionGeneration && connectionState != DLWSConnectionStateDisconnected) {
         [self notifyConnectionState:DLWSConnectionStateReconnecting];
     }
     NSLog(@"Websocket Closed");
@@ -152,6 +210,7 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
     [inToken retain];
     token = inToken;
     [self startReachabilityMonitoring];
+    [self abortCurrentConnection];
     [NSThread detachNewThreadSelector:@selector(startWebSocketThread) toTarget:self withObject:nil];
 }
 -(void)stop {
@@ -163,16 +222,14 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
         [reachabilityTimer invalidate];
         reachabilityTimer = nil;
     }
-    if (curlWebSocketHandle) {
-        curl_easy_setopt(curlWebSocketHandle, CURLOPT_TIMEOUT_MS, 1);
-    }
+    [self abortCurrentConnection];
     shouldResume = NO;
     [self notifyConnectionState:DLWSConnectionStateDisconnected];
 }
 -(void)sendWSTextData:(NSData *)textData {
-    if (curlWebSocketHandle) {
-        size_t sent;
-        curl_ws_send(curlWebSocketHandle, [textData bytes], [textData length], &sent, 0, CURLWS_TEXT);
+    if (![textData length]) return;
+    @synchronized(outgoingFrames) {
+        [outgoingFrames addObject:textData];
     }
 }
 
@@ -185,9 +242,7 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
     } else {
         shouldResume = YES;
         didResume = NO;
-        if (curlWebSocketHandle) {
-            curl_easy_setopt(curlWebSocketHandle, CURLOPT_TIMEOUT_MS, 1);
-        }
+        [self abortCurrentConnection];
         [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:1];
     }
 }
@@ -196,9 +251,7 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
     shouldResume = NO;
     if (!didResume) {
         didReconnect = YES;
-        if (curlWebSocketHandle) {
-            curl_easy_setopt(curlWebSocketHandle, CURLOPT_TIMEOUT_MS, 1);
-        }
+        [self abortCurrentConnection];
         [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:1];
     }
 }
@@ -217,9 +270,7 @@ static size_t writecb(char *b, size_t size, size_t nitems, void *p) {
         sequenceNumber = 0;
         didReconnect = YES;
     }
-    if (curlWebSocketHandle) {
-        curl_easy_setopt(curlWebSocketHandle, CURLOPT_TIMEOUT_MS, 1);
-    }
+    [self abortCurrentConnection];
     [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:2.0];
 }
 
