@@ -11,12 +11,50 @@
 #import "NSScroller+BGColor.h"
 #import "DLUtil.h"
 #import "DLTwemojiRenderer.h"
+#import "DLController.h"
+#import "DLMainWindowChromeControls.h"
 
-@interface DLDirectMessageController ()
+enum {
+    DLFriendsTabOnline = 0,
+    DLFriendsTabAll,
+    DLFriendsTabPending,
+    DLFriendsTabBlocked
+};
+
+// Text tab in the Friends header, highlighted like the official tabs.
+@interface DLFriendsTabButton : NSButton {
+    BOOL selected;
+}
+-(void)setSelected:(BOOL)flag;
+@end
+
+@implementation DLFriendsTabButton
+-(void)setSelected:(BOOL)flag {
+    selected = flag;
+    [self setNeedsDisplay:YES];
+}
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = [self bounds];
+    if (selected || [[self cell] isHighlighted]) {
+        [[DLUtil nativeSelectionColor] setFill];
+        [[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(bounds, 0.0, 2.0) xRadius:4.0 yRadius:4.0] fill];
+    }
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont systemFontOfSize:13.0], NSFontAttributeName,
+                                (selected ? [DLUtil nativePrimaryTextColor] : [DLUtil nativeSecondaryTextColor]), NSForegroundColorAttributeName, nil];
+    NSSize size = [[self title] sizeWithAttributes:attributes];
+    [[self title] drawAtPoint:NSMakePoint(floor(NSMidX(bounds) - size.width / 2.0), floor(NSMidY(bounds) - size.height / 2.0))
+               withAttributes:attributes];
+}
+@end
+
+@interface DLDirectMessageController () <DLUserDelegate>
 -(void)installFriendsHome;
 -(void)refreshFriendsHomeAvatars;
 -(void)friendsHomeFrameDidChange:(NSNotification *)notification;
 -(IBAction)openFriendDirectMessage:(id)sender;
+-(void)rebuildFriendsList;
+-(void)rebuildRecentConversations;
 @end
 
 @implementation DLDirectMessageController
@@ -86,6 +124,30 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
     [friendsSubtitleField setTextColor:[DLUtil nativeSecondaryTextColor]];
     [friendsSubtitleField setStringValue:@"Recent conversations"];
     [friendsHomeView addSubview:friendsSubtitleField];
+    // The official Friends page has tabs instead of a title.
+    [friendsTitleField setHidden:YES];
+    [friendsSubtitleField setHidden:YES];
+    friendsTabButtons = [[NSMutableArray alloc] init];
+    NSArray *tabTitles = [NSArray arrayWithObjects:@"Online", @"All", @"Pending", @"Blocked", nil];
+    CGFloat tabX = 20.0;
+    for (NSUInteger index = 0; index < [tabTitles count]; index++) {
+        NSString *tabTitle = [tabTitles objectAtIndex:index];
+        CGFloat width = ceil([tabTitle sizeWithAttributes:[NSDictionary dictionaryWithObject:[NSFont systemFontOfSize:13.0] forKey:NSFontAttributeName]].width) + 20.0;
+        DLFriendsTabButton *tab = [[[DLFriendsTabButton alloc] initWithFrame:NSMakeRect(tabX, NSHeight([friendsHomeView bounds]) - 48.0, width, 30.0)] autorelease];
+        [tab setAutoresizingMask:NSViewMinYMargin];
+        [tab setBordered:NO];
+        [tab setButtonType:NSMomentaryChangeButton];
+        [tab setTitle:tabTitle];
+        [tab setTag:index];
+        [tab setTarget:self];
+        [tab setAction:@selector(selectFriendsTab:)];
+        [friendsHomeView addSubview:tab];
+        [friendsTabButtons addObject:tab];
+        tabX += width + 8.0;
+    }
+    friendsTab = DLFriendsTabOnline;
+    friendUsers = [[NSMutableDictionary alloc] init];
+    friendRowItems = [[NSMutableArray alloc] init];
 
     friendsHomeScrollView = [[NSScrollView alloc] initWithFrame:
                              NSMakeRect(16.0, 16.0, NSWidth([friendsHomeView bounds]) - 32.0,
@@ -126,6 +188,190 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
     NSArray *newChannels = [channels retain];
     [friendsHomeChannels release];
     friendsHomeChannels = newChannels;
+    [self rebuildFriendsList];
+    [DLTwemojiRenderer setText:@"Friends" forLabel:chatHeaderLabel];
+    [chatHeaderImage setImage:nil];
+    [chatScrollView setHidden:YES];
+    [composerView setHidden:YES];
+    [friendsHomeView setHidden:NO];
+    [self updateResponsiveLayoutForWindowWidth:NSWidth([[[hostView window] contentView] bounds])
+                         showingDirectMessages:YES];
+}
+
+-(void)selectFriendsTab:(NSButton *)sender {
+    friendsTab = [sender tag];
+    [self rebuildFriendsList];
+}
+
+-(void)relationshipsDidUpdate {
+    if (friendsHomeView && ![friendsHomeView isHidden]) [self rebuildFriendsList];
+}
+
+-(void)user:(DLUser *)user avatarDidUpdateWithData:(NSData *)data {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(rebuildFriendsList) object:nil];
+    [self performSelector:@selector(rebuildFriendsList) withObject:nil afterDelay:0.3];
+}
+
+-(DLUser *)friendUserForRelationship:(NSDictionary *)relationship {
+    NSDictionary *userData = [relationship objectForKey:@"user"];
+    NSString *userID = [[relationship objectForKey:@"id"] description];
+    if (![userData isKindOfClass:[NSDictionary class]] || !userID) return nil;
+    DLUser *user = [friendUsers objectForKey:userID];
+    if (!user) {
+        user = [[[DLUser alloc] initWithDict:userData] autorelease];
+        [friendUsers setObject:user forKey:userID];
+        [user setDelegate:self];
+        [user loadAvatarData];
+    }
+    return user;
+}
+
+static NSString *DLStatusDescription(NSString *status) {
+    if ([status isEqualToString:@"online"]) return @"Online";
+    if ([status isEqualToString:@"idle"]) return @"Idle";
+    if ([status isEqualToString:@"dnd"]) return @"Do Not Disturb";
+    return @"Offline";
+}
+
+-(NSTextField *)friendsLabelWithFrame:(NSRect)frame font:(NSFont *)font color:(NSColor *)color {
+    NSTextField *field = [[[NSTextField alloc] initWithFrame:frame] autorelease];
+    [field setAutoresizingMask:NSViewWidthSizable];
+    [field setBezeled:NO];
+    [field setDrawsBackground:NO];
+    [field setEditable:NO];
+    [field setSelectable:NO];
+    [field setFont:font];
+    [field setTextColor:color];
+    [[field cell] setLineBreakMode:NSLineBreakByTruncatingTail];
+    return field;
+}
+
+// Friends page like the official client: Online / All / Pending / Blocked,
+// a "TAB — N" header and one row per person with a status line.
+-(void)rebuildFriendsList {
+    for (NSUInteger index = 0; index < [friendsTabButtons count]; index++) {
+        [(DLFriendsTabButton *)[friendsTabButtons objectAtIndex:index] setSelected:((NSInteger)index == friendsTab)];
+    }
+    DLController *controller = [DLController existingInstance];
+    NSArray *relationships = [controller relationships];
+    if ([relationships count] == 0) {
+        [self rebuildRecentConversations];
+        return;
+    }
+    [friendRowItems removeAllObjects];
+    NSEnumerator *enumerator = [relationships objectEnumerator];
+    NSDictionary *relationship;
+    while (relationship = [enumerator nextObject]) {
+        if (![relationship isKindOfClass:[NSDictionary class]]) continue;
+        int type = [[relationship objectForKey:@"type"] intValue];
+        NSString *status = [controller presenceStatusForUserID:[[relationship objectForKey:@"id"] description]];
+        BOOL include = NO;
+        if (friendsTab == DLFriendsTabOnline) include = (type == 1 && ![status isEqualToString:@"offline"]);
+        else if (friendsTab == DLFriendsTabAll) include = (type == 1);
+        else if (friendsTab == DLFriendsTabPending) include = (type == 3 || type == 4);
+        else include = (type == 2);
+        if (include) [friendRowItems addObject:relationship];
+    }
+
+    NSArray *tabNames = [NSArray arrayWithObjects:@"ONLINE", @"ALL FRIENDS", @"PENDING", @"BLOCKED", nil];
+    NSRect visibleBounds = [[friendsHomeScrollView contentView] bounds];
+    CGFloat rowHeight = 62.0;
+    CGFloat headerHeight = 36.0;
+    CGFloat documentHeight = MAX(NSHeight(visibleBounds), headerHeight + [friendRowItems count] * rowHeight + 8.0);
+    NSView_BGColor *document = [[[NSView_BGColor alloc] initWithFrame:
+                                NSMakeRect(0.0, 0.0, NSWidth(visibleBounds), documentHeight)] autorelease];
+    [document setAutoresizingMask:NSViewWidthSizable];
+    [document setBackgroundColor:[DLUtil nativeContentColor]];
+    NSTextField *header = [self friendsLabelWithFrame:NSMakeRect(12.0, documentHeight - 28.0, NSWidth(visibleBounds) - 24.0, 16.0)
+                                                 font:[NSFont boldSystemFontOfSize:10.0]
+                                                color:[DLUtil nativeSecondaryTextColor]];
+    [header setStringValue:[NSString stringWithFormat:@"%@ — %lu", [tabNames objectAtIndex:friendsTab], (unsigned long)[friendRowItems count]]];
+    [document addSubview:header];
+
+    NSInteger row = 0;
+    for (NSDictionary *item in friendRowItems) {
+        DLUser *user = [self friendUserForRelationship:item];
+        NSString *userID = [[item objectForKey:@"id"] description];
+        int type = [[item objectForKey:@"type"] intValue];
+        NSString *status = [controller presenceStatusForUserID:userID];
+        CGFloat y = documentHeight - headerHeight - (row + 1) * rowHeight;
+
+        NSButton *rowButton = [[[NSButton alloc] initWithFrame:NSMakeRect(0.0, y, NSWidth(visibleBounds), rowHeight - 1.0)] autorelease];
+        [rowButton setAutoresizingMask:NSViewWidthSizable];
+        [rowButton setBordered:NO];
+        [rowButton setTitle:@""];
+        [rowButton setTag:row];
+        [rowButton setTarget:self];
+        [rowButton setAction:@selector(openFriendRow:)];
+        [document addSubview:rowButton];
+
+        NSRect avatarRect = NSMakeRect(12.0, y + 13.0, 36.0, 36.0);
+        NSImageView *avatar = [[[NSImageView alloc] initWithFrame:avatarRect] autorelease];
+        NSImage *avatarImage = [[[NSImage alloc] initWithData:[user avatarImageData]] autorelease];
+        if (avatarImage) [avatar setImage:[DLUtil imageResize:avatarImage newSize:avatarRect.size cornerRadius:18.0]];
+        [document addSubview:avatar];
+        if (type == 1 && ![status isEqualToString:@"offline"]) {
+            DLStatusDotView *dot = [[[DLStatusDotView alloc] initWithFrame:NSMakeRect(NSMaxX(avatarRect) - 12.0, NSMinY(avatarRect) - 2.0, 14.0, 14.0)] autorelease];
+            [dot setDotColor:[DLUtil statusColorForPresenceStatus:status] ringColor:[DLUtil nativeContentColor]];
+            [document addSubview:dot];
+        }
+
+        NSTextField *nameField = [self friendsLabelWithFrame:NSMakeRect(60.0, y + 32.0, MAX(100.0, NSWidth(visibleBounds) - 120.0), 18.0)
+                                                        font:[NSFont boldSystemFontOfSize:13.0]
+                                                       color:[DLUtil nativePrimaryTextColor]];
+        [DLTwemojiRenderer setText:([user globalName] ? [user globalName] : @"") forLabel:nameField];
+        [document addSubview:nameField];
+        NSString *subtitle = type == 3 ? @"Incoming Friend Request"
+                           : (type == 4 ? @"Outgoing Friend Request"
+                           : (type == 2 ? @"Blocked" : DLStatusDescription(status)));
+        NSTextField *statusField = [self friendsLabelWithFrame:NSMakeRect(60.0, y + 14.0, MAX(100.0, NSWidth(visibleBounds) - 120.0), 16.0)
+                                                          font:[NSFont systemFontOfSize:11.0]
+                                                         color:[DLUtil nativeSecondaryTextColor]];
+        [statusField setStringValue:subtitle];
+        [document addSubview:statusField];
+
+        NSView_BGColor *separator = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(12.0, y + rowHeight - 1.0, MAX(0.0, NSWidth(visibleBounds) - 24.0), 1.0)] autorelease];
+        [separator setAutoresizingMask:NSViewWidthSizable];
+        [separator setBackgroundColor:[DLUtil nativeSelectionColor]];
+        [document addSubview:separator];
+        row++;
+    }
+    if ([friendRowItems count] == 0) {
+        NSTextField *emptyField = [self friendsLabelWithFrame:NSMakeRect(20.0, NSMidY([document bounds]) - 10.0, NSWidth(visibleBounds) - 40.0, 20.0)
+                                                         font:[NSFont systemFontOfSize:12.0]
+                                                        color:[DLUtil nativeSecondaryTextColor]];
+        [emptyField setAlignment:NSCenterTextAlignment];
+        NSArray *emptyTexts = [NSArray arrayWithObjects:@"No one's around to play with Wumpus.", @"Wumpus is waiting on friends.",
+                               @"There are no pending friend requests.", @"You can't unblock the Wumpus.", nil];
+        [emptyField setStringValue:[emptyTexts objectAtIndex:friendsTab]];
+        [document addSubview:emptyField];
+    }
+    [friendsHomeScrollView setDocumentView:document];
+}
+
+// Opens the existing one-to-one DM with the person, if there is one.
+-(void)openFriendRow:(NSButton *)sender {
+    NSInteger row = [sender tag];
+    if (row < 0 || row >= (NSInteger)[friendRowItems count]) return;
+    NSString *userID = [[[friendRowItems objectAtIndex:row] objectForKey:@"id"] description];
+    NSEnumerator *enumerator = [friendsHomeChannels objectEnumerator];
+    DLDirectMessageChannel *channel;
+    while (channel = [enumerator nextObject]) {
+        if (![channel isKindOfClass:[DLDirectMessageChannel class]] || [channel isGroupMessage]) continue;
+        if ([channel recipientWithUserID:userID]) {
+            [channelNavigationController selectChannelWithoutNotifying:channel];
+            if ([delegate respondsToSelector:@selector(directMessageController:didSelectChannel:)]) {
+                [delegate directMessageController:self didSelectChannel:channel];
+            }
+            return;
+        }
+    }
+    NSBeep();
+}
+
+// Used until READY relationships arrive: recent DM conversations.
+-(void)rebuildRecentConversations {
+    NSArray *channels = friendsHomeChannels;
     NSRect visibleBounds = [[friendsHomeScrollView contentView] bounds];
     CGFloat rowHeight = 58.0;
     CGFloat documentHeight = MAX(NSHeight(visibleBounds), [channels count] * rowHeight + 8.0);
@@ -187,13 +433,6 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
         [document addSubview:emptyField];
     }
     [friendsHomeScrollView setDocumentView:document];
-    [DLTwemojiRenderer setText:@"Friends" forLabel:chatHeaderLabel];
-    [chatHeaderImage setImage:nil];
-    [chatScrollView setHidden:YES];
-    [composerView setHidden:YES];
-    [friendsHomeView setHidden:NO];
-    [self updateResponsiveLayoutForWindowWidth:NSWidth([[[hostView window] contentView] bounds])
-                         showingDirectMessages:YES];
 }
 
 -(void)hideFriendsHome {
@@ -292,6 +531,9 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
     [composerView release];
     [chatScrollView release];
     [hostView release];
+    [friendsTabButtons release];
+    [friendRowItems release];
+    [friendUsers release];
     [super dealloc];
 }
 

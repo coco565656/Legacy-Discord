@@ -1380,6 +1380,42 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
     }
 }
 
+-(NSArray *)relationships {
+    return relationships ? relationships : [NSArray array];
+}
+
+-(NSString *)presenceStatusForUserID:(NSString *)userID {
+    NSString *status = userID ? [friendPresences objectForKey:[userID description]] : nil;
+    if ([status isEqualToString:@"online"] || [status isEqualToString:@"idle"] || [status isEqualToString:@"dnd"]) return status;
+    return @"offline";
+}
+
+-(void)wsDidReceiveRelationships:(NSArray *)inRelationships presences:(NSArray *)presences {
+    [relationships release];
+    relationships = [inRelationships isKindOfClass:[NSArray class]] ? [inRelationships copy] : nil;
+    if (!friendPresences) friendPresences = [[NSMutableDictionary alloc] init];
+    [friendPresences removeAllObjects];
+    if ([presences isKindOfClass:[NSArray class]]) {
+        NSEnumerator *enumerator = [presences objectEnumerator];
+        NSDictionary *presence;
+        while (presence = [enumerator nextObject]) {
+            if (![presence isKindOfClass:[NSDictionary class]]) continue;
+            NSString *userID = [[[presence objectForKey:@"user"] objectForKey:@"id"] description];
+            if (!userID) userID = [[presence objectForKey:@"user_id"] description];
+            NSString *status = [presence objectForKey:@"status"];
+            if (userID && [status isKindOfClass:[NSString class]]) [friendPresences setObject:status forKey:userID];
+        }
+    }
+    if ([delegate respondsToSelector:@selector(relationshipsDidUpdate)]) [delegate relationshipsDidUpdate];
+}
+
+-(void)wsUserWithID:(NSString *)userID didUpdatePresenceStatus:(NSString *)status {
+    if (!userID || ![status isKindOfClass:[NSString class]]) return;
+    if (!friendPresences) friendPresences = [[NSMutableDictionary alloc] init];
+    [friendPresences setObject:status forKey:userID];
+    if ([delegate respondsToSelector:@selector(relationshipsDidUpdate)]) [delegate relationshipsDidUpdate];
+}
+
 -(void)wsDidReceiveUserData:(NSDictionary *)data {
     [myUser release];
     myUser = [[DLUser alloc] initWithDict:data];

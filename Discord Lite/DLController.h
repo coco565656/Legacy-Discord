@@ -63,6 +63,7 @@ typedef enum {
 // The signed-in user's roles for a server arrived (or failed); channel
 // visibility for it may have changed.
 -(void)memberPermissionsDidLoadForServer:(DLServer *)server;
+-(void)relationshipsDidUpdate;
 -(void)initialDataWasReceived;
 -(void)messages:(NSArray *)messages receivedForChannel:(DLChannel *)c;
 -(void)newMessage:(DLMessage *)m receivedForChannel:(DLChannel *)c inServer:(DLServer *)s;
@@ -86,6 +87,8 @@ typedef enum {
     NSString *twoFactorTicket;
     id <DLControllerDelegate> delegate;
     NSMutableSet *pendingMemberRequests;
+    NSArray *relationships;
+    NSMutableDictionary *friendPresences;
     id <DLLoginDelegate> loginDelegate;
     NSString *captchaKey;
     DLServer *selectedServer;
@@ -128,6 +131,11 @@ typedef enum {
 // Acknowledge the newest known message and clear unread/mention state.
 -(void)markChannelAsRead:(DLChannel *)channel;
 -(void)markServerAsRead:(DLServer *)server;
+// READY relationships: dictionaries with id, type (1 friend, 2 blocked,
+// 3 incoming request, 4 outgoing request) and user.
+-(NSArray *)relationships;
+// "online", "idle", "dnd" or "offline" for a friend.
+-(NSString *)presenceStatusForUserID:(NSString *)userID;
 -(void)deleteMessage:(DLMessage *)m;
 -(void)logOutUser;
 -(void)informTypingInChannel:(DLChannel *)c;

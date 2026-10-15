@@ -159,7 +159,15 @@ static DLWSController* sharedObject = nil;
             NSMutableData *message = [[NSMutableData alloc] init];
             char buffer[16384];
             BOOL open = YES;
+            // Discord sends Hello right after the handshake. If nothing at all
+            // arrives, the connection is stalled; drop it so it is retried.
+            NSDate *connectedAt = [NSDate date];
+            BOOL receivedAnyFrame = NO;
             while (open && generation == connectionGeneration) {
+                if (!receivedAnyFrame && -[connectedAt timeIntervalSinceNow] > 20.0) {
+                    NSLog(@"Gateway sent no data within 20 seconds; reconnecting.");
+                    break;
+                }
                 NSAutoreleasePool *loopPool = [[NSAutoreleasePool alloc] init];
                 [self sendQueuedFramesOnHandle:handle];
                 curl_socket_t socket = CURL_SOCKET_BAD;
@@ -179,7 +187,10 @@ static DLWSController* sharedObject = nil;
                     if (result == CURLE_AGAIN) break;
                     if (result != CURLE_OK) { open = NO; break; }
                     if (meta && (meta->flags & CURLWS_CLOSE)) { open = NO; break; }
-                    if (received > 0) [message appendBytes:buffer length:received];
+                    if (received > 0) {
+                        [message appendBytes:buffer length:received];
+                        receivedAnyFrame = YES;
+                    }
                     if (meta && meta->bytesleft == 0 && !(meta->flags & CURLWS_CONT) &&
                         (meta->flags & (CURLWS_TEXT | CURLWS_BINARY)) && [message length] > 0) {
                         NSData *complete = [NSData dataWithData:message];
@@ -198,7 +209,11 @@ static DLWSController* sharedObject = nil;
     [pool release];
 
     if (generation == connectionGeneration && connectionState != DLWSConnectionStateDisconnected) {
+        // The connection ended without us asking (stall, server close or
+        // network error): reconnect instead of waiting for a heartbeat that
+        // may never have been scheduled.
         [self notifyConnectionState:DLWSConnectionStateReconnecting];
+        [self performSelectorOnMainThread:@selector(reconnectAfterUnexpectedClose) withObject:nil waitUntilDone:NO];
     }
     NSLog(@"Websocket Closed");
 }
@@ -254,6 +269,11 @@ static DLWSController* sharedObject = nil;
         [self abortCurrentConnection];
         [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:1];
     }
+}
+
+-(void)reconnectAfterUnexpectedClose {
+    if (connectionState == DLWSConnectionStateDisconnected) return;
+    [self scheduleReconnectCanResume:(sessionID != nil)];
 }
 
 -(void)scheduleReconnectCanResume:(BOOL)canResume {
@@ -386,6 +406,10 @@ static DLWSController* sharedObject = nil;
                 [delegate wsDidReceiveServerData:[self guildsWithOwnMembersFromReady:wsData]];
                 [delegate wsDidReceiveUserSettingsData:[wsData objectForKey:@"user_settings"]];
                 [delegate wsDidReceiveUserData:[wsData objectForKey:@"user"]];
+                if ([delegate respondsToSelector:@selector(wsDidReceiveRelationships:presences:)]) {
+                    [delegate wsDidReceiveRelationships:[wsData objectForKey:@"relationships"]
+                                              presences:[wsData objectForKey:@"presences"]];
+                }
                 [delegate wsDidReceivePrivateChannelData:[wsData objectForKey:@"private_channels"]];
                 [delegate wsDidLoadAllDataAfterReconnection:didReconnect];
                 [delegate wsDidReceiveReadStateData:[wsData
@@ -437,6 +461,14 @@ static DLWSController* sharedObject = nil;
                 }
                 [delegate wsDidReceiveMemberData:memberData
                                   forServerWithID:[wsData objectForKey:@"guild_id"]];
+            } else if ([type isEqualToString:@"PRESENCE_UPDATE"]) {
+                // Friend presences arrive without a guild_id.
+                NSDictionary *wsData = [res objectForKey:@kWSData];
+                NSString *userID = [[[wsData objectForKey:@"user"] objectForKey:@"id"] description];
+                if (userID && ![wsData objectForKey:@"guild_id"] &&
+                    [delegate respondsToSelector:@selector(wsUserWithID:didUpdatePresenceStatus:)]) {
+                    [delegate wsUserWithID:userID didUpdatePresenceStatus:[wsData objectForKey:@"status"]];
+                }
             } else if ([type isEqualToString:@"MESSAGE_UPDATE"]) {
                 NSDictionary *wsData = [res objectForKey:@kWSData];
                 NSString *messageID = [wsData objectForKey:@"id"];

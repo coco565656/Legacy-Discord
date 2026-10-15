@@ -47,6 +47,22 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Friends page and Gateway stall recovery
+
+- READY `relationships` and friends' `presences` are now stored (plus live
+  PRESENCE_UPDATE without guild_id). The DM home is the official Friends page:
+  Online / All / Pending / Blocked tabs, "TAB — N" header, rows with avatar,
+  presence dot, name and status or request type; clicking opens the existing
+  one-to-one DM. Recent conversations remain the fallback without
+  relationships.
+- Verified on 10.6.8: Online (2, idle/dnd dots) and All (4, offline shown).
+  Pending/Blocked tabs and opening a DM from a row were not exercised.
+- Found on the device: one launch connected but never received Hello and
+  stayed "Connecting" indefinitely (no heartbeat was ever scheduled). The
+  Gateway thread now drops a connection that sends nothing for 20 seconds and
+  any unexpected close triggers a reconnect. After the fix the app connected
+  normally; the stall itself could not be reproduced on demand.
+
 #### Context menus for servers, channels and members
 
 - Added right-click menus in the official order, limited to working actions:

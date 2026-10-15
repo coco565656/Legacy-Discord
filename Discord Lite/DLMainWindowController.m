@@ -557,6 +557,10 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 #endif
 }
 
+-(void)relationshipsDidUpdate {
+    [directMessageController relationshipsDidUpdate];
+}
+
 -(void)memberPermissionsDidLoadForServer:(DLServer *)server {
     if (![server isEqual:[[DLController sharedInstance] selectedServer]]) return;
     [channelNavigationController displayChannelItems:[[DLController sharedInstance] channelsForServer:server]];
