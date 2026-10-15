@@ -444,7 +444,13 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     DLServerMember *member = [self memberAtRow:row];
     if (!member) return nil;
     DLUser *user = [member user];
-    return [user globalName] ? [user globalName] : [user username];
+    NSString *name = [user globalName] ? [user globalName] : [user username];
+    // Like the official client, only names cut off by the row get a tooltip.
+    NSDictionary *attributes = [NSDictionary dictionaryWithObject:[NSFont systemFontOfSize:13.0]
+                                                           forKey:NSFontAttributeName];
+    CGFloat textWidth = NSWidth([inTableView frameOfCellAtColumn:0 row:row]) - 64.0;
+    if ([name sizeWithAttributes:attributes].width <= textWidth) return nil;
+    return name;
 }
 
 -(void)tableViewSelectionDidChange:(NSNotification *)notification {

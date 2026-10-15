@@ -47,6 +47,28 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Remaining checks and fixes
+
+- Verified on 10.6.8: window resize and zoom with the dark title bar; dark
+  Settings title bar; Settings minimize and restore from the Dock;
+  member-list row hover; Friends Online/All/Pending/Blocked tabs; opening a DM
+  from a friend row; channel Copy Link (clipboard checked with `pbpaste`);
+  Mark As Read on an unread channel (pill and bold title cleared); the
+  older-messages bar with Jump To Present on a long channel.
+- Fixed: author names and timestamps in a DM opened from the Friends page were
+  clipped ("co…", "2025/06/23 16:"). The header fields kept the nib's
+  flexible-width autoresizing, so a transient narrow row shrank them for good;
+  they are now sized only by `layoutMessageHeaderFields`. Confirmed fixed.
+- Fixed: the older-messages bar was drawn at the top of the (flipped) chat
+  scroll view; it now sits at the bottom above the composer, and the
+  new-messages bar along the top edge. Confirmed for the older-messages bar.
+- Fixed: the Friends page hid nothing in the header and left a DM row
+  selected; search, pins and the member toggle are now hidden there and the
+  DM selection is cleared. Member-list tooltips appear only for cut-off names.
+- Not exercised: the new-messages bar (needs an incoming message while
+  scrolled up), spoiler reveal (no spoiler in reachable history), the login
+  window title bar (requires logging out).
+
 #### Dark title bar
 
 - `DLDarkTitlebarView` paints a dark title bar (rail color, rounded top

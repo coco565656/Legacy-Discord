@@ -163,6 +163,11 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [timestampTextField setTextColor:[DLUtil nativeSecondaryTextColor]];
     [timestampTextField setFont:[NSFont systemFontOfSize:11 * displayScale]];
     [timestampTextField setAlignment:NSLeftTextAlignment];
+    // layoutMessageHeaderFields sizes both fields to their text. The nib's
+    // flexible widths let a transient narrow row (e.g. while the Friends page
+    // hid the chat) shrink them for good, clipping names and timestamps.
+    [usernameTextField setAutoresizingMask:([usernameTextField autoresizingMask] & ~NSViewWidthSizable) | NSViewMaxXMargin];
+    [timestampTextField setAutoresizingMask:([timestampTextField autoresizingMask] & ~(NSViewWidthSizable | NSViewMinXMargin)) | NSViewMaxXMargin];
     [editedInfoLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
     [editedInfoLabel setHidden:YES];
     [editDismissInfoLabel setTextColor:[DLUtil nativeSecondaryTextColor]];

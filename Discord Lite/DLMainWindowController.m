@@ -542,6 +542,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     isLoadingViews = NO;
     if (showingDirectMessages && !selectedChannel) {
         [directMessageController showFriendsHomeWithChannels:items];
+        [mainHeaderController setChannelControlsHidden:YES];
     }
 #if !LEGACY_DISCORD_LOCAL_DEV
     // Like the official client, opening a server shows its first readable
@@ -628,6 +629,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [[DLController sharedInstance] setSelectedChannel:nil];
     [messagePresentationController prepareForServerChange];
     [directMessageController hideFriendsHome];
+    [mainHeaderController setChannelControlsHidden:NO];
 
     if ([server isEqual:[[DLController sharedInstance] myServerItem]]) {
         [NSThread detachNewThreadSelector:@selector(loadDirectMessageChannels) toTarget:self withObject:nil];
@@ -639,6 +641,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 
 -(void)selectChannel:(DLChannel *)channel {
     [directMessageController hideFriendsHome];
+    [mainHeaderController setChannelControlsHidden:NO];
     [messageSearchController resetForChannelChange];
     [pinsController deactivate];
     [pinsController setEnabled:(channel != nil && [channel type] != ChannelTypeForum && [channel type] != ChannelTypeMedia)];

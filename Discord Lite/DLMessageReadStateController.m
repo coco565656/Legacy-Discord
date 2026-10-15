@@ -13,6 +13,7 @@
 
 @interface DLMessageReadStateController ()
 -(void)installMessageStateBanners;
+-(void)positionMessageBanners;
 -(void)refreshMessageBannerVisibility;
 -(void)markLatestMessagesRead:(id)sender;
 -(void)jumpToLatestMessages:(id)sender;
@@ -121,6 +122,22 @@ static NSTextField *DLBannerLabel(NSRect frame, NSColor *color, BOOL bold) {
     return pendingNewMessageCount > 0;
 }
 
+// NSScrollView is flipped, so place the bars from the view's own origin: the
+// new-messages bar along the top edge, the older-messages bar along the
+// bottom edge just above the composer.
+-(void)positionMessageBanners {
+    NSRect bounds = [chatScrollView bounds];
+    BOOL flipped = [chatScrollView isFlipped];
+    CGFloat unreadHeight = NSHeight([unreadMessageBanner frame]);
+    CGFloat historyHeight = NSHeight([historyMessageBanner frame]);
+    [unreadMessageBanner setFrame:NSMakeRect(0.0, flipped ? 0.0 : NSHeight(bounds) - unreadHeight,
+                                             NSWidth(bounds), unreadHeight)];
+    [unreadMessageBanner setAutoresizingMask:NSViewWidthSizable | (flipped ? NSViewMaxYMargin : NSViewMinYMargin)];
+    [historyMessageBanner setFrame:NSMakeRect(0.0, flipped ? NSHeight(bounds) - historyHeight : 0.0,
+                                              NSWidth(bounds), historyHeight)];
+    [historyMessageBanner setAutoresizingMask:NSViewWidthSizable | (flipped ? NSViewMinYMargin : NSViewMaxYMargin)];
+}
+
 -(void)refreshMessageBannerVisibility {
     BOOL hasPending = [self hasPendingMessages];
     // Like the official client, the bottom bar appears once the reader is more
@@ -130,6 +147,7 @@ static NSTextField *DLBannerLabel(NSRect frame, NSColor *color, BOOL bold) {
     [unreadMessageBanner setHidden:!hasPending];
     [historyMessageBanner setHidden:([self isViewingLatestMessages] || !(hasPending || farFromPresent))];
     if (hasPending || farFromPresent) {
+        [self positionMessageBanners];
         [chatScrollView addSubview:unreadMessageBanner positioned:NSWindowAbove relativeTo:nil];
         [chatScrollView addSubview:historyMessageBanner positioned:NSWindowAbove relativeTo:nil];
     }

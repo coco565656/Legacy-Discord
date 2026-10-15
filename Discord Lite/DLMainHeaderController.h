@@ -47,6 +47,8 @@
 -(NSButton *)reloadButton;
 -(void)setMembersEnabled:(BOOL)enabled;
 -(void)setReloadEnabled:(BOOL)enabled;
+// The Friends page has no channel: hide search, pins and the member toggle.
+-(void)setChannelControlsHidden:(BOOL)hidden;
 -(void)setConnectionState:(DLWSConnectionState)state;
 // Channel name with its topic after a divider, like the official header.
 -(void)setChannelTitle:(NSString *)title topic:(NSString *)topic;

@@ -189,6 +189,8 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
     [friendsHomeChannels release];
     friendsHomeChannels = newChannels;
     [self rebuildFriendsList];
+    // No conversation is open on the Friends page.
+    [channelNavigationController selectChannelWithoutNotifying:nil];
     [DLTwemojiRenderer setText:@"Friends" forLabel:chatHeaderLabel];
     [chatHeaderImage setImage:nil];
     [chatScrollView setHidden:YES];

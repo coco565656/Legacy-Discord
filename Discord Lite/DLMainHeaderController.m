@@ -174,6 +174,12 @@
     [membersButton setEnabled:enabled];
 }
 
+-(void)setChannelControlsHidden:(BOOL)hidden {
+    [membersButton setHidden:hidden];
+    [pinsButton setHidden:hidden];
+    [messageSearchField setHidden:hidden];
+}
+
 -(void)setReloadEnabled:(BOOL)enabled {
     [reloadButton setEnabled:enabled];
 }
