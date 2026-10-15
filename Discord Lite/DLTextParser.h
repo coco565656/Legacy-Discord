@@ -9,6 +9,9 @@
 #import <Foundation/Foundation.h>
 #import "DLMessage.h"
 
+// URL scheme of links that hide spoiler text until clicked.
+extern NSString * const DLSpoilerLinkScheme;
+
 @interface DLTextParser : NSObject
 
 +(NSColor *)DEFAULT_TEXT_COLOR;

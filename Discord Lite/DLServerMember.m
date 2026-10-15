@@ -47,6 +47,25 @@
     return [mine localizedCaseInsensitiveCompare:theirs];
 }
 
+-(NSString *)presenceStatus {
+    NSString *status = [presence objectForKey:@"status"];
+    if ([status isEqualToString:@"online"] || [status isEqualToString:@"idle"] || [status isEqualToString:@"dnd"]) return status;
+    return @"offline";
+}
+
+-(NSString *)customStatusText {
+    NSArray *activities = [presence objectForKey:@"activities"];
+    if (![activities isKindOfClass:[NSArray class]]) return nil;
+    NSEnumerator *enumerator = [activities objectEnumerator];
+    NSDictionary *activity;
+    while (activity = [enumerator nextObject]) {
+        if (![activity isKindOfClass:[NSDictionary class]] || [[activity objectForKey:@"type"] intValue] != 4) continue;
+        NSString *state = [activity objectForKey:@"state"];
+        if ([state isKindOfClass:[NSString class]] && [state length]) return state;
+    }
+    return nil;
+}
+
 -(void)dealloc {
     [user release];
     [roles release];

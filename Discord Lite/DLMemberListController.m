@@ -16,12 +16,18 @@
 #import "NSScroller+BGColor.h"
 #import "DLTwemojiRenderer.h"
 
+static const CGFloat DLMemberRowHeight = 44.0;
+static const CGFloat DLMemberGroupRowHeight = 30.0;
+
 @interface DLMemberListCell : NSCell {
     DLServerMember *representedMember;
     DLServer *representedServer;
+    NSString *groupTitle;
 }
 -(void)setRepresentedMember:(DLServerMember *)member;
 -(void)setRepresentedServer:(DLServer *)server;
+// Non-nil for a group header row ("ROLE — 3").
+-(void)setGroupTitle:(NSString *)title;
 @end
 
 @implementation DLMemberListCell
@@ -34,7 +40,26 @@
     representedServer = server;
 }
 
+-(void)setGroupTitle:(NSString *)title {
+    groupTitle = title;
+}
+
 -(void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
+    if (groupTitle) {
+        NSMutableParagraphStyle *headerStyle = [[[NSMutableParagraphStyle alloc] init] autorelease];
+        [headerStyle setLineBreakMode:NSLineBreakByTruncatingTail];
+        NSDictionary *headerAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                          [NSFont boldSystemFontOfSize:10.0], NSFontAttributeName,
+                                          [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName,
+                                          headerStyle, NSParagraphStyleAttributeName, nil];
+        NSMutableAttributedString *header = [[[NSMutableAttributedString alloc] initWithString:groupTitle attributes:headerAttributes] autorelease];
+        [DLTwemojiRenderer replaceEmojiInAttributedString:header size:10.0
+                                       excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
+        // Headers sit near the bottom of their row, just above the first member.
+        CGFloat headerY = [controlView isFlipped] ? NSMaxY(cellFrame) - 20.0 : NSMinY(cellFrame) + 6.0;
+        [header drawInRect:NSMakeRect(NSMinX(cellFrame) + 16.0, headerY, NSWidth(cellFrame) - 28.0, 14.0)];
+        return;
+    }
     // The table uses NSTableViewSelectionHighlightStyleNone: the Aqua
     // highlight turns light gray whenever the table is not key, which made
     // white member names unreadable. Draw the same rounded selection as the
@@ -48,30 +73,58 @@
     cellFrame = NSIntersectionRect(cellFrame, [controlView visibleRect]);
     DLUser *user = [representedMember user];
     if (!user) return;
+    NSString *status = [representedMember presenceStatus];
+    BOOL offline = [status isEqualToString:@"offline"];
+    // Offline members are dimmed like the official list.
+    CGFloat alpha = offline ? 0.35 : 1.0;
     NSRect avatarRect = NSMakeRect(NSMinX(cellFrame) + 12.0, NSMidY(cellFrame) - 16.0, 32.0, 32.0);
     NSImage *avatar = [[[NSImage alloc] initWithData:[user avatarImageData]] autorelease];
     if (avatar) {
         [NSGraphicsContext saveGraphicsState];
         [[NSBezierPath bezierPathWithOvalInRect:avatarRect] addClip];
         [avatar drawInRect:avatarRect fromRect:NSZeroRect operation:NSCompositeSourceOver
-                  fraction:1.0 respectFlipped:YES hints:nil];
+                  fraction:alpha respectFlipped:YES hints:nil];
         [NSGraphicsContext restoreGraphicsState];
+    }
+    if (!offline) {
+        BOOL flipped = [controlView isFlipped];
+        NSRect dotRect = NSMakeRect(NSMaxX(avatarRect) - 11.0, (flipped ? NSMaxY(avatarRect) - 11.0 : NSMinY(avatarRect) - 1.0), 12.0, 12.0);
+        [[DLUtil nativeSidebarColor] setFill];
+        [[NSBezierPath bezierPathWithOvalInRect:dotRect] fill];
+        [[DLUtil statusColorForPresenceStatus:status] setFill];
+        [[NSBezierPath bezierPathWithOvalInRect:NSInsetRect(dotRect, 2.0, 2.0)] fill];
     }
     NSString *name = [user globalName] ? [user globalName] : [user username];
     NSColor *nameColor = [DLUtil roleColorForRoleIDs:[representedMember roles] inServer:representedServer];
     NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
     [style setLineBreakMode:NSLineBreakByTruncatingTail];
+    NSColor *textColor = nameColor ? nameColor : [DLUtil nativePrimaryTextColor];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSFont systemFontOfSize:13.0], NSFontAttributeName,
-                                (nameColor ? nameColor : [DLUtil nativePrimaryTextColor]), NSForegroundColorAttributeName,
+                                [textColor colorWithAlphaComponent:alpha], NSForegroundColorAttributeName,
                                 style, NSParagraphStyleAttributeName, nil];
     NSMutableAttributedString *displayName = [[[NSMutableAttributedString alloc]
         initWithString:(name ? name : @"") attributes:attributes] autorelease];
     [DLTwemojiRenderer replaceEmojiInAttributedString:displayName size:13.0
                                    excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
-    [displayName drawInRect:NSMakeRect(NSMaxX(avatarRect) + 12.0, NSMidY(cellFrame) - 9.0,
-                                NSWidth(cellFrame) - NSMaxX(avatarRect) - 20.0, 18.0)
-        ];
+    CGFloat textX = NSMaxX(avatarRect) + 12.0;
+    CGFloat textWidth = NSWidth(cellFrame) - NSMaxX(avatarRect) - 20.0;
+    NSString *customStatus = offline ? nil : [representedMember customStatusText];
+    if (![customStatus length]) {
+        [displayName drawInRect:NSMakeRect(textX, NSMidY(cellFrame) - 9.0, textWidth, 18.0)];
+        return;
+    }
+    // Name above, custom status below.
+    BOOL flipped = [controlView isFlipped];
+    [displayName drawInRect:NSMakeRect(textX, NSMidY(cellFrame) + (flipped ? -17.0 : 0.0), textWidth, 18.0)];
+    NSDictionary *statusAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                      [NSFont systemFontOfSize:11.0], NSFontAttributeName,
+                                      [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName,
+                                      style, NSParagraphStyleAttributeName, nil];
+    NSMutableAttributedString *statusText = [[[NSMutableAttributedString alloc] initWithString:customStatus attributes:statusAttributes] autorelease];
+    [DLTwemojiRenderer replaceEmojiInAttributedString:statusText size:11.0
+                                   excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
+    [statusText drawInRect:NSMakeRect(textX, NSMidY(cellFrame) + (flipped ? 1.0 : -16.0), textWidth, 15.0)];
 }
 
 @end
@@ -82,6 +135,8 @@
 -(void)requestNextPageIfNeeded;
 -(void)layoutPanes;
 -(void)hostFrameDidChange:(NSNotification *)notification;
+-(NSArray *)groupedItemsForServer:(DLServer *)server;
+-(DLServerMember *)memberAtRow:(NSInteger)row;
 @end
 
 @implementation DLMemberListController
@@ -136,10 +191,12 @@
     [titleField setFont:[NSFont boldSystemFontOfSize:10.0]];
     [titleField setTextColor:[DLUtil nativeSecondaryTextColor]];
     [titleField setStringValue:@"MEMBERS"];
+    // Group headers ("ONLINE — 12") replace the single pane title.
+    [titleField setHidden:YES];
     [pane addSubview:titleField];
 
     scrollView = [[NSScrollView alloc] initWithFrame:
-                  NSMakeRect(0.0, 0.0, paneWidth, NSHeight(bounds) - 76.0)];
+                  NSMakeRect(0.0, 0.0, paneWidth, NSHeight(bounds) - 50.0)];
     [scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [scrollView setBorderType:NSNoBorder];
     [scrollView setHasVerticalScroller:YES];
@@ -160,7 +217,7 @@
     [tableView setHeaderView:nil];
     [tableView setDataSource:self];
     [tableView setDelegate:self];
-    [tableView setRowHeight:44.0];
+    [tableView setRowHeight:DLMemberRowHeight];
     [tableView setIntercellSpacing:NSMakeSize(0.0, 0.0)];
     [tableView setAllowsEmptySelection:YES];
     [tableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
@@ -175,24 +232,77 @@
     [pane setHidden:YES];
 }
 
+// Groups members like the official list: online members under their highest
+// hoisted ("display separately") role, then the remaining online members,
+// then offline members. Header rows are NSStrings, member rows DLServerMember.
+-(NSArray *)groupedItemsForServer:(DLServer *)server {
+    if (!server) return [NSArray array];
+    NSArray *hoistedRoles = [[server roles] filteredArrayUsingPredicate:
+                             [NSPredicate predicateWithFormat:@"hoist == YES"]];
+    hoistedRoles = [hoistedRoles sortedArrayUsingDescriptors:[NSArray arrayWithObject:
+                    [[[NSSortDescriptor alloc] initWithKey:@"position" ascending:NO] autorelease]]];
+    NSMutableDictionary *roleGroups = [NSMutableDictionary dictionary];
+    NSMutableArray *online = [NSMutableArray array];
+    NSMutableArray *offline = [NSMutableArray array];
+    NSEnumerator *memberEnumerator = [[server members] objectEnumerator];
+    DLServerMember *member;
+    while (member = [memberEnumerator nextObject]) {
+        if ([[member presenceStatus] isEqualToString:@"offline"]) {
+            [offline addObject:member];
+            continue;
+        }
+        NSString *groupRoleID = nil;
+        NSEnumerator *roleEnumerator = [hoistedRoles objectEnumerator];
+        NSDictionary *role;
+        while ((role = [roleEnumerator nextObject]) && !groupRoleID) {
+            NSString *roleID = [[role objectForKey:@"id"] description];
+            NSEnumerator *memberRoles = [[member roles] objectEnumerator];
+            id memberRoleID;
+            while (memberRoleID = [memberRoles nextObject]) {
+                if ([[memberRoleID description] isEqualToString:roleID]) { groupRoleID = roleID; break; }
+            }
+        }
+        if (groupRoleID) {
+            NSMutableArray *group = [roleGroups objectForKey:groupRoleID];
+            if (!group) { group = [NSMutableArray array]; [roleGroups setObject:group forKey:groupRoleID]; }
+            [group addObject:member];
+        } else {
+            [online addObject:member];
+        }
+    }
+    NSMutableArray *result = [NSMutableArray array];
+    NSEnumerator *roleEnumerator = [hoistedRoles objectEnumerator];
+    NSDictionary *role;
+    while (role = [roleEnumerator nextObject]) {
+        NSArray *group = [roleGroups objectForKey:[[role objectForKey:@"id"] description]];
+        if (![group count]) continue;
+        [result addObject:[NSString stringWithFormat:@"%@ — %lu", [[role objectForKey:@"name"] uppercaseString], (unsigned long)[group count]]];
+        [result addObjectsFromArray:[group sortedArrayUsingSelector:@selector(compareDisplayName:)]];
+    }
+    if ([online count]) {
+        [result addObject:[NSString stringWithFormat:@"ONLINE — %lu", (unsigned long)[online count]]];
+        [result addObjectsFromArray:[online sortedArrayUsingSelector:@selector(compareDisplayName:)]];
+    }
+    if ([offline count]) {
+        [result addObject:[NSString stringWithFormat:@"OFFLINE — %lu", (unsigned long)[offline count]]];
+        [result addObjectsFromArray:[offline sortedArrayUsingSelector:@selector(compareDisplayName:)]];
+    }
+    return result;
+}
+
+-(DLServerMember *)memberAtRow:(NSInteger)row {
+    if (row < 0 || row >= (NSInteger)[items count]) return nil;
+    id item = [items objectAtIndex:row];
+    return [item isKindOfClass:[DLServerMember class]] ? item : nil;
+}
+
 -(void)refreshForServer:(DLServer *)server {
     [displayedServer release];
     displayedServer = [server retain];
-    NSArray *newItems = server ? [[server members] sortedArrayUsingSelector:@selector(compareDisplayName:)] : [NSArray array];
+    NSArray *newItems = [self groupedItemsForServer:server];
     [items release];
     items = [newItems retain];
     [tableView reloadData];
-    NSInteger loadCount = MIN((NSInteger)[items count], 20);
-    for (NSInteger index = 0; index < loadCount; index++) {
-        DLServerMember *member = [items objectAtIndex:index];
-        DLUser *user = [member user];
-        NSString *userID = [[user userID] description];
-        if (userID && ![avatarRequests containsObject:userID]) {
-            [avatarRequests addObject:userID];
-            [user setDelegate:self];
-            [user loadAvatarData];
-        }
-    }
 }
 
 -(void)setVisible:(BOOL)shouldShow server:(DLServer *)server channel:(DLChannel *)channel {
@@ -217,6 +327,16 @@
     [self layoutPanes];
     [toggleButton setState:(shouldShow ? NSOnState : NSOffState)];
 }
+
+#if LEGACY_DISCORD_LOCAL_DEV
+-(void)showOfflineReplayForServer:(DLServer *)server {
+    [self refreshForServer:server];
+    [pane setHidden:NO];
+    visible = YES;
+    [self layoutPanes];
+    [toggleButton setState:NSOnState];
+}
+#endif
 
 -(void)layoutPanes {
     CGFloat hostWidth = NSWidth([hostView bounds]);
@@ -280,32 +400,50 @@
 }
 
 -(id)tableView:(NSTableView *)inTableView objectValueForTableColumn:(NSTableColumn *)column row:(NSInteger)row {
-    DLServerMember *member = [items objectAtIndex:row];
+    DLServerMember *member = [self memberAtRow:row];
+    if (!member) return (row >= 0 && row < (NSInteger)[items count]) ? [items objectAtIndex:row] : nil;
     DLUser *user = [member user];
     return [user globalName] ? [user globalName] : [user username];
 }
 
+-(CGFloat)tableView:(NSTableView *)inTableView heightOfRow:(NSInteger)row {
+    return [self memberAtRow:row] ? DLMemberRowHeight : DLMemberGroupRowHeight;
+}
+
+-(BOOL)tableView:(NSTableView *)inTableView shouldSelectRow:(NSInteger)row {
+    return [self memberAtRow:row] != nil;
+}
+
 -(void)tableView:(NSTableView *)inTableView willDisplayCell:(id)cell
   forTableColumn:(NSTableColumn *)column row:(NSInteger)row {
-    if ([cell isKindOfClass:[DLMemberListCell class]]) {
-        [(DLMemberListCell *)cell setRepresentedMember:[items objectAtIndex:row]];
-        [(DLMemberListCell *)cell setRepresentedServer:displayedServer];
+    if (![cell isKindOfClass:[DLMemberListCell class]]) return;
+    DLServerMember *member = [self memberAtRow:row];
+    [(DLMemberListCell *)cell setRepresentedMember:member];
+    [(DLMemberListCell *)cell setRepresentedServer:displayedServer];
+    [(DLMemberListCell *)cell setGroupTitle:(member ? nil : [items objectAtIndex:row])];
+    // Avatars load lazily as rows are drawn instead of for the first rows only.
+    DLUser *user = [member user];
+    NSString *userID = [[user userID] description];
+    if (userID && ![avatarRequests containsObject:userID]) {
+        [avatarRequests addObject:userID];
+        [user setDelegate:self];
+        [user loadAvatarData];
     }
 }
 
 -(NSString *)tableView:(NSTableView *)inTableView toolTipForCell:(NSCell *)cell
                   rect:(NSRectPointer)rect tableColumn:(NSTableColumn *)column
                    row:(NSInteger)row mouseLocation:(NSPoint)mouseLocation {
-    if (row < 0 || row >= (NSInteger)[items count]) return nil;
-    DLServerMember *member = [items objectAtIndex:row];
+    DLServerMember *member = [self memberAtRow:row];
+    if (!member) return nil;
     DLUser *user = [member user];
     return [user globalName] ? [user globalName] : [user username];
 }
 
 -(void)tableViewSelectionDidChange:(NSNotification *)notification {
     NSInteger row = [tableView selectedRow];
-    if (row < 0 || row >= (NSInteger)[items count]) return;
-    DLServerMember *member = [items objectAtIndex:row];
+    DLServerMember *member = [self memberAtRow:row];
+    if (!member) return;
     DLUser *user = [member user];
     [delegate memberListController:self didSelectUser:user
                     relativeToRect:[tableView rectOfRow:row] ofView:tableView];

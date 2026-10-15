@@ -19,7 +19,7 @@ while [ "$#" -gt 0 ]; do
         *) FIXTURE="$1"; shift ;;
     esac
 done
-case "$FIXTURE" in channel-basic|channel-message-states|channel-layout|channel-layout-text|channel-layout-unbroken|channel-layout-states|channel-layout-attachment|channel-navigation|composer-text|composer-reply|composer-attachment|composer-emoji|composer-emoji-picker|composer-mention|composer-typing|composer-sticker|profile-note|settings-account|settings-appearance|settings-accessibility|settings-chat|settings-notifications|settings-advanced) ;; *) echo "Unknown fixture: $FIXTURE" >&2; exit 2;; esac
+case "$FIXTURE" in channel-basic|channel-message-states|channel-layout|channel-layout-text|channel-layout-unbroken|channel-layout-states|channel-layout-attachment|channel-navigation|channel-markdown|channel-members|composer-text|composer-reply|composer-attachment|composer-emoji|composer-emoji-picker|composer-mention|composer-typing|composer-sticker|profile-note|settings-account|settings-appearance|settings-accessibility|settings-chat|settings-notifications|settings-advanced) ;; *) echo "Unknown fixture: $FIXTURE" >&2; exit 2;; esac
 case "$WINDOW_SIZE" in 720x520|960x640|1280x800) ;; *) echo "Unsupported window size: $WINDOW_SIZE" >&2; exit 2;; esac
 if [ -z "$OUTPUT_PATH" ]; then OUTPUT_PATH="$OUTPUT_DIR/$FIXTURE.png"; fi
 case "$OUTPUT_PATH" in

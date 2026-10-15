@@ -73,6 +73,8 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
         ![name isEqualToString:@"channel-layout-states"] &&
         ![name isEqualToString:@"channel-layout-attachment"] &&
         ![name isEqualToString:@"channel-navigation"] &&
+        ![name isEqualToString:@"channel-markdown"] &&
+        ![name isEqualToString:@"channel-members"] &&
         ![name isEqualToString:@"composer-text"] &&
         ![name isEqualToString:@"composer-reply"] &&
         ![name isEqualToString:@"composer-attachment"] &&
@@ -119,6 +121,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
                                                       candidateUsers:[DLReplayFixtureProvider composerCandidateUsers]
                                                      attachmentPaths:[DLReplayFixtureProvider composerAttachmentPaths]
                                                         stickerItems:[DLReplayFixtureProvider composerStickerItems]];
+    }
+    if ([name isEqualToString:@"channel-members"]) {
+        [memberListController showOfflineReplayForServer:[DLReplayFixtureProvider serverForMembersFixture]];
     }
     if (profileNoteFixture) {
         [userProfileController showOfflineProfileNoteForUser:[DLReplayFixtureProvider profileNoteUser]

@@ -173,6 +173,12 @@ static NSDictionary *superPropertiesDict;
 +(NSColor *)nativeOfflineStatusColor {
     return [NSColor colorWithCalibratedRed:0.502 green:0.518 blue:0.557 alpha:1.0];
 }
++(NSColor *)statusColorForPresenceStatus:(NSString *)status {
+    if ([status isEqualToString:@"online"]) return [self nativeOnlineStatusColor];
+    if ([status isEqualToString:@"idle"]) return [NSColor colorWithCalibratedRed:0.941 green:0.698 blue:0.196 alpha:1.0];
+    if ([status isEqualToString:@"dnd"]) return [NSColor colorWithCalibratedRed:0.949 green:0.247 blue:0.263 alpha:1.0];
+    return [self nativeOfflineStatusColor];
+}
 // Discord stores colors as 0xRRGGBB integers; 0 means "no color".
 +(NSColor *)colorFromDiscordColorValue:(id)value {
     if (![value isKindOfClass:[NSNumber class]]) return nil;

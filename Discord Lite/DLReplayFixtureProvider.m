@@ -72,6 +72,21 @@
                                                   timestamp:@"2024-06-10T10:08:00.000000+00:00"] mutableCopy] autorelease];
     [groupNewer setValue:[NSArray arrayWithObject:[self unicodeReaction]] forKey:@"reactions"];
 
+    if ([fixtureName isEqualToString:@"channel-markdown"]) {
+        NSDictionary *blocks = [self messageWithID:@"local-markdown-001"
+                                            author:avery
+                                           content:@"# Heading one\n## Heading two\n### Heading three\nPlain line after headings.\n-# Subtext is small and dim"
+                                         timestamp:@"2024-06-10T12:00:00.000000+00:00"];
+        NSDictionary *lists = [self messageWithID:@"local-markdown-002"
+                                           author:mika
+                                          content:@"Shopping list:\n- first item\n- second item that is long enough to wrap onto another line in a narrow window\n* starred item with **bold** text"
+                                        timestamp:@"2024-06-10T12:02:00.000000+00:00"];
+        NSDictionary *tokens = [self messageWithID:@"local-markdown-003"
+                                            author:replay
+                                           content:@"See <#1055828505159540736>, ping <@&123456789>, run </help:42>, meet <t:1718020800:F> (<t:1718020800:R>), read [the docs](https://example.com/docs) and ||this is a spoiler||."
+                                         timestamp:@"2024-06-10T12:04:00.000000+00:00"];
+        return [NSArray arrayWithObjects:tokens, lists, blocks, nil];
+    }
     if ([fixtureName isEqualToString:@"channel-message-states"]) {
         NSDictionary *nextDay = [self messageWithID:@"local-message-005"
                                              author:avery
@@ -143,6 +158,7 @@
 
 + (NSString *)channelNameForFixtureNamed:(NSString *)fixtureName {
     if ([fixtureName isEqualToString:@"channel-navigation"]) return @"general";
+    if ([fixtureName isEqualToString:@"channel-markdown"]) return @"replay-markdown";
     if ([fixtureName isEqualToString:@"channel-message-states"]) return @"replay-message-states";
     if ([fixtureName isEqualToString:@"channel-layout"] || [fixtureName isEqualToString:@"channel-layout-text"]) return @"replay-layout-text";
     if ([fixtureName isEqualToString:@"channel-layout-unbroken"]) return @"replay-layout-unbroken";
@@ -174,6 +190,48 @@
     [home release];
     [workspace release];
     return result;
+}
+
++ (NSDictionary *)fixtureMemberWithID:(NSString *)userID name:(NSString *)name roles:(NSArray *)roles
+                               status:(NSString *)status customStatus:(NSString *)customStatus {
+    NSMutableDictionary *presence = [NSMutableDictionary dictionaryWithObject:status forKey:@"status"];
+    if (customStatus) {
+        [presence setObject:[NSArray arrayWithObject:[NSDictionary dictionaryWithObjectsAndKeys:
+                                                      [NSNumber numberWithInt:4], @"type",
+                                                      @"Custom Status", @"name",
+                                                      customStatus, @"state", nil]]
+                     forKey:@"activities"];
+    }
+    return [NSDictionary dictionaryWithObjectsAndKeys:
+            [self userWithID:userID name:name], @"user", roles, @"roles", presence, @"presence", nil];
+}
+
++ (DLServer *)serverForMembersFixture {
+    NSArray *roles = [NSArray arrayWithObjects:
+        [NSDictionary dictionaryWithObjectsAndKeys:@"fixture-server", @"id", @"@everyone", @"name",
+            [NSNumber numberWithInteger:0], @"color", [NSNumber numberWithBool:NO], @"hoist", [NSNumber numberWithInteger:0], @"position", nil],
+        [NSDictionary dictionaryWithObjectsAndKeys:@"role-mods", @"id", @"Moderators", @"name",
+            [NSNumber numberWithInteger:0x3BA55C], @"color", [NSNumber numberWithBool:YES], @"hoist", [NSNumber numberWithInteger:3], @"position", nil],
+        [NSDictionary dictionaryWithObjectsAndKeys:@"role-helpers", @"id", @"Helpers", @"name",
+            [NSNumber numberWithInteger:0x5865F2], @"color", [NSNumber numberWithBool:YES], @"hoist", [NSNumber numberWithInteger:2], @"position", nil],
+        [NSDictionary dictionaryWithObjectsAndKeys:@"role-artists", @"id", @"Artists", @"name",
+            [NSNumber numberWithInteger:0xE67E22], @"color", [NSNumber numberWithBool:NO], @"hoist", [NSNumber numberWithInteger:1], @"position", nil],
+        nil];
+    NSArray *members = [NSArray arrayWithObjects:
+        [self fixtureMemberWithID:@"m1" name:@"Avery Park" roles:[NSArray arrayWithObjects:@"role-mods", @"role-artists", nil] status:@"online" customStatus:@"Reviewing reports"],
+        [self fixtureMemberWithID:@"m2" name:@"Mika Ito" roles:[NSArray arrayWithObject:@"role-helpers"] status:@"idle" customStatus:nil],
+        [self fixtureMemberWithID:@"m3" name:@"Replay Bot" roles:[NSArray arrayWithObject:@"role-helpers"] status:@"dnd" customStatus:@"Do not disturb 🌙"],
+        [self fixtureMemberWithID:@"m4" name:@"Sora" roles:[NSArray arrayWithObject:@"role-artists"] status:@"online" customStatus:nil],
+        [self fixtureMemberWithID:@"m5" name:@"Kai" roles:[NSArray array] status:@"online" customStatus:nil],
+        [self fixtureMemberWithID:@"m6" name:@"Offline Mod" roles:[NSArray arrayWithObject:@"role-mods"] status:@"offline" customStatus:nil],
+        [self fixtureMemberWithID:@"m7" name:@"Quiet User" roles:[NSArray array] status:@"offline" customStatus:nil],
+        nil];
+    NSDictionary *data = [NSDictionary dictionaryWithObjectsAndKeys:
+                          @"fixture-server", @"id", @"Example Community", @"name",
+                          [NSNull null], @"icon", members, @"members",
+                          [NSArray array], @"emojis", [NSArray array], @"stickers",
+                          roles, @"roles", nil];
+    return [[[DLServer alloc] initWithDict:data] autorelease];
 }
 
 + (NSArray *)channelsForNavigationFixture {

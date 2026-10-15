@@ -144,8 +144,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [chatTextView setInsertionPointColor:[DLTextParser DEFAULT_TEXT_COLOR]];
     [chatTextView setBackgroundColor:[DLUtil nativeContentColor]];
     [chatTextView setSelectedTextAttributes:[NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:[DLUtil nativeSelectedTextColor], [DLTextParser DEFAULT_TEXT_HIGHLIGHT_COLOR], nil] forKeys:[NSArray arrayWithObjects:NSForegroundColorAttributeName, NSBackgroundColorAttributeName, nil]]];
-    NSMutableDictionary *linkTextAttributes = [NSMutableDictionary dictionaryWithDictionary:[chatTextView linkTextAttributes]];
-    [linkTextAttributes setObject:[DLTextParser DEFAULT_LINK_TEXT_COLOR] forKey:NSForegroundColorAttributeName];
+    // Link colors come from the parsed text itself so that spoilers (links
+    // that hide their text) are not recolored; only the cursor is shared.
+    NSMutableDictionary *linkTextAttributes = [NSMutableDictionary dictionaryWithObject:[NSCursor pointingHandCursor]
+                                                                                 forKey:NSCursorAttributeName];
     
     [chatTextView setLinkTextAttributes:linkTextAttributes];
     [chatTextView setEditable:NO];
@@ -1726,6 +1728,21 @@ static const NSInteger DLDeveloperMenuItemTag = 9001;
 }
 
 - (BOOL)textView:(NSTextView *)textView clickedOnLink:(id)link atIndex:(NSUInteger)charIndex {
+    NSString *linkString = [link isKindOfClass:[NSURL class]] ? [(NSURL *)link absoluteString] : link;
+    if ([linkString isKindOfClass:[NSString class]] && [linkString hasPrefix:[DLSpoilerLinkScheme stringByAppendingString:@":"]]) {
+        NSRange spoilerRange;
+        NSTextStorage *storage = [textView textStorage];
+        if (charIndex < [storage length] &&
+            [storage attribute:NSLinkAttributeName atIndex:charIndex longestEffectiveRange:&spoilerRange inRange:NSMakeRange(0, [storage length])]) {
+            [storage beginEditing];
+            [storage removeAttribute:NSLinkAttributeName range:spoilerRange];
+            [storage removeAttribute:NSToolTipAttributeName range:spoilerRange];
+            [storage addAttribute:NSForegroundColorAttributeName value:[DLUtil nativePrimaryTextColor] range:spoilerRange];
+            [storage addAttribute:NSBackgroundColorAttributeName value:[DLUtil nativeSelectionColor] range:spoilerRange];
+            [storage endEditing];
+        }
+        return YES;
+    }
     NSURL *url = [link isKindOfClass:[NSURL class]] ? link :
         ([link isKindOfClass:[NSString class]] ? [NSURL URLWithString:link] : nil);
     NSString *scheme = [[url scheme] lowercaseString];

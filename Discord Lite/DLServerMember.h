@@ -23,5 +23,9 @@
 
 -(void)setUser:(DLUser *)u;
 -(NSComparisonResult)compareDisplayName:(DLServerMember *)other;
+// "online", "idle", "dnd" or "offline" (also when no presence is known).
+-(NSString *)presenceStatus;
+// Text of the member's custom status activity, if any.
+-(NSString *)customStatusText;
 
 @end

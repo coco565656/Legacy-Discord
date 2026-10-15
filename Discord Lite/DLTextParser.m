@@ -11,10 +11,176 @@
 #import "HTTPCache.h"
 #import "DLPreferencesHandler.h"
 #import "DLTwemojiRenderer.h"
+#import "DLController.h"
 
 @implementation DLTextParser
 
 static NSString * const DLCodeSpanAttributeName = @"DLCodeSpanAttributeName";
+
+// Links using this scheme hide spoiler text; ChatItemViewController reveals
+// the range when it is clicked.
+NSString * const DLSpoilerLinkScheme = @"dlspoiler";
+
+typedef NSAttributedString *(*DLTokenRenderer)(NSArray *captures, NSDictionary *baseAttributes, NSDictionary *context);
+
+// Replaces every match of regex outside code spans with the renderer's result.
+static void DLReplaceTokens(NSMutableAttributedString *text, NSString *regex, DLTokenRenderer renderer, NSDictionary *context) {
+    NSUInteger location = 0;
+    while (location < [text length]) {
+        NSRange search = NSMakeRange(location, [text length] - location);
+        NSRange match = [[text string] rangeOfRegex:regex options:RKLNoOptions inRange:search capture:0 error:NULL];
+        if (match.location == NSNotFound || match.length == 0) break;
+        if ([text attribute:DLCodeSpanAttributeName atIndex:match.location effectiveRange:NULL]) {
+            location = NSMaxRange(match);
+            continue;
+        }
+        NSArray *captures = [[text string] captureComponentsMatchedByRegex:regex range:match];
+        NSDictionary *baseAttributes = [text attributesAtIndex:match.location effectiveRange:NULL];
+        NSAttributedString *replacement = renderer(captures, baseAttributes, context);
+        if (!replacement) {
+            location = NSMaxRange(match);
+            continue;
+        }
+        [text replaceCharactersInRange:match withAttributedString:replacement];
+        location = match.location + [replacement length];
+    }
+}
+
+static NSAttributedString *DLMentionPill(NSString *string, NSDictionary *baseAttributes, NSDictionary *context, NSColor *foreground, NSColor *background) {
+    NSMutableDictionary *attributes = [NSMutableDictionary dictionaryWithDictionary:baseAttributes];
+    [attributes setObject:[NSFont boldSystemFontOfSize:[[context objectForKey:@"fontSize"] doubleValue]] forKey:NSFontAttributeName];
+    [attributes setObject:(background ? background : [DLUtil nativeTagColor]) forKey:NSBackgroundColorAttributeName];
+    if (foreground) [attributes setObject:foreground forKey:NSForegroundColorAttributeName];
+    return [[[NSAttributedString alloc] initWithString:string attributes:attributes] autorelease];
+}
+
+// <#channel_id>
+static NSAttributedString *DLRenderChannelMention(NSArray *captures, NSDictionary *baseAttributes, NSDictionary *context) {
+    if ([captures count] < 2) return nil;
+    DLChannel *channel = [[DLController sharedInstance] loadedChannelWithID:[captures objectAtIndex:1]];
+    NSString *name = [channel name];
+    return DLMentionPill([NSString stringWithFormat:@"#%@", ([name length] ? name : @"unknown")], baseAttributes, context, nil, nil);
+}
+
+// <@&role_id>: drawn in the role's color like the official client.
+static NSAttributedString *DLRenderRoleMention(NSArray *captures, NSDictionary *baseAttributes, NSDictionary *context) {
+    if ([captures count] < 2) return nil;
+    DLServer *server = [context objectForKey:@"server"];
+    NSDictionary *role = [server roleWithID:[captures objectAtIndex:1]];
+    NSString *name = [role objectForKey:@"name"];
+    if (![name isKindOfClass:[NSString class]] || ![name length]) name = @"unknown-role";
+    NSColor *color = [DLUtil colorFromDiscordColorValue:[role objectForKey:@"color"]];
+    return DLMentionPill([NSString stringWithFormat:@"@%@", name], baseAttributes, context,
+                         color, (color ? [color colorWithAlphaComponent:0.18] : nil));
+}
+
+// </command:id>
+static NSAttributedString *DLRenderCommandMention(NSArray *captures, NSDictionary *baseAttributes, NSDictionary *context) {
+    if ([captures count] < 2) return nil;
+    return DLMentionPill([NSString stringWithFormat:@"/%@", [captures objectAtIndex:1]], baseAttributes, context, nil, nil);
+}
+
+static NSString *DLRelativeTimeString(NSDate *date) {
+    NSTimeInterval seconds = [date timeIntervalSinceNow];
+    BOOL future = seconds > 0;
+    double value = fabs(seconds);
+    NSString *unit;
+    if (value < 60.0) { unit = @"second"; }
+    else if ((value /= 60.0) < 60.0) { unit = @"minute"; }
+    else if ((value /= 60.0) < 24.0) { unit = @"hour"; }
+    else if ((value /= 24.0) < 30.0) { unit = @"day"; }
+    else if ((value /= 30.0) < 12.0) { unit = @"month"; }
+    else { value /= 12.0; unit = @"year"; }
+    long amount = MAX(1L, (long)floor(value));
+    NSString *phrase = [NSString stringWithFormat:@"%ld %@%@", amount, unit, (amount == 1 ? @"" : @"s")];
+    return future ? [NSString stringWithFormat:@"in %@", phrase] : [NSString stringWithFormat:@"%@ ago", phrase];
+}
+
+// <t:unix_seconds:style>, styles t T d D f F R (default f).
+static NSAttributedString *DLRenderTimestamp(NSArray *captures, NSDictionary *baseAttributes, NSDictionary *context) {
+    if ([captures count] < 2) return nil;
+    NSDate *date = [NSDate dateWithTimeIntervalSince1970:[[captures objectAtIndex:1] doubleValue]];
+    NSString *style = [captures count] > 2 ? [captures objectAtIndex:2] : @"";
+    NSString *string;
+    if ([style isEqualToString:@"R"]) {
+        string = DLRelativeTimeString(date);
+    } else {
+        NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+        NSDateFormatterStyle dateStyle = NSDateFormatterLongStyle;
+        NSDateFormatterStyle timeStyle = NSDateFormatterShortStyle;
+        if ([style isEqualToString:@"t"]) { dateStyle = NSDateFormatterNoStyle; }
+        else if ([style isEqualToString:@"T"]) { dateStyle = NSDateFormatterNoStyle; timeStyle = NSDateFormatterMediumStyle; }
+        else if ([style isEqualToString:@"d"]) { dateStyle = NSDateFormatterShortStyle; timeStyle = NSDateFormatterNoStyle; }
+        else if ([style isEqualToString:@"D"]) { timeStyle = NSDateFormatterNoStyle; }
+        else if ([style isEqualToString:@"F"]) { dateStyle = NSDateFormatterFullStyle; }
+        [formatter setDateStyle:dateStyle];
+        [formatter setTimeStyle:timeStyle];
+        string = [formatter stringFromDate:date];
+    }
+    NSMutableDictionary *attributes = [NSMutableDictionary dictionaryWithDictionary:baseAttributes];
+    [attributes setObject:[DLUtil nativeInputColor] forKey:NSBackgroundColorAttributeName];
+    NSDateFormatter *full = [[[NSDateFormatter alloc] init] autorelease];
+    [full setDateStyle:NSDateFormatterFullStyle];
+    [full setTimeStyle:NSDateFormatterShortStyle];
+    [attributes setObject:[full stringFromDate:date] forKey:NSToolTipAttributeName];
+    return [[[NSAttributedString alloc] initWithString:(string ? string : @"") attributes:attributes] autorelease];
+}
+
+// [text](https://url)
+static NSAttributedString *DLRenderMaskedLink(NSArray *captures, NSDictionary *baseAttributes, NSDictionary *context) {
+    if ([captures count] < 3) return nil;
+    NSMutableDictionary *attributes = [NSMutableDictionary dictionaryWithDictionary:baseAttributes];
+    [attributes setObject:[captures objectAtIndex:2] forKey:NSLinkAttributeName];
+    [attributes setObject:[DLUtil nativeLinkColor] forKey:NSForegroundColorAttributeName];
+    [attributes setObject:[captures objectAtIndex:2] forKey:NSToolTipAttributeName];
+    return [[[NSAttributedString alloc] initWithString:[captures objectAtIndex:1] attributes:attributes] autorelease];
+}
+
+// Line-level Markdown: "# " / "## " / "### " headings, "-# " subtext and
+// "- " / "* " bulleted lists. Lines inside code blocks are left alone.
+static void DLApplyLineMarkdown(NSMutableAttributedString *text, CGFloat fontSize) {
+    NSUInteger location = 0;
+    while (location < [text length]) {
+        NSUInteger lineStart = 0, lineEnd = 0, contentsEnd = 0;
+        [[text string] getLineStart:&lineStart end:&lineEnd contentsEnd:&contentsEnd forRange:NSMakeRange(location, 0)];
+        if (lineEnd <= lineStart) break;
+        if ([text attribute:DLCodeSpanAttributeName atIndex:lineStart effectiveRange:NULL]) {
+            location = lineEnd;
+            continue;
+        }
+        NSString *line = [[text string] substringWithRange:NSMakeRange(lineStart, contentsEnd - lineStart)];
+        NSUInteger prefixLength = 0;
+        NSFont *font = nil;
+        NSColor *color = nil;
+        BOOL bullet = NO;
+        if ([line hasPrefix:@"### "]) { prefixLength = 4; font = [NSFont boldSystemFontOfSize:round(fontSize * 1.0)]; }
+        else if ([line hasPrefix:@"## "]) { prefixLength = 3; font = [NSFont boldSystemFontOfSize:round(fontSize * 1.25)]; }
+        else if ([line hasPrefix:@"# "]) { prefixLength = 2; font = [NSFont boldSystemFontOfSize:round(fontSize * 1.5)]; }
+        else if ([line hasPrefix:@"-# "]) { prefixLength = 3; font = [NSFont systemFontOfSize:round(fontSize * 0.82)]; color = [DLUtil nativeSecondaryTextColor]; }
+        else if ([line hasPrefix:@"- "] || [line hasPrefix:@"* "]) { prefixLength = 2; bullet = YES; }
+        if (prefixLength == 0 || contentsEnd - lineStart <= prefixLength) {
+            location = lineEnd;
+            continue;
+        }
+        if (bullet) {
+            [text replaceCharactersInRange:NSMakeRange(lineStart, prefixLength) withString:@"•  "];
+            NSUInteger newContentsEnd = contentsEnd + 1;
+            NSFont *bodyFont = [text attribute:NSFontAttributeName atIndex:lineStart effectiveRange:NULL];
+            CGFloat indent = ceil([@"•  " sizeWithAttributes:[NSDictionary dictionaryWithObject:(bodyFont ? bodyFont : [NSFont systemFontOfSize:fontSize]) forKey:NSFontAttributeName]].width);
+            NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
+            [style setFirstLineHeadIndent:4.0];
+            [style setHeadIndent:indent + 4.0];
+            [text addAttribute:NSParagraphStyleAttributeName value:style range:NSMakeRange(lineStart, newContentsEnd - lineStart)];
+            location = lineEnd + 1;
+        } else {
+            [text deleteCharactersInRange:NSMakeRange(lineStart, prefixLength)];
+            NSRange contentRange = NSMakeRange(lineStart, contentsEnd - prefixLength - lineStart);
+            if (font) [text addAttribute:NSFontAttributeName value:font range:contentRange];
+            if (color) [text addAttribute:NSForegroundColorAttributeName value:color range:contentRange];
+            location = lineEnd - prefixLength;
+        }
+    }
+}
 
 static void DLApplyDelimitedAttributes(NSMutableAttributedString *text, NSString *delimiter, NSDictionary *attributes) {
     NSUInteger searchLocation = 0;
@@ -166,6 +332,7 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
             NSDictionary *boldItalicAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
                 boldFont, NSFontAttributeName, [NSNumber numberWithFloat:0.20], NSObliquenessAttributeName, nil];
             DLApplyCodeBlocks(as, messageFontSize - 1.0);
+            DLApplyLineMarkdown(as, messageFontSize);
             DLApplyDelimitedAttributes(as, @"`", [NSDictionary dictionaryWithObjectsAndKeys:
                 ([NSFont fontWithName:@"Menlo" size:messageFontSize - 1.0] ? [NSFont fontWithName:@"Menlo" size:messageFontSize - 1.0] : [NSFont userFixedPitchFontOfSize:messageFontSize - 1.0]), NSFontAttributeName,
                 [DLUtil nativeInputColor], NSBackgroundColorAttributeName,
@@ -176,8 +343,24 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
             DLApplyDelimitedAttributes(as, @"__", [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSUnderlineStyleAttributeName]);
             DLApplyDelimitedAttributes(as, @"~~", [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName]);
             DLApplyDelimitedAttributes(as, @"*", [NSDictionary dictionaryWithObject:[NSNumber numberWithFloat:0.20] forKey:NSObliquenessAttributeName]);
+            NSColor *spoilerColor = [DLUtil nativeServerRailColor];
+            DLApplyDelimitedAttributes(as, @"||", [NSDictionary dictionaryWithObjectsAndKeys:
+                [NSString stringWithFormat:@"%@:", DLSpoilerLinkScheme], NSLinkAttributeName,
+                spoilerColor, NSForegroundColorAttributeName,
+                spoilerColor, NSBackgroundColorAttributeName,
+                @"Spoiler — click to reveal", NSToolTipAttributeName, nil]);
             DLApplyQuoteStyling(as);
         }
+
+        DLServer *server = [m serverID] ? [[DLController sharedInstance] loadedServerWithID:[m serverID]] : nil;
+        if (!server) server = [[DLController sharedInstance] selectedServer];
+        NSMutableDictionary *tokenContext = [NSMutableDictionary dictionaryWithObject:[NSNumber numberWithDouble:messageFontSize] forKey:@"fontSize"];
+        if (server) [tokenContext setObject:server forKey:@"server"];
+        DLReplaceTokens(as, @"<#([0-9]+)>", DLRenderChannelMention, tokenContext);
+        DLReplaceTokens(as, @"<@&([0-9]+)>", DLRenderRoleMention, tokenContext);
+        DLReplaceTokens(as, @"</([^:<>]+):[0-9]+>", DLRenderCommandMention, tokenContext);
+        DLReplaceTokens(as, @"<t:(-?[0-9]+)(?::([tTdDfFR]))?>", DLRenderTimestamp, tokenContext);
+        DLReplaceTokens(as, @"\\[([^\\]\\n]+)\\]\\((https?://[^\\s)]+)\\)", DLRenderMaskedLink, tokenContext);
         
         NSInteger lastLocation = -1;
         while (lastLocation != NSNotFound) {
@@ -198,6 +381,7 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
             NSRange urlRange = [[as string] rangeOfString:matchedUrl];
             if (urlRange.location != NSNotFound && ![as attribute:DLCodeSpanAttributeName atIndex:urlRange.location effectiveRange:NULL]) {
                 [as addAttribute: NSLinkAttributeName value:matchedUrl range:urlRange];
+                [as addAttribute:NSForegroundColorAttributeName value:[DLUtil nativeLinkColor] range:urlRange];
             }
         }
 

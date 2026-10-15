@@ -44,6 +44,8 @@
 +(NSColor *)nativeContentColorForTheme:(NSString *)theme;
 +(NSColor *)nativeOnlineStatusColor;
 +(NSColor *)nativeOfflineStatusColor;
+// Presence dot color for a Discord status string (online, idle, dnd, offline).
++(NSColor *)statusColorForPresenceStatus:(NSString *)status;
 +(NSColor *)colorFromDiscordColorValue:(id)value;
 +(NSColor *)roleColorForRoleIDs:(NSArray *)roleIDs inServer:(DLServer *)server;
 +(NSColor *)nativeHeaderTopColor;

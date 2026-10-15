@@ -47,6 +47,22 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Markdown extensions and grouped member list
+
+- Same remote build procedure; read-only navigation only.
+- Verified: a real `<#channel>` mention in the rules channel now renders as a
+  `#🐣 | 自己紹介` mention pill with Twemoji instead of the raw token.
+- Verified: the member list groups online members under hoisted roles
+  (e.g. `副管理者 — 4`, `🔈 | READING ALOUD BOT — 4`), shows online / idle /
+  do-not-disturb dots and custom status text, and dims offline members.
+- Group counts reflect loaded members (the client requests up to 500), so
+  large servers can show smaller counts than the official client.
+- Not verified on the device: role mentions, timestamps, headings, lists,
+  masked links and spoiler reveal (no such messages were on screen); these are
+  covered by the `channel-markdown` replay fixture.
+- Final executable SHA256: `6f9bf6fcca422c41828ef5778235d5d1b08ff8c5616abc70f2a6029dd7e71d1e`.
+- Screenshots: `md-rules-up2.png`, `members-grouped.png`.
+
 #### User panel, Discord sizing and expanded settings
 
 - Same remote build procedure as below; the new `DLUserPanelController` was

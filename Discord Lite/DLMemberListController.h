@@ -50,5 +50,9 @@
 -(void)refreshForServer:(DLServer *)server;
 -(void)members:(NSArray *)members didUpdateForServer:(DLServer *)server;
 -(void)applyCurrentTheme;
+#if LEGACY_DISCORD_LOCAL_DEV
+// Shows the pane for a fixture server without requesting members.
+-(void)showOfflineReplayForServer:(DLServer *)server;
+#endif
 
 @end

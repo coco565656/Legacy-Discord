@@ -47,9 +47,9 @@ run_step() {
 }
 
 if [ -n "$FIXTURE" ]; then
-    case "$FIXTURE" in channel-basic|channel-message-states|channel-layout|channel-layout-text|channel-layout-unbroken|channel-layout-states|channel-layout-attachment|channel-navigation|composer-text|composer-reply|composer-attachment|composer-emoji|composer-emoji-picker|composer-mention|composer-typing|composer-sticker|profile-note) FIXTURES="$FIXTURE" ;; *) echo "Unknown fixture: $FIXTURE" >&2; exit 2;; esac
+    case "$FIXTURE" in channel-basic|channel-message-states|channel-layout|channel-layout-text|channel-layout-unbroken|channel-layout-states|channel-layout-attachment|channel-navigation|channel-markdown|channel-members|composer-text|composer-reply|composer-attachment|composer-emoji|composer-emoji-picker|composer-mention|composer-typing|composer-sticker|profile-note) FIXTURES="$FIXTURE" ;; *) echo "Unknown fixture: $FIXTURE" >&2; exit 2;; esac
 else
-    FIXTURES="channel-basic channel-message-states channel-layout-text channel-layout-unbroken channel-layout-states channel-layout-attachment channel-navigation composer-text composer-reply composer-attachment composer-emoji composer-emoji-picker composer-mention composer-typing composer-sticker profile-note"
+    FIXTURES="channel-basic channel-message-states channel-layout-text channel-layout-unbroken channel-layout-states channel-layout-attachment channel-navigation channel-markdown channel-members composer-text composer-reply composer-attachment composer-emoji composer-emoji-picker composer-mention composer-typing composer-sticker profile-note"
 fi
 
 SIZES="960x640"
