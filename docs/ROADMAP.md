@@ -36,8 +36,8 @@
 
 ## Milestone 2: modern channel features
 
-- [ ] Thread navigation and thread message composer
-- [ ] Forum channel post list
+- [x] Thread navigation and thread message composer (Threads list, full-width threads with breadcrumb)
+- [x] Forum channel post list (official cards, search, New Post draft)
 - [ ] Channel message search
 - [ ] Pins and improved attachment handling
 - [x] Notification and per-channel mute controls (server/channel/category/DM mute with durations, Dock badge and bounce; badge verified on 10.6.8)

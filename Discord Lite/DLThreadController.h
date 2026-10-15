@@ -36,6 +36,16 @@
     NSTextField *emptyField;
     DLChannel *baseChannel;
     BOOL visible;
+    // New Post draft (forum mode).
+    NSButton *newPostButton;
+    NSView_BGColor *composeView;
+    NSTextField *postTitleField;
+    NSTextField *postMessageField;
+    NSMutableArray *postTagButtons;
+    NSButton *postSubmitButton;
+    NSButton *postCancelButton;
+    NSTextField *postStatusField;
+    BOOL composing;
 }
 
 -(id)initWithHostView:(NSView *)hostView

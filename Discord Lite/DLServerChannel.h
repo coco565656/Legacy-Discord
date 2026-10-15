@@ -22,6 +22,7 @@
     NSArray *appliedTagIDs;
     NSArray *availableTags;
     NSDictionary *starterSummary;
+    NSInteger channelFlags;
 }
 
 -(id)initWithDict:(NSDictionary *)d;
@@ -43,6 +44,8 @@
 -(NSArray *)appliedTagIDs;
 // A forum's tags: [{id, name, emoji_name, emoji_id}].
 -(NSArray *)availableTags;
+// Forum flag REQUIRE_TAG (1 << 4): new posts must carry at least one tag.
+-(BOOL)requiresTag;
 // A forum post's opening message: {author, text, imageURL}, once loaded.
 -(NSDictionary *)starterSummary;
 -(void)setStarterSummary:(NSDictionary *)summary;

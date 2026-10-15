@@ -176,11 +176,49 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
 
 @end
 
+// Tag pill in the New Post draft; blurple when selected.
+@interface DLTagToggleButton : NSButton
+@end
+
+@implementation DLTagToggleButton
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect pill = NSInsetRect([self bounds], 0.5, 1.5);
+    BOOL on = [self state] == NSOnState;
+    NSColor *fill = on ? [NSColor colorWithCalibratedRed:0.345 green:0.396 blue:0.949 alpha:1.0] : [DLUtil nativeInputColor];
+    [fill set];
+    [[NSBezierPath bezierPathWithRoundedRect:pill xRadius:NSHeight(pill) / 2.0 yRadius:NSHeight(pill) / 2.0] fill];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont boldSystemFontOfSize:11.0], NSFontAttributeName,
+                                (on ? [NSColor whiteColor] : [DLUtil nativePrimaryTextColor]), NSForegroundColorAttributeName, nil];
+    NSString *title = [self title] ? [self title] : @"";
+    NSSize size = [title sizeWithAttributes:attributes];
+    [title drawAtPoint:NSMakePoint(floor(NSMidX(pill) - size.width / 2.0), floor(NSMidY(pill) - size.height / 2.0))
+        withAttributes:attributes];
+}
+@end
+
+static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL multiline) {
+    NSTextField *field = [[[NSTextField alloc] initWithFrame:NSZeroRect] autorelease];
+    [field setBezeled:NO];
+    [field setBordered:NO];
+    [field setDrawsBackground:YES];
+    [field setBackgroundColor:[DLUtil nativeInputColor]];
+    [field setTextColor:[DLUtil nativePrimaryTextColor]];
+    [field setFont:[NSFont systemFontOfSize:fontSize]];
+    [field setFocusRingType:NSFocusRingTypeNone];
+    [[field cell] setPlaceholderString:placeholder];
+    [[field cell] setWraps:multiline];
+    [[field cell] setScrollable:!multiline];
+    return field;
+}
+
 @interface DLThreadController ()
 -(void)installViews;
 -(BOOL)isForumMode;
 -(void)reloadItems;
 -(void)applySearchFilter;
+-(void)layoutListArea;
+-(void)setComposing:(BOOL)shouldCompose;
 @end
 
 @implementation DLThreadController
@@ -196,6 +234,8 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
         [self installViews];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(threadStarterDidLoad:)
                                                      name:DLThreadStarterDidLoadNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(forumPostCreationDidFinish:)
+                                                     name:DLForumPostCreationDidFinishNotification object:nil];
     }
     return self;
 }
@@ -258,6 +298,48 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
     [closeButton setAction:@selector(closeThreadList:)];
     [listPane addSubview:closeButton];
 
+    newPostButton = [[DLPrimaryButton alloc] initWithFrame:
+                     NSMakeRect(NSWidth(paneBounds) - DLForumCardMargin - 96.0, NSHeight(paneBounds) - 42.0, 96.0, 28.0)];
+    [newPostButton setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
+    [newPostButton setTitle:@"New Post"];
+    [newPostButton setTarget:self];
+    [newPostButton setAction:@selector(beginNewPost:)];
+    [listPane addSubview:newPostButton];
+
+    // Draft card shown between the top bar and the post list.
+    composeView = [[NSView_BGColor alloc] initWithFrame:NSZeroRect];
+    [composeView setBackgroundColor:[DLUtil nativeSidebarColor]];
+    [composeView setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
+    postTitleField = [DLDraftField(@"Post title", 15.0, NO) retain];
+    [postTitleField setFont:[NSFont boldSystemFontOfSize:15.0]];
+    postMessageField = [DLDraftField(@"Enter a message (Option-Return for a new line)", 13.0, YES) retain];
+    postStatusField = [[NSTextField alloc] initWithFrame:NSZeroRect];
+    [postStatusField setBezeled:NO];
+    [postStatusField setDrawsBackground:NO];
+    [postStatusField setEditable:NO];
+    [postStatusField setSelectable:NO];
+    [postStatusField setFont:[NSFont systemFontOfSize:12.0]];
+    [postStatusField setTextColor:[NSColor colorWithCalibratedRed:0.95 green:0.40 blue:0.40 alpha:1.0]];
+    postSubmitButton = [[DLPrimaryButton alloc] initWithFrame:NSZeroRect];
+    [postSubmitButton setTitle:@"Post"];
+    [postSubmitButton setTarget:self];
+    [postSubmitButton setAction:@selector(submitNewPost:)];
+    postCancelButton = [[NSButton alloc] initWithFrame:NSZeroRect];
+    [postCancelButton setBordered:NO];
+    [postCancelButton setAttributedTitle:[[[NSAttributedString alloc] initWithString:@"Cancel"
+        attributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSFont systemFontOfSize:13.0], NSFontAttributeName,
+                    [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName, nil]] autorelease]];
+    [postCancelButton setTarget:self];
+    [postCancelButton setAction:@selector(cancelNewPost:)];
+    [composeView addSubview:postTitleField];
+    [composeView addSubview:postMessageField];
+    [composeView addSubview:postStatusField];
+    [composeView addSubview:postSubmitButton];
+    [composeView addSubview:postCancelButton];
+    [composeView setHidden:YES];
+    [listPane addSubview:composeView];
+    postTagButtons = [[NSMutableArray alloc] init];
+
     listScrollView = [[NSScrollView alloc] initWithFrame:
                       NSMakeRect(0.0, 0.0, NSWidth(paneBounds), NSHeight(paneBounds) - 56.0)];
     [listScrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
@@ -313,8 +395,10 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
     BOOL forum = [self isForumMode];
     [titleField setHidden:forum];
     [closeButton setHidden:forum];
+    [newPostButton setHidden:!forum];
+    [newPostButton setFrame:NSMakeRect(NSWidth(paneBounds) - DLForumCardMargin - 96.0, NSHeight(paneBounds) - 42.0, 96.0, 28.0)];
     CGFloat left = forum ? DLForumCardMargin : DLForumCardMargin + 90.0;
-    CGFloat right = forum ? DLForumCardMargin : 46.0;
+    CGFloat right = forum ? DLForumCardMargin + 106.0 : 46.0;
     [searchField setFrame:NSMakeRect(left, NSHeight(paneBounds) - 42.0,
                                      MAX(80.0, NSWidth(paneBounds) - left - right), 28.0)];
     [[searchField cell] setPlaceholderString:(forum ? @"Search posts" : @"Search threads")];
@@ -339,6 +423,7 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
     [baseChannel release];
     baseChannel = [parentChannel retain];
     [searchField setStringValue:@""];
+    [self setComposing:NO];
     [self layoutTopBar];
     [self reloadItems];
     [[DLController sharedInstance] loadArchivedThreadsForChannel:parentChannel];
@@ -413,6 +498,117 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
         [delegate threadController:self restoreBaseChannel:channel];
     }
     [channel release];
+}
+
+// The post list fills the pane below the top bar and, while drafting, below
+// the draft card.
+-(void)layoutListArea {
+    NSRect paneBounds = [listPane bounds];
+    CGFloat top = NSHeight(paneBounds) - 56.0;
+    if (composing) {
+        CGFloat width = NSWidth(paneBounds) - DLForumCardMargin * 2.0;
+        CGFloat inner = width - 32.0;
+        BOOL hasTags = [postTagButtons count] > 0;
+        CGFloat height = 16.0 + 32.0 + 8.0 + 88.0 + (hasTags ? 34.0 : 0.0) + 44.0;
+        [composeView setFrame:NSMakeRect(DLForumCardMargin, top - height, width, height)];
+        CGFloat y = height - 16.0 - 32.0;
+        [postTitleField setFrame:NSMakeRect(16.0, y, inner, 32.0)];
+        y -= 8.0 + 88.0;
+        [postMessageField setFrame:NSMakeRect(16.0, y, inner, 88.0)];
+        if (hasTags) {
+            y -= 34.0;
+            CGFloat x = 16.0;
+            NSEnumerator *enumerator = [postTagButtons objectEnumerator];
+            NSButton *tagButton;
+            while (tagButton = [enumerator nextObject]) {
+                CGFloat tagWidth = ceil([[tagButton title] sizeWithAttributes:
+                    [NSDictionary dictionaryWithObject:[NSFont boldSystemFontOfSize:11.0] forKey:NSFontAttributeName]].width) + 22.0;
+                [tagButton setHidden:(x + tagWidth > inner + 16.0)];
+                [tagButton setFrame:NSMakeRect(x, y + 4.0, tagWidth, 24.0)];
+                x += tagWidth + 6.0;
+            }
+        }
+        [postSubmitButton setFrame:NSMakeRect(width - 16.0 - 80.0, 10.0, 80.0, 28.0)];
+        [postCancelButton setFrame:NSMakeRect(width - 16.0 - 80.0 - 76.0, 10.0, 70.0, 28.0)];
+        [postStatusField setFrame:NSMakeRect(16.0, 14.0, MAX(40.0, width - 210.0), 18.0)];
+        top -= height + 8.0;
+    }
+    [listScrollView setFrame:NSMakeRect(0.0, 0.0, NSWidth(paneBounds), MAX(40.0, top))];
+}
+
+-(void)setComposing:(BOOL)shouldCompose {
+    composing = shouldCompose && [self isForumMode];
+    [composeView setHidden:!composing];
+    [newPostButton setEnabled:!composing];
+    if (composing) {
+        [postTagButtons makeObjectsPerformSelector:@selector(removeFromSuperview)];
+        [postTagButtons removeAllObjects];
+        NSEnumerator *enumerator = [[(DLServerChannel *)baseChannel availableTags] objectEnumerator];
+        NSDictionary *tag;
+        while (tag = [enumerator nextObject]) {
+            if (![tag isKindOfClass:[NSDictionary class]] || ![[tag objectForKey:@"name"] isKindOfClass:[NSString class]]) continue;
+            DLTagToggleButton *tagButton = [[[DLTagToggleButton alloc] initWithFrame:NSZeroRect] autorelease];
+            [tagButton setButtonType:NSPushOnPushOffButton];
+            [tagButton setBordered:NO];
+            NSString *emoji = [tag objectForKey:@"emoji_name"];
+            [tagButton setTitle:([emoji isKindOfClass:[NSString class]] && [emoji length])
+                ? [NSString stringWithFormat:@"%@ %@", emoji, [tag objectForKey:@"name"]] : [tag objectForKey:@"name"]];
+            [[tagButton cell] setRepresentedObject:[[tag objectForKey:@"id"] description]];
+            [composeView addSubview:tagButton];
+            [postTagButtons addObject:tagButton];
+        }
+        [postTitleField setStringValue:@""];
+        [postMessageField setStringValue:@""];
+        [postStatusField setStringValue:@""];
+        [postSubmitButton setEnabled:YES];
+        [[listPane window] makeFirstResponder:postTitleField];
+    }
+    [self layoutListArea];
+}
+
+-(IBAction)beginNewPost:(id)sender {
+    [self setComposing:YES];
+}
+
+-(IBAction)cancelNewPost:(id)sender {
+    [self setComposing:NO];
+}
+
+-(IBAction)submitNewPost:(id)sender {
+    NSString *title = [[postTitleField stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    NSString *message = [[postMessageField stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    NSMutableArray *tagIDs = [NSMutableArray array];
+    NSEnumerator *enumerator = [postTagButtons objectEnumerator];
+    NSButton *tagButton;
+    while (tagButton = [enumerator nextObject]) {
+        if ([tagButton state] == NSOnState && [[tagButton cell] representedObject]) [tagIDs addObject:[[tagButton cell] representedObject]];
+    }
+    if (![title length] || ![message length]) {
+        [postStatusField setStringValue:@"A post needs a title and a message."];
+        return;
+    }
+    if ([(DLServerChannel *)baseChannel requiresTag] && ![tagIDs count]) {
+        [postStatusField setStringValue:@"This forum requires at least one tag."];
+        return;
+    }
+    [postStatusField setStringValue:@""];
+    [postSubmitButton setEnabled:NO];
+    [[DLController sharedInstance] createForumPostInChannel:(DLServerChannel *)baseChannel
+                                                      title:title content:message tagIDs:tagIDs];
+}
+
+-(void)forumPostCreationDidFinish:(NSNotification *)notification {
+    if (![[notification object] isEqual:baseChannel]) return;
+    DLChannel *thread = [[notification userInfo] objectForKey:@"thread"];
+    if (!thread) {
+        [postSubmitButton setEnabled:YES];
+        [postStatusField setStringValue:[[notification userInfo] objectForKey:@"error"]];
+        return;
+    }
+    // Like the official client, the new post opens right away.
+    [self setComposing:NO];
+    [self hideThreadBrowser];
+    [delegate threadController:self selectChannel:thread];
 }
 
 -(void)threadStarterDidLoad:(NSNotification *)notification {
@@ -523,6 +719,14 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
     [titleField release];
     [closeButton release];
     [searchField release];
+    [newPostButton release];
+    [composeView release];
+    [postTitleField release];
+    [postMessageField release];
+    [postTagButtons release];
+    [postSubmitButton release];
+    [postCancelButton release];
+    [postStatusField release];
     [listTableView release];
     [listScrollView release];
     [listPane release];

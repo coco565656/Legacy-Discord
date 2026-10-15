@@ -60,6 +60,18 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### New forum posts
+
+- Forum lists have the official blurple "New Post" button. It opens a draft
+  card with a title, a message (Option-Return for new lines), the forum's tags
+  as toggle pills, Cancel and Post. Post sends
+  `POST /channels/{forum}/threads` with `applied_tags`; forums flagged
+  REQUIRE_TAG need a tag. The new post opens right away and is shown as joined.
+- Verified on 10.6.8: the draft opens, an empty Post shows "A post needs a
+  title and a message." without sending, tags toggle, Cancel restores the
+  list. Creating a real post and sending into a thread were not exercised
+  (they write to a real server).
+
 #### Forum post list, thread list and WebP previews
 
 - Forum and media channels show the official post list: a "Search posts"

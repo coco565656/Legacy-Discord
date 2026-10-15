@@ -464,6 +464,44 @@ static DLController* sharedObject = nil;
     [[NSNotificationCenter defaultCenter] postNotificationName:DLThreadStarterDidLoadNotification object:thread];
 }
 
+-(void)createForumPostInChannel:(DLServerChannel *)forum title:(NSString *)title
+                        content:(NSString *)content tagIDs:(NSArray *)tagIDs {
+    if (!forum || ![title length] || ![content length]) return;
+    NSMutableDictionary *parameters = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                       title, @"name",
+                                       [NSDictionary dictionaryWithObject:content forKey:@"content"], @"message", nil];
+    if ([tagIDs count]) [parameters setObject:tagIDs forKey:@"applied_tags"];
+    AsyncHTTPPostRequest *req = [[AsyncHTTPPostRequest alloc] init];
+    [req setParameters:parameters];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDCreateForumPost];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:forum forKey:@"forum"]];
+    [req setUrl:[@API_ROOT stringByAppendingFormat:@"/channels/%@/threads", [forum channelID]]];
+    [req start];
+}
+
+-(void)handleCreateForumPostResponse:(AsyncHTTPRequest *)req {
+    DLServerChannel *forum = [[req userInfo] objectForKey:@"forum"];
+    id response = [[CJSONDeserializer deserializer] deserialize:[req responseData] error:nil];
+    NSDictionary *userInfo = nil;
+    if ([req result] == HTTPResultOK && [response isKindOfClass:[NSDictionary class]] && [response objectForKey:@"id"]) {
+        NSMutableDictionary *threadData = [NSMutableDictionary dictionaryWithDictionary:response];
+        // The creator is a member of the new post, so it appears as joined.
+        if (![threadData objectForKey:@"member"]) [threadData setObject:[NSDictionary dictionary] forKey:@"member"];
+        [self storeThreadData:[NSArray arrayWithObject:threadData] forServerWithID:[forum serverID] replacingExisting:NO];
+        DLChannel *thread = [self loadedChannelWithID:[response objectForKey:@"id"]];
+        if (thread) userInfo = [NSDictionary dictionaryWithObject:thread forKey:@"thread"];
+    }
+    if (!userInfo) {
+        NSString *message = [response isKindOfClass:[NSDictionary class]] ? [response objectForKey:@"message"] : nil;
+        userInfo = [NSDictionary dictionaryWithObject:([message isKindOfClass:[NSString class]] ? message : @"The post could not be created.")
+                                               forKey:@"error"];
+    }
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLForumPostCreationDidFinishNotification
+                                                        object:forum userInfo:userInfo];
+}
+
 -(void)loadPinsForChannel:(DLChannel *)channel {
     if (!channel) return;
     AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
@@ -1295,6 +1333,9 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
             break;
         case RequestIDForumStarter:
             [self handleForumStarterResponse:request];
+            break;
+        case RequestIDCreateForumPost:
+            [self handleCreateForumPostResponse:request];
             break;
         case RequestIDLogout:
             

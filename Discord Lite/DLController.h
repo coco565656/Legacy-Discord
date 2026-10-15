@@ -24,6 +24,8 @@
 #define DLNotificationSettingsDidChangeNotification @"DLNotificationSettingsDidChangeNotification"
 // Posted (object: the thread) when a forum post's opening message loaded.
 #define DLThreadStarterDidLoadNotification @"DLThreadStarterDidLoadNotification"
+// Posted after creating a forum post: userInfo {thread} on success or {error}.
+#define DLForumPostCreationDidFinishNotification @"DLForumPostCreationDidFinishNotification"
 
 #define kDefaultsToken "token"
 
@@ -51,7 +53,8 @@ typedef enum {
     RequestIDUserNoteSave = 20,
     RequestIDMyGuildMember = 21,
     RequestIDNotificationSettings = 22,
-    RequestIDForumStarter = 23
+    RequestIDForumStarter = 23,
+    RequestIDCreateForumPost = 24
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -184,6 +187,9 @@ typedef enum {
 -(void)loadPinsForChannel:(DLChannel *)channel;
 // Fetches a forum post's opening message (same ID as the post) once.
 -(void)loadStarterMessageForThread:(DLServerChannel *)thread;
+// POST /channels/{forum}/threads with a title, opening message and tag IDs.
+-(void)createForumPostInChannel:(DLServerChannel *)forum title:(NSString *)title
+                        content:(NSString *)content tagIDs:(NSArray *)tagIDs;
 
 
 -(DLServer *)myServerItem;

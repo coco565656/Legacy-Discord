@@ -32,6 +32,8 @@
     if ([value isKindOfClass:[NSString class]]) { [ownerID release]; ownerID = [value copy]; }
     value = [d objectForKey:@"applied_tags"];
     if ([value isKindOfClass:[NSArray class]]) { [appliedTagIDs release]; appliedTagIDs = [value copy]; }
+    value = [d objectForKey:@"flags"];
+    if ([value respondsToSelector:@selector(integerValue)]) channelFlags = [value integerValue];
     value = [d objectForKey:@"available_tags"];
     if ([value isKindOfClass:[NSArray class]]) { [availableTags release]; availableTags = [value copy]; }
     id overwrites = [d objectForKey:@"permission_overwrites"];
@@ -134,6 +136,9 @@
 }
 -(NSArray *)availableTags {
     return availableTags;
+}
+-(BOOL)requiresTag {
+    return (channelFlags & (1 << 4)) != 0;
 }
 -(NSDictionary *)starterSummary {
     return starterSummary;
