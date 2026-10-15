@@ -24,9 +24,16 @@
 }
 
 -(void)setBackgroundColor:(NSColor *)bgColor {
-    [backgroundColor release];
+    if (backgroundColor == bgColor) return;
     [bgColor retain];
+    [backgroundColor release];
     backgroundColor = bgColor;
+    [self setNeedsDisplay:YES];
+}
+
+-(void)dealloc {
+    [backgroundColor release];
+    [super dealloc];
 }
 
 @end

@@ -1,0 +1,9 @@
+Twemoji graphics version 17.0.3
+Graphics by Twitter, Inc. and other contributors; maintained by the
+jdecked/twemoji contributors. Original PNG graphics are bundled unchanged.
+Source: https://github.com/jdecked/twemoji/tree/v17.0.3/assets/72x72
+License: CC BY 4.0 (see LICENSE-GRAPHICS in this directory)
+
+standard-emoji.tsv contains Unicode Emoji 16.0 fully-qualified sequences and
+their English names from https://unicode.org/Public/emoji/16.0/emoji-test.txt.
+The matching Twemoji graphics are bundled locally for Snow Leopard.

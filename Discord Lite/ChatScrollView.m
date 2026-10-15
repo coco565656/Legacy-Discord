@@ -9,6 +9,9 @@
 #import "ChatScrollView.h"
 #import "DLUtil.h"
 #import "HTTPCache.h"
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+#import "DLUIDiagnostics.h"
+#endif
 
 extern NSString * const DLMessageActionBarDidShowNotification;
 extern NSString * const DLMessageActionBarDidHideNotification;
@@ -211,7 +214,7 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     NSRect itemRect = [[self contentView] convertRect:[[item view] bounds] fromView:[item view]];
     NSRect actionFrame = [sharedMessageActionBar frame];
     actionFrame.origin.x = MAX(NSMinX(visibleBounds) + 4.0,
-                               NSMaxX(visibleBounds) - NSWidth(actionFrame) - 10.0);
+                               NSMaxX(visibleBounds) - NSWidth(actionFrame) - 4.0);
     actionFrame.origin.y = NSMaxY(itemRect) - NSHeight(actionFrame) - 1.0;
     actionFrame.origin.y = MAX(NSMinY(visibleBounds) + 4.0,
                                MIN(actionFrame.origin.y,
@@ -312,10 +315,21 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
         item.view.frame = itemFrame;
         [item layoutForCurrentViewFrame];
         [item.view setNeedsDisplay:YES];
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+        [DLUIDiagnostics recordEvent:@"message-row-layout-pass" details:[NSDictionary dictionaryWithObjectsAndKeys:
+                                          [NSNumber numberWithDouble:[item expectedHeight]], @"expected_height",
+                                          [NSNumber numberWithDouble:NSHeight([item.view frame])], @"actual_height", nil]];
+#endif
         currentHeight += [item expectedHeight];
     }
     [self updateUnreadSeparatorPosition];
     [self.documentView setNeedsDisplay:YES];
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+    [DLUIDiagnostics recordEvent:@"message-layout" details:[NSDictionary dictionaryWithObjectsAndKeys:
+                                      [NSNumber numberWithUnsignedInteger:[content count]], @"message_count",
+                                      [NSNumber numberWithDouble:NSWidth([self.documentView bounds])], @"width",
+                                      [NSNumber numberWithDouble:NSHeight([self.documentView bounds])], @"height", nil]];
+#endif
 }
 -(void)refreshVisibleMessageHeaderLayouts {
     NSRect visibleRect = [[self documentView] convertRect:[[self contentView] bounds]
@@ -360,6 +374,9 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     frame.size.height = height;
     [self.documentView setFrame: frame];
     [self.documentView setNeedsDisplay:YES];
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+    [DLUIDiagnostics recordEvent:@"message-set-content" details:[NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedInteger:[content count]] forKey:@"message_count"]];
+#endif
 }
 -(void)appendContent:(NSArray *)inContent {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(screenResize) object:nil];
@@ -388,6 +405,9 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
     [self.documentView setFrame: frame];
     [self.documentView setNeedsDisplay:YES];
     [self screenResize];
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+    [DLUIDiagnostics recordEvent:@"message-append-content" details:[NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedInteger:[inContent count]] forKey:@"added_count"]];
+#endif
 }
 -(void)prependContent:(NSArray *)inContent preservingVisiblePosition:(BOOL)preservePosition {
     if ([inContent count] == 0) {
@@ -410,6 +430,11 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
         [[self contentView] scrollToPoint:oldOrigin];
         [self reflectScrolledClipView:[self contentView]];
     }
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+    [DLUIDiagnostics recordEvent:@"message-prepend-content" details:[NSDictionary dictionaryWithObjectsAndKeys:
+                                      [NSNumber numberWithUnsignedInteger:[inContent count]], @"added_count",
+                                      [NSNumber numberWithBool:preservePosition], @"preserved_scroll_position", nil]];
+#endif
 }
 -(void)prependViewController:(ChatItemViewController *)vc {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(screenResize) object:nil];

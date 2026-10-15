@@ -31,7 +31,12 @@
         eventHandlerView = [[NSView_Events alloc] initWithFrame:frame];
         [eventHandlerView setDelegate:self];
         [attachmentView addSubview:eventHandlerView];
-        [representedObject loadScaledData];
+        NSData *previewData = [representedObject scaledAttachmentData];
+        if (previewData) {
+            [self attachment:representedObject previewDataWasUpdated:previewData];
+        } else {
+            [representedObject loadScaledData];
+        }
     } else if ([representedObject type] == AttachmentTypeVideo) {
         WebView *videoView = [[WebView alloc] initWithFrame:frame];
         attachmentView = videoView;

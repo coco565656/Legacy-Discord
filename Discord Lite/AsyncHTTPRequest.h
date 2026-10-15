@@ -34,6 +34,7 @@ typedef enum {
     CURL *curlRequestHandle;
     NSMutableData *responseData;
     HTTPResult result;
+    long statusCode;
     NSDictionary *headers;
     NSString *url;
     NSFileHandle *downloadingFile;
@@ -50,6 +51,7 @@ typedef enum {
 -(void)start;
 -(NSMutableData *)responseData;
 -(HTTPResult)result;
+-(long)statusCode;
 -(int)identifier;
 -(NSString *)userAgentString;
 -(NSString *)url;

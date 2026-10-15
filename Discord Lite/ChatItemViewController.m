@@ -8,7 +8,11 @@
 
 #import "ChatItemViewController.h"
 #import "DLPreferencesHandler.h"
+#import "DLTwemojiRenderer.h"
 #import <WebKit/WebKit.h>
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+#import "DLUIDiagnostics.h"
+#endif
 
 NSString * const DLMessageActionBarDidShowNotification = @"DLMessageActionBarDidShowNotification";
 NSString * const DLMessageActionBarDidHideNotification = @"DLMessageActionBarDidHideNotification";
@@ -29,6 +33,10 @@ static NSString *DLStickerURL(NSDictionary *sticker) {
     }
     return [NSString stringWithFormat:@"https://cdn.discordapp.com/stickers/%@.png", stickerID];
 }
+
+@interface ChatItemViewController ()
+-(NSAttributedString *)displayAttributedContent;
+@end
 
 @interface DLMessageActionButton : NSButton
 @end
@@ -113,6 +121,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [timestampTextField setFont:[NSFont systemFontOfSize:11 * displayScale]];
     [timestampTextField setAlignment:NSLeftTextAlignment];
     [editedInfoLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
+    [editedInfoLabel setHidden:YES];
     [editDismissInfoLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
     [referencedMessageTextField setTextColor:[DLUtil nativePrimaryTextColor]];
     reactionTextField = [[NSTextField alloc] initWithFrame:NSMakeRect(72, 3, view.frame.size.width - 88, 17)];
@@ -206,14 +215,18 @@ const NSInteger ATTACHMENT_SPACING = 15;
     }
     CGFloat left = NSMinX([usernameTextField frame]);
     CGFloat availableWidth = MAX(0.0, NSWidth([insetView bounds]) - left - 12.0);
-    NSDictionary *usernameAttributes = [NSDictionary dictionaryWithObject:[usernameTextField font]
-                                                                    forKey:NSFontAttributeName];
     NSDictionary *timestampAttributes = [NSDictionary dictionaryWithObject:[timestampTextField font]
                                                                      forKey:NSFontAttributeName];
-    CGFloat usernameWidth = ceil([[usernameTextField stringValue] sizeWithAttributes:usernameAttributes].width) + 5.0;
+    CGFloat usernameWidth = ceil([[usernameTextField attributedStringValue] size].width) + 5.0;
     CGFloat timestampWidth = ceil([[timestampTextField stringValue] sizeWithAttributes:timestampAttributes].width) + 5.0;
-    timestampWidth = MIN(timestampWidth, MAX(0.0, availableWidth * 0.48));
-    usernameWidth = MIN(usernameWidth, MAX(0.0, availableWidth - timestampWidth - 5.0));
+    // A partial date is misleading. Preserve space for the author and show the
+    // timestamp only when its complete text fits alongside that name.
+    CGFloat minimumNameWidth = MIN(usernameWidth, 100.0 * [[DLPreferencesHandler sharedInstance] messageDisplayScale]);
+    BOOL showTimestamp = availableWidth >= minimumNameWidth + timestampWidth + 5.0;
+    [timestampTextField setHidden:!showTimestamp];
+    if (!showTimestamp) timestampWidth = 0.0;
+    usernameWidth = MIN(usernameWidth, MAX(0.0, availableWidth - timestampWidth - (showTimestamp ? 5.0 : 0.0)));
+    [usernameTextField setToolTip:[NSString stringWithFormat:@"%@ — %@", [[representedObject author] globalName], [timestampTextField stringValue]]];
 
     NSRect usernameFrame = [usernameTextField frame];
     usernameFrame.size.width = usernameWidth;
@@ -238,7 +251,29 @@ const NSInteger ATTACHMENT_SPACING = 15;
 }
 
 -(CGFloat)reactionViewHeight {
-    return MAX(19.0, round(22.0 * [[DLPreferencesHandler sharedInstance] messageDisplayScale]));
+    if (![reactionButtons count]) return 0.0;
+    CGFloat scale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
+    CGFloat rowHeight = MAX(19.0, round(22.0 * scale));
+    CGFloat maximumX = NSWidth([view bounds]) - 12.0;
+    CGFloat availableWidth = MAX(1.0, maximumX - 72.0);
+    CGFloat x = 72.0;
+    NSInteger row = 0;
+    for (NSButton *button in reactionButtons) {
+        NSDictionary *attributes = [NSDictionary dictionaryWithObject:[button font] forKey:NSFontAttributeName];
+        CGFloat naturalWidth = ceil([[button title] sizeWithAttributes:attributes].width)
+            + ([button image] ? 38.0 : 20.0);
+        CGFloat width = MIN(availableWidth, MAX(42.0, naturalWidth));
+        if (x > 72.0 && x + width > maximumX) { row++; x = 72.0; }
+        [button setFrame:NSMakeRect(x, row * rowHeight + 1.0, width, rowHeight - 1.0)];
+        x += width + 4.0;
+    }
+    CGFloat height = (row + 1) * rowHeight;
+    for (NSButton *button in reactionButtons) {
+        NSRect frame = [button frame];
+        frame.origin.y = height - NSMaxY(frame) + 1.0;
+        [button setFrame:frame];
+    }
+    return height;
 }
 
 -(CGFloat)expectedHeight {
@@ -464,6 +499,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
                 [image setSize:NSMakeSize(16, 16)];
                 [item setImage:image];
             }
+        } else {
+            [item setTitle:[NSString stringWithFormat:@"%@ %@", reactedByMe ? @"Remove" : @"Add",
+                            [DLTwemojiRenderer displayNameForEmoji:identifier]]];
+            [item setImage:[DLTwemojiRenderer imageForEmoji:identifier size:16.0]];
         }
         [reactionMenu addItem:item];
         [item release];
@@ -495,8 +534,17 @@ const NSInteger ATTACHMENT_SPACING = 15;
                 [summary appendAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
                 appendedImage = YES;
             }
+        } else {
+            NSImage *image = [DLTwemojiRenderer imageForEmoji:name size:16 * displayScale];
+            if (image) {
+                NSTextAttachmentCell *cell = [[[NSTextAttachmentCell alloc] initImageCell:image] autorelease];
+                NSTextAttachment *attachment = [[[NSTextAttachment alloc] init] autorelease];
+                [attachment setAttachmentCell:cell];
+                [summary appendAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
+                appendedImage = YES;
+            }
         }
-        NSString *label = appendedImage ? @"" : ((emojiID && ![emojiID isKindOfClass:[NSNull class]]) ? [NSString stringWithFormat:@":%@:", name] : name);
+        NSString *label = appendedImage ? @"" : ((emojiID && ![emojiID isKindOfClass:[NSNull class]]) ? [NSString stringWithFormat:@":%@:", name] : [DLTwemojiRenderer displayNameForEmoji:name]);
         NSString *countText = [NSString stringWithFormat:@"%@%@%@", label, [label length] > 0 ? @" " : @"", [reaction objectForKey:@"count"]];
         [summary appendAttributedString:[[[NSAttributedString alloc] initWithString:countText] autorelease]];
     }
@@ -509,7 +557,6 @@ const NSInteger ATTACHMENT_SPACING = 15;
 
 -(void)rebuildReactionButtons {
     CGFloat displayScale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
-    CGFloat reactionHeight = [self reactionViewHeight];
     NSEnumerator *oldButtonEnumerator = [reactionButtons objectEnumerator];
     NSButton *oldButton;
     while (oldButton = [oldButtonEnumerator nextObject]) {
@@ -517,8 +564,6 @@ const NSInteger ATTACHMENT_SPACING = 15;
     }
     [reactionButtons removeAllObjects];
 
-    CGFloat x = 72.0;
-    CGFloat maximumX = NSWidth([insetView bounds]) - 12.0;
     NSEnumerator *enumerator = [[representedObject reactions] objectEnumerator];
     NSDictionary *reaction;
     while (reaction = [enumerator nextObject]) {
@@ -543,21 +588,17 @@ const NSInteger ATTACHMENT_SPACING = 15;
                 title = [NSString stringWithFormat:@":%@: %@", name, count];
             }
         } else {
-            title = [NSString stringWithFormat:@"%@ %@", name, count];
+            emojiImage = [DLTwemojiRenderer imageForEmoji:name size:16 * displayScale];
+            title = emojiImage ? count : [NSString stringWithFormat:@"%@ %@", [DLTwemojiRenderer displayNameForEmoji:name], count];
         }
 
-        NSDictionary *attributes = [NSDictionary dictionaryWithObject:[NSFont systemFontOfSize:12 * displayScale] forKey:NSFontAttributeName];
-        CGFloat width = ceil([title sizeWithAttributes:attributes].width) + (emojiImage ? 38.0 : 20.0);
-        width = MAX(42.0, width);
-        if (x + width > maximumX) {
-            break;
-        }
-        NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(x, 1, width, reactionHeight - 1.0)];
+        NSButton *button = [[NSButton alloc] initWithFrame:NSZeroRect];
         [button setAutoresizingMask:NSViewMaxYMargin];
         [button setBezelStyle:NSRecessedBezelStyle];
         [button setButtonType:NSPushOnPushOffButton];
         [button setFont:[NSFont systemFontOfSize:12 * displayScale]];
         [button setTitle:title];
+        [[button cell] setLineBreakMode:NSLineBreakByTruncatingTail];
         if (emojiImage) {
             [button setImage:emojiImage];
             [button setImagePosition:NSImageLeft];
@@ -571,8 +612,8 @@ const NSInteger ATTACHMENT_SPACING = 15;
         [insetView addSubview:button];
         [reactionButtons addObject:button];
         [button release];
-        x += width + 4.0;
     }
+    [self reactionViewHeight];
     [reactionTextField setHidden:YES];
 }
 
@@ -657,8 +698,12 @@ const NSInteger ATTACHMENT_SPACING = 15;
             [recent addObject:fallbackIdentifier];
         }
     }
+    NSView *barParent = [actionBar superview];
+    CGFloat availableWidth = MAX(86.0, NSWidth([(barParent ? barParent : view) bounds]) - 8.0);
+    NSInteger recentCount = MIN(3, MAX(0, (NSInteger)((availableWidth - 86.0) / 34.0)));
+    [actionBar setFrameSize:NSMakeSize(86.0 + recentCount * 34.0, 30.0)];
     CGFloat x = 0;
-    for (NSInteger index = 0; index < 3; index++) {
+    for (NSInteger index = 0; index < recentCount; index++) {
         NSString *identifier = [recent objectAtIndex:index];
         NSButton *button = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(x, 1, 34, 28)];
         [button setBordered:NO];
@@ -669,7 +714,13 @@ const NSInteger ATTACHMENT_SPACING = 15;
         [button setAction:@selector(quickReaction:)];
         NSRange separator = [identifier rangeOfString:@":" options:NSBackwardsSearch];
         if (separator.location == NSNotFound) {
-            [button setTitle:identifier];
+            NSImage *image = [DLTwemojiRenderer imageForEmoji:identifier size:18.0];
+            if (image) {
+                [button setImage:image];
+                [button setImagePosition:NSImageOnly];
+            } else {
+                [button setTitle:@"?"];
+            }
         } else {
             NSString *emojiID = [identifier substringFromIndex:separator.location + 1];
             NSString *emojiURL = DLCustomEmojiURL(emojiID, [self isCustomEmojiAnimated:emojiID]);
@@ -694,7 +745,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         [button release];
         x += 34;
     }
-    NSButton *pickerButton = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(102, 1, 34, 28)];
+    NSButton *pickerButton = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(x, 1, 34, 28)];
     [pickerButton setBordered:NO];
     [pickerButton setRefusesFirstResponder:YES];
     [pickerButton setTitle:@"+"];
@@ -703,7 +754,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [pickerButton setAction:@selector(showReactionPicker:)];
     [actionBar addSubview:pickerButton];
     [pickerButton release];
-    NSButton *replyButton = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(136, 1, 52, 28)];
+    NSButton *replyButton = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(x + 34.0, 1, 52, 28)];
     [replyButton setBordered:NO];
     [replyButton setRefusesFirstResponder:YES];
     [replyButton setTitle:@"Reply"];
@@ -1087,11 +1138,27 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [self updateViewFromRepresentedObject];
 }
 
+-(NSAttributedString *)displayAttributedContent {
+    NSAttributedString *content = [DLTextParser attributedContentStringForMessage:representedObject];
+    if (!content || ![representedObject editedTimestamp] || isEditing) {
+        return content;
+    }
+
+    NSMutableAttributedString *displayContent = [[[NSMutableAttributedString alloc] initWithAttributedString:content] autorelease];
+    CGFloat displayScale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont systemFontOfSize:MAX(8.0, round(9.0 * displayScale))], NSFontAttributeName,
+                                [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName, nil];
+    NSString *marker = [displayContent length] > 0 ? @" (edited)" : @"(edited)";
+    [displayContent appendAttributedString:[[[NSAttributedString alloc] initWithString:marker attributes:attributes] autorelease]];
+    return displayContent;
+}
+
 -(void)updateViewFromRepresentedObject {
     [representedObject setDelegate:self];
     [[representedObject author] setDelegate:self];
     
-    NSAttributedString *as = [DLTextParser attributedContentStringForMessage:representedObject];
+    NSAttributedString *as = [self displayAttributedContent];
     if (as) {
         [[chatTextView textStorage] setAttributedString:as];
     }
@@ -1102,7 +1169,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [reactionTextField setHidden:[reactionSummary length] == 0];
     [self rebuildReactionButtons];
     [self updateReactionMenu];
-    [editedInfoLabel setHidden:[representedObject editedTimestamp] == nil];
+    [editedInfoLabel setHidden:YES];
     [self loadCustomEmojiImages];
     [self rebuildStickerViews];
     if ([embedViews count] == 0 && [[representedObject embeds] count] > 0) {
@@ -1116,7 +1183,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         return;
     }
 
-    [usernameTextField setStringValue:[[representedObject author] globalName]];
+    [DLTwemojiRenderer setText:[[representedObject author] globalName] forLabel:usernameTextField];
     [avatarImageView setImage:[DLUtil imageResize:[[[NSImage alloc] initWithData:[[representedObject author] avatarImageData]] autorelease] newSize:avatarImageView.frame.size cornerRadius:[ChatItemViewController AVATAR_RADIUS]]];
     [[representedObject author] loadAvatarData];
     
@@ -1224,6 +1291,12 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [self syncAvatarProfileButton];
     viewHasLoaded = YES;
     [self refreshAnimatedEmojiTimer];
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+    [DLUIDiagnostics recordEvent:@"message-rendered" details:[NSDictionary dictionaryWithObjectsAndKeys:
+                                      [NSNumber numberWithUnsignedInteger:[[representedObject content] length]], @"content_length",
+                                      [NSNumber numberWithDouble:[self expectedHeight]], @"expected_height",
+                                      [NSNumber numberWithDouble:NSHeight([self.view frame])], @"actual_height", nil]];
+#endif
 }
 
 -(void)setSearchHighlighted:(BOOL)highlighted {
@@ -1274,6 +1347,22 @@ const NSInteger ATTACHMENT_SPACING = 15;
         [self layoutForCurrentViewFrame];
     }
 }
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+-(BOOL)isCompactDisplay {
+    return compactDisplay;
+}
+-(CGFloat)diagnosticAvailableMessageWidth {
+    CGFloat inset = [chatTextView textContainerInset].width;
+    return MAX(0.0, NSWidth([chatTextView bounds]) - (inset * 2.0));
+}
+-(CGFloat)diagnosticCalculatedTextHeight {
+    NSRect usedRect = [[chatTextView layoutManager] usedRectForTextContainer:[chatTextView textContainer]];
+    return NSHeight(usedRect) + ([chatTextView textContainerInset].height * 2.0);
+}
+-(CGFloat)diagnosticDisplayedTextHeight {
+    return NSHeight([chatTextView frame]);
+}
+#endif
 
 -(BOOL)isMessageActionBarVisible {
     return ![messageActionBar isHidden];
@@ -1358,6 +1447,12 @@ const NSInteger ATTACHMENT_SPACING = 15;
             [referencedMessageAvatarImageView setImage:[DLUtil imageResize:[[[NSImage alloc] initWithData:data] autorelease] newSize:referencedMessageAvatarImageView.frame.size cornerRadius:[ChatItemViewController REFERENCED_AVATAR_RADIUS]]];
         }
     }
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+    [DLUIDiagnostics recordEvent:@"message-avatar-updated" details:[NSDictionary dictionaryWithObjectsAndKeys:
+                                      [NSNumber numberWithUnsignedInteger:[[representedObject content] length]], @"content_length",
+                                      [NSNumber numberWithDouble:[self expectedHeight]], @"expected_height",
+                                      [NSNumber numberWithDouble:NSHeight([self.view frame])], @"actual_height", nil]];
+#endif
 }
 
 -(void)mouseWasDepressedWithEvent:(NSEvent *)event {
@@ -1384,10 +1479,13 @@ const NSInteger ATTACHMENT_SPACING = 15;
 }
 -(void)escapeKeyWasPressed {
     [self endEditingContent];
-    [[chatTextView textStorage] setAttributedString:[DLTextParser attributedContentStringForMessage:representedObject]];
+    [[chatTextView textStorage] setAttributedString:[self displayAttributedContent]];
     [delegate chatView:self didEndEditingWithCommit:NO];
 }
 -(void)messageContentWasUpdated {
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+    [DLUIDiagnostics recordEvent:@"message-model-updated" details:[NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedInteger:[[representedObject content] length]] forKey:@"content_length"]];
+#endif
     [self updateViewFromRepresentedObject];
     [delegate chatViewContentWasUpdated:self];
 }
@@ -1467,7 +1565,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     if (!messageUsesEmoji) {
         return;
     }
-    [[chatTextView textStorage] setAttributedString:[DLTextParser attributedContentStringForMessage:representedObject]];
+    [[chatTextView textStorage] setAttributedString:[self displayAttributedContent]];
     [reactionTextField setAttributedStringValue:[self attributedReactionSummary]];
     [self rebuildReactionButtons];
     [self updateReactionMenu];
@@ -1481,6 +1579,24 @@ const NSInteger ATTACHMENT_SPACING = 15;
 
 -(void)textDidChange:(NSNotification *)notification {
     [delegate chatViewUpdatedWithEnteredText:self];
+}
+
+- (BOOL)textView:(NSTextView *)textView clickedOnLink:(id)link atIndex:(NSUInteger)charIndex {
+    NSURL *url = [link isKindOfClass:[NSURL class]] ? link :
+        ([link isKindOfClass:[NSString class]] ? [NSURL URLWithString:link] : nil);
+    NSString *scheme = [[url scheme] lowercaseString];
+    if (!url || !([scheme isEqualToString:@"https"] || [scheme isEqualToString:@"http"])) {
+        return YES;
+    }
+    NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+    [alert setMessageText:@"Open external link?"];
+    [alert setInformativeText:[url absoluteString]];
+    [alert addButtonWithTitle:@"Open Link"];
+    [alert addButtonWithTitle:@"Cancel"];
+    if ([alert runModal] == NSAlertFirstButtonReturn) {
+        [[NSWorkspace sharedWorkspace] openURL:url];
+    }
+    return YES;
 }
 
 - (BOOL)textView:(NSTextView *)aTextView doCommandBySelector:(SEL)aSelector

@@ -77,6 +77,7 @@ typedef enum {
 -(AttachmentType)type;
 
 -(void)setAttachmentData:(NSData *)d;
+-(void)setScaledAttachmentData:(NSData *)d;
 -(void)setFilename:(NSString *)inFilename;
 -(void)setWidth:(CGFloat)inWidth;
 -(void)setHeight:(CGFloat)inHeight;

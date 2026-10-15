@@ -21,4 +21,3 @@
 - (IBAction)showPreferencesWindow:(id)sender;
 
 @end
-

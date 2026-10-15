@@ -9,6 +9,18 @@ PROJECT_FILE="$PROJECT_DIR/Discord Lite.xcodeproj/project.pbxproj"
 
 plutil -lint "$PROJECT_FILE" "$SOURCE_DIR/Info.plist"
 
+PRODUCTION_106_COUNT=$(grep -c 'MACOSX_DEPLOYMENT_TARGET = 10.6;' "$PROJECT_FILE" || true)
+if [ "$PRODUCTION_106_COUNT" -lt 4 ]; then
+    echo "Production Debug/Release deployment targets are not all set to 10.6." >&2
+    exit 1
+fi
+
+PRODUCTION_X86_64_COUNT=$(grep -c 'ARCHS = x86_64;' "$PROJECT_FILE" || true)
+if [ "$PRODUCTION_X86_64_COUNT" -lt 2 ]; then
+    echo "Production Debug/Release architectures are not both x86_64." >&2
+    exit 1
+fi
+
 if grep -R -n -E 'api/v6|encoding=json&v=6|SSL_VERIFYPEER, 0|SSL_VERIFYHOST, 0|Loaded token:' "$SOURCE_DIR" \
     --exclude-dir=curl_headers; then
     echo "Legacy endpoint, disabled TLS verification, or token logging found." >&2
@@ -31,7 +43,7 @@ if command -v xcrun >/dev/null 2>&1 && command -v clang >/dev/null 2>&1; then
         -Wno-objc-method-access \
         -Wno-incompatible-pointer-types \
         -isysroot "$SDK_PATH" \
-        -mmacosx-version-min=10.7 \
+        -mmacosx-version-min=10.6 \
         -arch x86_64 \
         -I"$SOURCE_DIR"
 fi

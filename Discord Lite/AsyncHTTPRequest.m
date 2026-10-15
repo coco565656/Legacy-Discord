@@ -74,9 +74,8 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
     
     int response = curl_easy_perform(curlRequestHandle);
     if (response == CURLE_OK) {
-        long httpStatusCode = 0;
-        curl_easy_getinfo (curlRequestHandle, CURLINFO_RESPONSE_CODE, &httpStatusCode);
-        switch (httpStatusCode) {
+        curl_easy_getinfo(curlRequestHandle, CURLINFO_RESPONSE_CODE, &statusCode);
+        switch (statusCode) {
             case 200:
                 result = HTTPResultOK;
                 break;
@@ -90,11 +89,13 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
                 result = HTTPResultErrGeneral;
                 break;
         }
-        [self performSelectorOnMainThread:@selector(requestDidFinishLoading) withObject:nil waitUntilDone:NO];
     } else {
-        fprintf(stderr, "curl_easy_perform() for request: %s failed: %s\n",
-                [url UTF8String], curl_easy_strerror(response));
+        result = HTTPResultErrConnecting;
+        NSLog(@"HTTP request failed (curl error %d).", response);
     }
+    // Always release the sequencer slot and notify the owner, including TLS and
+    // connection failures. Otherwise a failed note load can block later work.
+    [self performSelectorOnMainThread:@selector(requestDidFinishLoading) withObject:nil waitUntilDone:NO];
     [pool release];
 }
 
@@ -104,6 +105,9 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
 
 -(HTTPResult)result {
     return result;
+}
+-(long)statusCode {
+    return statusCode;
 }
 -(NSMutableData *)responseData {
     return responseData;
@@ -165,7 +169,7 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
     if (isFileDownload) {
         [downloadingFile closeFile];
     } else {
-        if (cached) {
+        if (cached && result == HTTPResultOK) {
             [[HTTPCache sharedInstance] setCachedData:responseData forURL:url];
         }
     }

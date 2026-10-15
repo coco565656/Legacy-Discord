@@ -12,7 +12,7 @@
 
 -(id)init {
     self = [super init];
-    method = @"POST";
+    if (self) method = [@"POST" retain];
     return self;
 }
 
@@ -92,6 +92,13 @@
     [files release];
     [inFiles retain];
     files = inFiles;
+}
+
+-(void)dealloc {
+    [parameters release];
+    [files release];
+    [method release];
+    [super dealloc];
 }
 
 @end

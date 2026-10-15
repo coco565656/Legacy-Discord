@@ -1,112 +1,101 @@
-# Xcode 5.0.2 / OS X Mountain Lion でのビルド
+# Xcode 4.6.3 / Xcode 5.0.2 でのレガシービルド
 
-## 準備
+本番バイナリの対象は64-bit Intelで、deployment targetはMac OS X 10.6です。
+正式確認範囲は10.6.8 Snow Leopardから10.8.5 Mountain Lionまでとし、
+10.9.5 Mavericksは可能な範囲で確認します。現行macOSのDevLocalビルドは、
+この互換性を証明しません。
 
-1. プロジェクト一式をMountain LionのMacへコピーする。
-2. パスの途中に日本語や極端に長い名前を含めない場所へ置く。
-3. `Discord Lite.xcodeproj`をダブルクリックしてXcode 5.0.2で開く。
-4. Xcodeがプロジェクト設定の更新を提案しても、最初のビルドでは
-   `Perform Changes`を押さずに閉じる。
+## 推奨ツールチェーン
+
+最初に試す本番構成は、Mountain Lion上のXcode 4.6.3とOS X 10.8 SDKです。
+Xcode 5.0.2は既存のMountain Lion検証を再確認するための補助構成として
+残します。どちらもプロジェクト形式の自動変換は行いません。
+
+Snow Leopard上のXcode 4.2も別の検証候補ですが、このプロジェクト全体と
+現在の同梱ライブラリをビルドできることはまだ確認していません。
+
+現行Xcodeは10.6指定でソースをコンパイルできても、古いObjective-C runtime
+を補う`libarclite`を同梱していないため最終リンクに使用しません。この設定を
+無効化したバイナリはSnow Leopard用の正式成果物として扱わないでください。
 
 ## Xcode上の設定確認
 
-1. 左側Project Navigator最上部の青い`Discord Lite`を選択する。
-2. 中央の`TARGETS`から`Discord Lite`を選択する。
-3. `Build Settings`を開き、表示を`All`にする。
-4. 次を確認する。
+1. `Discord Lite.xcodeproj`を開く。
+2. Xcodeが設定更新を提案しても`Perform Changes`を押さずに閉じる。
+3. Project Navigator最上部の`Discord Lite`を選択する。
+4. `TARGETS`から`Discord Lite`を選び、`Build Settings`を`All`表示にする。
+5. 次を確認する。
    - Architectures: `x86_64`
-   - Base SDK: `Latest OS X (OS X 10.9)`
-   - OS X Deployment Target: `OS X 10.7`
+   - Base SDK: `OS X 10.8`（Xcode 4.6.3の推奨構成）
+   - OS X Deployment Target: `Mac OS X 10.6`
    - Build Active Architecture Only: `No`
    - Code Signing Identity: 空欄または`Don't Code Sign`
-5. 画面左上のSchemeが`Discord Lite > My Mac 64-bit`になっていることを確認する。
+6. Schemeが`Discord Lite > My Mac 64-bit`になっていることを確認する。
 
-## 初回ビルド
+## ビルド
 
-1. `Product > Clean`を実行する。
-2. `Product > Build`、またはCommand+Bを押す。
-3. 成功したら`Product > Run`、またはCommand+Rで起動する。
-4. ビルド済みアプリをFinderで確認する場合は、Productsグループの
-   `Discord Lite.app`を右クリックして`Show in Finder`を選ぶ。
-
-## ターミナルからのビルド
-
-プロジェクトのあるフォルダへ移動し、次を実行する。
+Xcodeでは`Product > Build`を実行する。ターミナルではプロジェクトのある
+フォルダから次を実行する。
 
 ```sh
 xcodebuild -project "Discord Lite.xcodeproj" \
   -scheme "Discord Lite" \
   -configuration Debug \
-  -sdk macosx \
+  -sdk macosx10.8 \
   ARCHS=x86_64 \
-  MACOSX_DEPLOYMENT_TARGET=10.7 \
+  MACOSX_DEPLOYMENT_TARGET=10.6 \
   CODE_SIGN_IDENTITY="" \
+  SYMROOT="$PWD/build" \
   build
 ```
 
-生成先を分かりやすく固定する場合は末尾へ次を追加する。
+成功後、実際に生成されたアプリの実行ファイルを確認する。
 
 ```sh
-SYMROOT="$PWD/build"
+file "build/Debug/Legacy Discord.app/Contents/MacOS/Legacy Discord"
+otool -l "build/Debug/Legacy Discord.app/Contents/MacOS/Legacy Discord"
 ```
 
-この場合、アプリは通常`build/Debug/Discord Lite.app`へ生成される。
+`file`に`x86_64`が含まれ、`LC_VERSION_MIN_MACOSX`の`version`が`10.6`
+であることを確認する。Xcodeやプロジェクトの状態により製品名が
+`Discord Lite.app`になった場合は、その実際のパスへ読み替える。
 
-## SSH経由の自動ビルド
+## OS別の確認順
 
-ローカル側でSSHホスト名`mountainlion`が設定されている場合は、プロジェクト
-ルートから次を実行する。
+同じ成果物をコピーして、次の順番でFinderから直接起動する。
+
+1. Mac OS X 10.6.8 Snow Leopard
+2. Mac OS X 10.7.5 Lion
+3. OS X 10.8.5 Mountain Lion
+4. OS X 10.9.5 Mavericks（可能な範囲）
+
+各OSでログイン画面、Keychain保存・復元・削除、チャンネル表示、メッセージ
+送受信、画像、プロフィール、絵文字・スタンプ画面、終了時クラッシュを確認
+する。同梱curl/OpenSSLのロードとTLS接続は、Snow Leopardで必ず実測する。
+
+## 現行Macとの分離
+
+現行macOSでは次だけを開発用プレビューとして使用する。
 
 ```sh
-scripts/remote-build-mountainlion.sh
+./scripts/local-build-all.sh
+./scripts/test-local-regression.sh --quick --screenshots
 ```
 
-ソースはMountain Lion側の
-`~/Developer/legacy-discordClient-remote`へ同期され、Xcode 5でビルドされる。
-成功すると、アプリとログがローカルの次の場所へ回収される。
-
-```text
-artifacts/mountainlion/Debug/Discord Lite.app
-artifacts/mountainlion/Debug/xcodebuild.log
-```
-
-ビルド後にMountain Lion側でアプリを起動する場合：
-
-```sh
-scripts/remote-build-mountainlion.sh --run
-```
-
-`--run`はログイン中のFinderと同じAqua bootstrap sessionでの起動を試みるが、
-OS X 10.8ではSSH由来のアプリに対してKeychainが`OSStatus -25308`を返す場合が
-ある。初回ログインとセッション維持の試験では、ビルド後にMountain Lion側の
-Finderから`~/Developer/legacy-discordClient-remote/build/Debug/Discord Lite.app`
-を直接開く。
-
-ソース同期を省略して再ビルドする場合：
-
-```sh
-scripts/remote-build-mountainlion.sh --no-sync
-```
-
-Releaseビルドの場合：
-
-```sh
-scripts/remote-build-mountainlion.sh --release
-```
-
-公開鍵認証を設定していない場合、同期・ビルド・成果物回収の各接続でSSH
-パスワードを求められることがある。Mountain Lionの古いSSHサーバーで
-`Master refused session request: Permission denied`が出るのを避けるため、
-接続共有は使用していない。継続的な自動テストには公開鍵認証を推奨する。
+これらは`DevLocal`またはコマンドライン限定の12.0 overrideを使い、本番の
+x86_64 / 10.6設定を上書きしない。レガシーOS試験へ進めない場合も、現行Mac
+の開発作業を止める理由にはしない。
 
 ## 最初に確認する項目
 
-1. ログイン画面が描画される。
-2. Console.appにトークンが表示されない。
+1. アプリが起動し、ログイン画面が描画される。
+2. Console.appにトークンや認証情報が表示されない。
 3. Keychain Accessに`org.legacydiscord.client`が作成される。
-4. ログイン後、サーバーとDM一覧が表示される。
-5. 終了して再起動してもセッションが復元される。
+4. 終了して再起動してもセッションが復元される。
+5. ログアウト後にKeychain項目が削除される。
+6. プロフィール、絵文字、スタンプの各パネルが開閉できる。
+7. アプリ終了時にクラッシュしない。
 
-ビルドが失敗した場合は、Issue Navigatorの一番上にある赤いエラーを
-展開し、その完全な本文を記録する。後続エラーは最初のエラーが原因で
-連鎖していることが多い。
+失敗時は、最初のビルドエラー、クラッシュログ、OSバージョン、実行ファイル
+のload commandを保存する。トークン、メールアドレス、パスワード、本文、
+ユーザー名、サーバー名、チャンネル名は共有ログから除外する。

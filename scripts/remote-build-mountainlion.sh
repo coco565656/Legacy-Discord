@@ -127,7 +127,7 @@ $SSH_RSH "$REMOTE_HOST" "
       -sdk macosx \\
       ARCHS=x86_64 \\
       ONLY_ACTIVE_ARCH=NO \\
-      MACOSX_DEPLOYMENT_TARGET=10.7 \\
+      MACOSX_DEPLOYMENT_TARGET=10.6 \\
       CODE_SIGN_IDENTITY= \\
       CODE_SIGNING_REQUIRED=NO \\
       OBJROOT=\"\$PWD/build/obj\" \\

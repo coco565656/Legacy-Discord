@@ -3,7 +3,8 @@
 ## Milestone 0: maintainable Intel baseline
 
 - [x] Import Discord Lite with attribution and GPL license
-- [x] Set the deployment target to OS X 10.7 and architecture to x86_64
+- [x] Set the deployment target to Mac OS X 10.6 and architecture to x86_64
+- [x] Replace Lion-only popover and Keychain entry points with Snow Leopard-compatible paths
 - [x] Move REST and Gateway version constants to v10
 - [x] Store the session token in Keychain and migrate the old preference
 - [x] Enable TLS certificate and hostname verification with a current CA bundle
@@ -11,7 +12,9 @@
 - [x] Verify Gateway reconnect after a Wi-Fi interruption on 10.8.5
 - [x] Build on Xcode 5.0.2 with the Mountain Lion SDK
 - [x] Smoke-test login, Keychain session restoration, server sync and messaging on 10.8.5
-- [ ] Smoke-test login, server sync and message display on 10.9.5
+- [ ] Build and smoke-test the 10.6-targeted binary on Mac OS X 10.6.8
+- [ ] Smoke-test the same binary on Mac OS X 10.7.5 and OS X 10.8.5
+- [ ] Best-effort smoke-test login, server sync and message display on OS X 10.9.5
 - [ ] Record current Gateway payload differences and fix initial sync
 
 ## Milestone 1: daily text client
@@ -23,6 +26,8 @@
 - [x] Reaction payload model, live Gateway updates and add/remove REST actions
 - [x] Reaction display and message context-menu actions
 - [x] Custom emoji rendering and picker
+- [x] Private user notes in the expanded profile, adapted from Discord Messenger
+- [x] Confirmation before opening links in message text
 - [ ] Unread and mention state that survives relaunch
 - [ ] Member/profile inspector
 - [ ] Link embed cards with a strict native renderer

@@ -92,7 +92,7 @@
     [card addSubview:progressIndicator]; [progressIndicator release];
 
     NSTextField *compatibility = [self loginLabelWithFrame:NSMakeRect(30.0, 18.0, 296.0, 18.0)
-                                                       text:@"Built for OS X Mountain Lion and Mavericks"
+                                                       text:@"Built for Mac OS X Snow Leopard through OS X Mountain Lion"
                                                        font:[NSFont systemFontOfSize:9.0]
                                                       color:[DLUtil nativeSecondaryTextColor]
                                                   alignment:NSCenterTextAlignment];

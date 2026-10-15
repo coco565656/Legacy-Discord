@@ -10,6 +10,7 @@
 #import "DLUtil.h"
 #import "HTTPCache.h"
 #import "DLPreferencesHandler.h"
+#import "DLTwemojiRenderer.h"
 
 @implementation DLTextParser
 
@@ -232,6 +233,11 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
             }
         }
         
+        [DLTwemojiRenderer replaceEmojiInAttributedString:as
+                                                   size:(jumboEmoji ? 52.0 : 18.0) * displayScale
+                                     excludingAttribute:DLCodeSpanAttributeName
+                                    recordingAttribute:nil
+                                         cursorLocation:NULL];
         return [as autorelease];
     }
     return [[[NSAttributedString alloc] init] autorelease];

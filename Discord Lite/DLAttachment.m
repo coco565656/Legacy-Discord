@@ -22,6 +22,10 @@
     filename = [[d objectForKey:@"filename"] retain];
     url = [[d objectForKey:@"url"] retain];
     proxyURL = [[d objectForKey:@"proxy_url"] retain];
+    id previewData = [d objectForKey:@"preview_data"];
+    if ([previewData isKindOfClass:[NSData class]]) {
+        scaledAttachmentData = [previewData retain];
+    }
     width = [[d objectForKey:@"width"] intValue];
     height = [[d objectForKey:@"height"] intValue];
     mimeType = [[d objectForKey:@"content_type"] retain];
@@ -121,7 +125,7 @@
         }
         if (width > maxScaledWidth) {
             CGFloat ratio = maxScaledWidth * 1.0 / width;
-            return height * ratio;
+            return ceil(height * ratio);
         }
         return height;
     }
@@ -147,6 +151,10 @@
     [attachmentData release];
     [d retain];
     attachmentData = d;
+}
+-(void)setScaledAttachmentData:(NSData *)d {
+    [scaledAttachmentData release];
+    scaledAttachmentData = [d retain];
 }
 -(void)setFilename:(NSString *)inFilename {
     [filename release];

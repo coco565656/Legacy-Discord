@@ -39,7 +39,9 @@ typedef enum {
     RequestIDActiveThreads = 15,
     RequestIDArchivedThreads = 16,
     RequestIDUserProfile = 17,
-    RequestIDChannelPins = 18
+    RequestIDChannelPins = 18,
+    RequestIDUserNoteLoad = 19,
+    RequestIDUserNoteSave = 20
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -68,6 +70,8 @@ typedef enum {
 -(void)archivedThreadsDidUpdateForServer:(DLServer *)server channel:(DLChannel *)channel;
 -(void)userProfile:(NSDictionary *)profile didLoadForUser:(DLUser *)user inServer:(DLServer *)server;
 -(void)channelPins:(NSArray *)messages didLoadForChannel:(DLChannel *)channel;
+-(void)userNote:(NSString *)note didLoadForUser:(DLUser *)user error:(BOOL)error;
+-(void)userNote:(NSString *)note didSaveForUser:(DLUser *)user error:(BOOL)error;
 @end
 
 @interface DLController : NSObject <AsyncHTTPRequestDelegate, DLWSControllerDelegate> {
@@ -133,6 +137,8 @@ typedef enum {
 -(void)loadActiveThreadsForServer:(DLServer *)server;
 -(void)loadArchivedThreadsForChannel:(DLChannel *)channel;
 -(void)loadProfileForUser:(DLUser *)user inServer:(DLServer *)server;
+-(void)loadNoteForUser:(DLUser *)user;
+-(void)saveNote:(NSString *)note forUser:(DLUser *)user;
 -(void)loadPinsForChannel:(DLChannel *)channel;
 
 

@@ -12,6 +12,7 @@
 #define kTagAttribute "tagged"
 #define kMentionUserIDAttribute "mentionUserID"
 #define kCustomEmojiAttribute "customEmojiMarkup"
+#define kUnicodeEmojiAttribute "unicodeEmojiText"
 
 @protocol DLMessageEditorDelegate <NSObject>
 @optional

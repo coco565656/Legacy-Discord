@@ -8,3 +8,4 @@ xcuserdata/
 *.xcuserstate
 *.xccheckout
 *.xcscmblueprint
+build-production/

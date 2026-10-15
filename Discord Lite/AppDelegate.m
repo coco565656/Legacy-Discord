@@ -14,14 +14,79 @@
 
 @implementation AppDelegate
 
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+- (void)saveSanitizedUIDiagnostics:(id)sender {
+    NSString *path = [mainWindow writeSanitizedUIDiagnostics];
+    if (path) NSLog(@"Sanitized UI diagnostics written to %@", path);
+    else NSLog(@"Unable to write sanitized UI diagnostics.");
+}
+#endif
+
+#if LEGACY_DISCORD_LOCAL_DEV
+- (NSString *)localFixtureNameFromLaunchArguments {
+    NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+    NSUInteger index = [arguments indexOfObject:@"--fixture"];
+    if (index != NSNotFound && index + 1 < [arguments count]) return [arguments objectAtIndex:index + 1];
+    return @"channel-basic";
+}
+- (NSString *)localScreenshotPathFromLaunchArguments {
+    NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+    NSUInteger index = [arguments indexOfObject:@"--screenshot"];
+    if (index != NSNotFound && index + 1 < [arguments count]) return [arguments objectAtIndex:index + 1];
+    return nil;
+}
+- (BOOL)localDiagnosticsRequestedFromLaunchArguments {
+    return [[[NSProcessInfo processInfo] arguments] containsObject:@"--write-sanitized-ui-diagnostics"];
+}
+- (NSSize)localWindowSizeFromLaunchArguments {
+    NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+    NSUInteger index = [arguments indexOfObject:@"--window-size"];
+    if (index == NSNotFound || index + 1 >= [arguments count]) return NSMakeSize(960, 640);
+    NSString *value = [arguments objectAtIndex:index + 1];
+    NSRange separator = [value rangeOfString:@"x"];
+    if (separator.location == NSNotFound) return NSMakeSize(960, 640);
+    CGFloat width = [[value substringToIndex:separator.location] doubleValue];
+    CGFloat height = [[value substringFromIndex:separator.location + 1] doubleValue];
+    if (width < 720 || height < 520) return NSMakeSize(960, 640);
+    return NSMakeSize(width, height);
+}
+- (void)captureLocalFixtureScreenshot:(NSString *)path {
+    if (![mainWindow captureLocalReplayPNGToPath:path]) {
+        NSLog(@"Unable to save local replay screenshot to %@", path);
+        return;
+    }
+    [NSApp terminate:nil];
+}
+#endif
+
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     NSMenuItem *applicationMenuItem = [[NSApp mainMenu] itemAtIndex:0];
     NSMenuItem *preferencesItem = [[applicationMenuItem submenu] itemWithTitle:@"Preferences…"];
     [preferencesItem setTarget:self];
     [preferencesItem setAction:@selector(showPreferencesWindow:)];
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+    NSMenu *applicationMenu = [applicationMenuItem submenu];
+    NSMenuItem *diagnosticsItem = [[NSMenuItem alloc] initWithTitle:@"Save Sanitized UI Diagnostics" action:@selector(saveSanitizedUIDiagnostics:) keyEquivalent:@""];
+    [diagnosticsItem setTarget:self];
+    [applicationMenu addItem:[NSMenuItem separatorItem]];
+    [applicationMenu addItem:diagnosticsItem];
+    [diagnosticsItem release];
+#endif
 
     //[NSURLProtocol registerClass:[DLURLProtocol class]];
     
+#if LEGACY_DISCORD_LOCAL_DEV
+    mainWindow = [[DLMainWindowController alloc] initWithWindowNibName:@"DLMainWindowController"];
+    [mainWindow setDelegate:self];
+    [mainWindow showWindow:self];
+    [mainWindow showLocalReplayFixtureNamed:[self localFixtureNameFromLaunchArguments]
+                                 windowSize:[self localWindowSizeFromLaunchArguments]];
+    if ([self localDiagnosticsRequestedFromLaunchArguments]) {
+        [self performSelector:@selector(saveSanitizedUIDiagnostics:) withObject:nil afterDelay:0.25];
+    }
+    NSString *screenshotPath = [self localScreenshotPathFromLaunchArguments];
+    if (screenshotPath) [self performSelector:@selector(captureLocalFixtureScreenshot:) withObject:screenshotPath afterDelay:0.5];
+#else
     if (![[DLController sharedInstance] isLoggedIn]) {
         loginWindow = [[DLLoginWindowController alloc] initWithWindowNibName:@"DLLoginWindowController"];
         [loginWindow setDelegate:self];
@@ -32,14 +97,20 @@
         [mainWindow setDelegate:self];
         [mainWindow showWindow:mainWindow.window];
     }
+#endif
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     // Insert code here to tear down your application
+#if !LEGACY_DISCORD_LOCAL_DEV
     [[DLController sharedInstance] stopWebSocket];
+#endif
 }
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)theApplication hasVisibleWindows:(BOOL)flag {
+#if LEGACY_DISCORD_LOCAL_DEV
+    [mainWindow showWindow:self];
+#else
     if (![[DLController sharedInstance] isLoggedIn]) {
         if (!loginWindow) {
             loginWindow = [[DLLoginWindowController alloc] initWithWindowNibName:@"DLLoginWindowController"];
@@ -54,14 +125,19 @@
         [mainWindow setDelegate:self];
         [mainWindow showWindow:mainWindow.window];
     }
+#endif
     return YES;
 }
 
 - (IBAction)showPreferencesWindow:(id)sender {
+#if LEGACY_DISCORD_LOCAL_DEV
+    [mainWindow showWindow:self];
+#else
     if (!preferencesWindow) {
         preferencesWindow = [[DLPreferencesWindowController alloc] initWithWindowNibName:@"DLPreferencesWindowController"];
     }
     [preferencesWindow showWindow:preferencesWindow.window];
+#endif
 }
 
 #pragma mark Delegated Functions

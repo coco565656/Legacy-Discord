@@ -9,8 +9,8 @@
 #import "DLController.h"
 #import <Security/Security.h>
 
-static const char *DLKeychainService = "org.legacydiscord.client";
-static const char *DLKeychainAccount = "discord-user-token";
+static const char DLKeychainService[] = "org.legacydiscord.client";
+static const char DLKeychainAccount[] = "discord-user-token";
 
 @interface DLController ()
 -(NSString *)tokenFromKeychain;
@@ -23,6 +23,7 @@ static const char *DLKeychainAccount = "discord-user-token";
 -(void)handleActiveThreadsRequestResponse:(AsyncHTTPRequest *)req;
 -(void)handleArchivedThreadsRequestResponse:(AsyncHTTPRequest *)req;
 -(void)handleUserProfileRequestResponse:(AsyncHTTPRequest *)req;
+-(void)handleUserNoteRequestResponse:(AsyncHTTPRequest *)req;
 -(void)handleChannelPinsRequestResponse:(AsyncHTTPRequest *)req;
 -(void)parseUserProfileInBackground:(NSDictionary *)context;
 -(void)finishUserProfileParsing:(NSDictionary *)result;
@@ -103,62 +104,72 @@ static DLController* sharedObject = nil;
 }
 
 -(NSString *)tokenFromKeychain {
-    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
-                           (id)kSecClassGenericPassword, (id)kSecClass,
-                           [NSString stringWithUTF8String:DLKeychainService], (id)kSecAttrService,
-                           [NSString stringWithUTF8String:DLKeychainAccount], (id)kSecAttrAccount,
-                           [NSNumber numberWithBool:YES], (id)kSecReturnData,
-                           (id)kSecMatchLimitOne, (id)kSecMatchLimit,
-                           nil];
-    CFTypeRef result = NULL;
-    OSStatus status = SecItemCopyMatching((CFDictionaryRef)query, &result);
-    if (status != errSecSuccess || !result) {
+    UInt32 passwordLength = 0;
+    void *passwordData = NULL;
+    OSStatus status = SecKeychainFindGenericPassword(NULL,
+                                                      (UInt32)(sizeof(DLKeychainService) - 1), DLKeychainService,
+                                                      (UInt32)(sizeof(DLKeychainAccount) - 1), DLKeychainAccount,
+                                                      &passwordLength, &passwordData, NULL);
+    if (status != errSecSuccess || !passwordData) {
         if (status != errSecItemNotFound) {
             NSLog(@"Unable to read saved Discord session from Keychain (OSStatus %ld).", (long)status);
         }
         return nil;
     }
 
-    NSData *passwordData = (NSData *)result;
-    NSString *storedToken = [[[NSString alloc] initWithData:passwordData
+    NSData *data = [NSData dataWithBytes:passwordData length:passwordLength];
+    NSString *storedToken = [[[NSString alloc] initWithData:data
                                                    encoding:NSUTF8StringEncoding] autorelease];
-    CFRelease(result);
+    SecKeychainItemFreeContent(NULL, passwordData);
     return storedToken;
 }
 
 -(void)storeTokenInKeychain:(NSString *)newToken {
     NSData *tokenData = [newToken dataUsingEncoding:NSUTF8StringEncoding];
-    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
-                           (id)kSecClassGenericPassword, (id)kSecClass,
-                           [NSString stringWithUTF8String:DLKeychainService], (id)kSecAttrService,
-                           [NSString stringWithUTF8String:DLKeychainAccount], (id)kSecAttrAccount,
-                           nil];
-    NSDictionary *changes = [NSDictionary dictionaryWithObject:tokenData forKey:(id)kSecValueData];
-    OSStatus status = SecItemUpdate((CFDictionaryRef)query, (CFDictionaryRef)changes);
+    UInt32 previousLength = 0;
+    void *previousData = NULL;
+    SecKeychainItemRef item = NULL;
+    OSStatus status = SecKeychainFindGenericPassword(NULL,
+                                                      (UInt32)(sizeof(DLKeychainService) - 1), DLKeychainService,
+                                                      (UInt32)(sizeof(DLKeychainAccount) - 1), DLKeychainAccount,
+                                                      &previousLength, &previousData, &item);
     if (status == errSecSuccess) {
+        if (previousData) SecKeychainItemFreeContent(NULL, previousData);
+        OSStatus updateStatus = SecKeychainItemModifyAttributesAndData(item, NULL,
+                                                                       (UInt32)[tokenData length],
+                                                                       [tokenData bytes]);
+        if (item) CFRelease(item);
+        if (updateStatus != errSecSuccess) {
+            NSLog(@"Unable to update Discord session in Keychain (OSStatus %ld).", (long)updateStatus);
+        }
         return;
     }
-
     if (status != errSecItemNotFound) {
         NSLog(@"Unable to update Discord session in Keychain (OSStatus %ld).", (long)status);
+        if (previousData) SecKeychainItemFreeContent(NULL, previousData);
+        if (item) CFRelease(item);
         return;
     }
-
-    NSMutableDictionary *newItem = [NSMutableDictionary dictionaryWithDictionary:query];
-    [newItem setObject:tokenData forKey:(id)kSecValueData];
-    OSStatus addStatus = SecItemAdd((CFDictionaryRef)newItem, NULL);
+    OSStatus addStatus = SecKeychainAddGenericPassword(NULL,
+                                                        (UInt32)(sizeof(DLKeychainService) - 1), DLKeychainService,
+                                                        (UInt32)(sizeof(DLKeychainAccount) - 1), DLKeychainAccount,
+                                                        (UInt32)[tokenData length], [tokenData bytes], NULL);
     if (addStatus != errSecSuccess) {
         NSLog(@"Unable to save Discord session in Keychain (OSStatus %ld).", (long)addStatus);
     }
 }
 
 -(void)deleteTokenFromKeychain {
-    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
-                           (id)kSecClassGenericPassword, (id)kSecClass,
-                           [NSString stringWithUTF8String:DLKeychainService], (id)kSecAttrService,
-                           [NSString stringWithUTF8String:DLKeychainAccount], (id)kSecAttrAccount,
-                           nil];
-    OSStatus status = SecItemDelete((CFDictionaryRef)query);
+    UInt32 passwordLength = 0;
+    void *passwordData = NULL;
+    SecKeychainItemRef item = NULL;
+    OSStatus status = SecKeychainFindGenericPassword(NULL,
+                                                      (UInt32)(sizeof(DLKeychainService) - 1), DLKeychainService,
+                                                      (UInt32)(sizeof(DLKeychainAccount) - 1), DLKeychainAccount,
+                                                      &passwordLength, &passwordData, &item);
+    if (passwordData) SecKeychainItemFreeContent(NULL, passwordData);
+    if (status == errSecSuccess && item) status = SecKeychainItemDelete(item);
+    if (item) CFRelease(item);
     if (status != errSecSuccess && status != errSecItemNotFound) {
         NSLog(@"Unable to delete Discord session from Keychain (OSStatus %ld).", (long)status);
     }
@@ -174,7 +185,8 @@ static DLController* sharedObject = nil;
 }
 
 -(NSDictionary *)requestHeaders {
-    return [[NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:token, [DLUtil superPropertiesString], nil] forKeys:[NSArray arrayWithObjects:@"Authorization", @"X-Super-Properties", nil]] autorelease];
+    return [NSDictionary dictionaryWithObjectsAndKeys:
+            token, @"Authorization", [DLUtil superPropertiesString], @"X-Super-Properties", nil];
 }
 
 -(NSString *)URLQueryValue:(NSString *)value {
@@ -383,6 +395,30 @@ static DLController* sharedObject = nil;
         [requestURL appendFormat:@"&guild_id=%@", [server serverID]];
     }
     [req setUrl:requestURL];
+    [req start];
+}
+
+-(void)loadNoteForUser:(DLUser *)user {
+    if (![self isLoggedIn] || !user || ![user userID]) return;
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDUserNoteLoad];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:user forKey:@"user"]];
+    [req setUrl:[@API_ROOT stringByAppendingFormat:@"/users/@me/notes/%@", [user userID]]];
+    [req start];
+}
+
+-(void)saveNote:(NSString *)note forUser:(DLUser *)user {
+    if (![self isLoggedIn] || !user || ![user userID] || !note) return;
+    AsyncHTTPPostRequest *req = [[AsyncHTTPPostRequest alloc] init];
+    [req setMethod:@"PUT"];
+    [req setParameters:[NSDictionary dictionaryWithObject:note forKey:@"note"]];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDUserNoteSave];
+    [req setUserInfo:[NSDictionary dictionaryWithObjectsAndKeys:user, @"user", note, @"note", nil]];
+    [req setUrl:[@API_ROOT stringByAppendingFormat:@"/users/@me/notes/%@", [user userID]]];
     [req start];
 }
 
@@ -1006,6 +1042,26 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
     }
 }
 
+-(void)handleUserNoteRequestResponse:(AsyncHTTPRequest *)req {
+    DLUser *user = [[req userInfo] objectForKey:@"user"];
+    if ([req identifier] == RequestIDUserNoteSave) {
+        if ([delegate respondsToSelector:@selector(userNote:didSaveForUser:error:)]) {
+            [delegate userNote:[[req userInfo] objectForKey:@"note"]
+                didSaveForUser:user error:[req result] != HTTPResultOK];
+        }
+        return;
+    }
+    // Discord returns 404 for a user whose note has never been set.
+    BOOL missing = [req statusCode] == 404;
+    NSDictionary *body = [req result] == HTTPResultOK
+        ? [[CJSONDeserializer deserializer] deserializeAsDictionary:[req responseData] error:nil] : nil;
+    NSString *note = [body objectForKey:@"note"];
+    BOOL error = !missing && ([req result] != HTTPResultOK || ![note isKindOfClass:[NSString class]]);
+    if ([delegate respondsToSelector:@selector(userNote:didLoadForUser:error:)]) {
+        [delegate userNote:error ? nil : (missing ? @"" : note) didLoadForUser:user error:error];
+    }
+}
+
 -(void)parseUserProfileInBackground:(NSDictionary *)context {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     id response = [[CJSONDeserializer deserializer]
@@ -1122,6 +1178,10 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
             break;
         case RequestIDUserProfile:
             [self handleUserProfileRequestResponse:request];
+            break;
+        case RequestIDUserNoteLoad:
+        case RequestIDUserNoteSave:
+            [self handleUserNoteRequestResponse:request];
             break;
         case RequestIDChannelPins:
             [self handleChannelPinsRequestResponse:request];

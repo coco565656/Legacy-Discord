@@ -21,8 +21,6 @@
 		8725137A28EF98AD00BD5170 /* delete.png in Resources */ = {isa = PBXBuildFile; fileRef = 8725137928EF98AD00BD5170 /* delete.png */; };
 		872660932A461D1D009CE587 /* AsyncHTTPRequestSequencer.m in Sources */ = {isa = PBXBuildFile; fileRef = 872660922A461D1D009CE587 /* AsyncHTTPRequestSequencer.m */; };
 		872660962A461D90009CE587 /* AsyncHTTPRequestSequencerObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 872660952A461D90009CE587 /* AsyncHTTPRequestSequencerObject.m */; };
-		872FCEC8272A4C5F002434B1 /* ServerItemViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 872FCEC6272A4C5F002434B1 /* ServerItemViewController.m */; };
-		872FCECA272A4CDA002434B1 /* ServerItemViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 872FCECC272A4CDA002434B1 /* ServerItemViewController.xib */; };
 		872FCED7272A5902002434B1 /* FlippedClipView.m in Sources */ = {isa = PBXBuildFile; fileRef = 872FCED6272A5902002434B1 /* FlippedClipView.m */; };
 		873E712F2D0E7F3200427A00 /* NSTextField+DynamicHeight.m in Sources */ = {isa = PBXBuildFile; fileRef = 873E712E2D0E7F3200427A00 /* NSTextField+DynamicHeight.m */; };
 		873E71322D0E899E00427A00 /* PopoutView.m in Sources */ = {isa = PBXBuildFile; fileRef = 873E71312D0E899E00427A00 /* PopoutView.m */; };
@@ -43,7 +41,6 @@
 		877F4DD228ECEF2F00183257 /* NSScroller+BGColor.m in Sources */ = {isa = PBXBuildFile; fileRef = 877F4DD128ECEF2F00183257 /* NSScroller+BGColor.m */; };
 		877F4DD928ED2DCB00183257 /* ServerStatusIndicatorView.m in Sources */ = {isa = PBXBuildFile; fileRef = 877F4DD828ED2DCB00183257 /* ServerStatusIndicatorView.m */; };
 		8782FE0E274C40B800ECA836 /* DLServerMember.m in Sources */ = {isa = PBXBuildFile; fileRef = 8782FE0D274C40B800ECA836 /* DLServerMember.m */; };
-		87877CDA273050A50062B796 /* ChannelItemViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 87877CDC273050A50062B796 /* ChannelItemViewController.xib */; };
 		8788B61728EE2F0A00B338DF /* attach.png in Resources */ = {isa = PBXBuildFile; fileRef = 8788B61628EE2F0A00B338DF /* attach.png */; };
 		8788B61A28EE984B00B338DF /* DLServerFolder.m in Sources */ = {isa = PBXBuildFile; fileRef = 8788B61928EE984B00B338DF /* DLServerFolder.m */; };
 		878B0B2A2738FC6400547D61 /* discord_purple.png in Resources */ = {isa = PBXBuildFile; fileRef = 878B0B292738FC6400547D61 /* discord_purple.png */; };
@@ -64,14 +61,12 @@
 		87A38DD32732FF76002385EE /* HTTPCacheData.m in Sources */ = {isa = PBXBuildFile; fileRef = 87A38DD22732FF76002385EE /* HTTPCacheData.m */; };
 		87A38DD627330B49002385EE /* NSView+Border.m in Sources */ = {isa = PBXBuildFile; fileRef = 87A38DD527330B49002385EE /* NSView+Border.m */; };
 		87A38DD9273330C0002385EE /* AttachmentPreviewViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 87A38DD8273330C0002385EE /* AttachmentPreviewViewController.m */; };
-		87A38DDE27336E14002385EE /* DirectMessageItemViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 87A38DDD27336E14002385EE /* DirectMessageItemViewController.m */; };
 		87A38DE327337386002385EE /* DLDirectMessageChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 87A38DE227337386002385EE /* DLDirectMessageChannel.m */; };
 		87A38DE927338E48002385EE /* f5k.png in Resources */ = {isa = PBXBuildFile; fileRef = 87A38DE827338E48002385EE /* f5k.png */; };
 		87A38DEF27339557002385EE /* at.png in Resources */ = {isa = PBXBuildFile; fileRef = 87A38DEE27339557002385EE /* at.png */; };
 		87A6E2BE2735E0C2000DC06E /* RoundedTextFieldCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 87A6E2BD2735E0C2000DC06E /* RoundedTextFieldCell.m */; };
 		87A6E2C12735E392000DC06E /* BadgeTextField.m in Sources */ = {isa = PBXBuildFile; fileRef = 87A6E2C02735E392000DC06E /* BadgeTextField.m */; };
 		87A6E2C4273612B5000DC06E /* BezierPathRoundedRect.m in Sources */ = {isa = PBXBuildFile; fileRef = 87A6E2C3273612B5000DC06E /* BezierPathRoundedRect.m */; };
-		87A7E7972A4935FB00CA0671 /* DirectMessageItemViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 87A7E7992A4935FB00CA0671 /* DirectMessageItemViewController.xib */; };
 		87AD27D72741D3230092F428 /* HorizontalDynamicScrollView.m in Sources */ = {isa = PBXBuildFile; fileRef = 87AD27D62741D3230092F428 /* HorizontalDynamicScrollView.m */; };
 		87AD27DA2741EF9C0092F428 /* PendingAttachmentViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 87AD27D92741EF9C0092F428 /* PendingAttachmentViewController.m */; };
 		87AD27DD2741EFBC0092F428 /* PendingAttachmentViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 87AD27DF2741EFBC0092F428 /* PendingAttachmentViewController.xib */; };
@@ -93,6 +88,27 @@
 		87C083662728E9FB00C8F933 /* AsyncHTTPPostRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C083652728E9FB00C8F933 /* AsyncHTTPPostRequest.m */; };
 		87C083692728EA0800C8F933 /* AsyncHTTPGetRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C083682728EA0800C8F933 /* AsyncHTTPGetRequest.m */; };
 		87C11C942728DB7B000046F2 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C11C932728DB7B000046F2 /* AppDelegate.m */; };
+		D10000000000000000000001 /* DLReplayFixtureProvider.m in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000003 /* DLReplayFixtureProvider.m */; };
+		D10000000000000000000007 /* DLUIDiagnostics.m in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000009 /* DLUIDiagnostics.m */; };
+		D20000000000000000000001 /* DLCompatibilityPopover.m in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000003 /* DLCompatibilityPopover.m */; };
+		D30000000000000000000001 /* DLMessageComposerControls.m in Sources */ = {isa = PBXBuildFile; fileRef = D30000000000000000000003 /* DLMessageComposerControls.m */; };
+		D40000000000000000000001 /* DLMainWindowChromeControls.m in Sources */ = {isa = PBXBuildFile; fileRef = D40000000000000000000003 /* DLMainWindowChromeControls.m */; };
+		D50000000000000000000001 /* DLMessageReadStateController.m in Sources */ = {isa = PBXBuildFile; fileRef = D50000000000000000000003 /* DLMessageReadStateController.m */; };
+		D60000000000000000000001 /* DLServerNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = D60000000000000000000003 /* DLServerNavigationController.m */; };
+		D70000000000000000000001 /* DLChannelNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = D70000000000000000000003 /* DLChannelNavigationController.m */; };
+		D80000000000000000000001 /* DLMemberListController.m in Sources */ = {isa = PBXBuildFile; fileRef = D80000000000000000000003 /* DLMemberListController.m */; };
+		D90000000000000000000001 /* DLUserProfileController.m in Sources */ = {isa = PBXBuildFile; fileRef = D90000000000000000000003 /* DLUserProfileController.m */; };
+		DA0000000000000000000001 /* DLThreadController.m in Sources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000003 /* DLThreadController.m */; };
+		DB0000000000000000000001 /* DLMessageSearchController.m in Sources */ = {isa = PBXBuildFile; fileRef = DB0000000000000000000003 /* DLMessageSearchController.m */; };
+		DC0000000000000000000001 /* DLPinsController.m in Sources */ = {isa = PBXBuildFile; fileRef = DC0000000000000000000003 /* DLPinsController.m */; };
+		DD0000000000000000000001 /* DLEmojiPickerController.m in Sources */ = {isa = PBXBuildFile; fileRef = DD0000000000000000000003 /* DLEmojiPickerController.m */; };
+		DE0000000000000000000001 /* DLStickerPickerController.m in Sources */ = {isa = PBXBuildFile; fileRef = DE0000000000000000000003 /* DLStickerPickerController.m */; };
+		DF0000000000000000000001 /* DLMessageComposerController.m in Sources */ = {isa = PBXBuildFile; fileRef = DF0000000000000000000003 /* DLMessageComposerController.m */; };
+		E00000000000000000000001 /* DLDirectMessageController.m in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000003 /* DLDirectMessageController.m */; };
+		E10000000000000000000001 /* DLMessagePresentationController.m in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000003 /* DLMessagePresentationController.m */; };
+		E20000000000000000000001 /* DLMainHeaderController.m in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000003 /* DLMainHeaderController.m */; };
+		F10000000000000000000001 /* DLTwemojiRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* DLTwemojiRenderer.m */; };
+		F10000000000000000000004 /* Twemoji72 in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* Twemoji72 */; };
 		87C11C962728DB7B000046F2 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C11C952728DB7B000046F2 /* main.m */; };
 		87C11C982728DB7B000046F2 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 87C11C972728DB7B000046F2 /* Images.xcassets */; };
 		87C11C9B2728DB7B000046F2 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 87C11C992728DB7B000046F2 /* MainMenu.xib */; };
@@ -100,7 +116,6 @@
 		87C2CF8C272F438600F10466 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C2CF8B272F438600F10466 /* ViewController.m */; };
 		87C2CF92272F77AD00F10466 /* NSView+BGColor.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C2CF91272F77AD00F10466 /* NSView+BGColor.m */; };
 		87C6E6972730510500090639 /* uI4.png in Resources */ = {isa = PBXBuildFile; fileRef = 87C6E6962730510500090639 /* uI4.png */; };
-		87C6E69A273052B100090639 /* ChannelItemViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C6E699273052B100090639 /* ChannelItemViewController.m */; };
 		87C6E6A0273053F000090639 /* DynamicScrollView.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C6E69F273053F000090639 /* DynamicScrollView.m */; };
 		87C6E6A627305BB600090639 /* DLServerChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C6E6A527305BB600090639 /* DLServerChannel.m */; };
 		87C6E6A827305DBF00090639 /* DLChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 87C6E6A727305DBF00090639 /* DLChannel.m */; };
@@ -169,9 +184,6 @@
 		872660922A461D1D009CE587 /* AsyncHTTPRequestSequencer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AsyncHTTPRequestSequencer.m; sourceTree = "<group>"; };
 		872660942A461D90009CE587 /* AsyncHTTPRequestSequencerObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AsyncHTTPRequestSequencerObject.h; sourceTree = "<group>"; };
 		872660952A461D90009CE587 /* AsyncHTTPRequestSequencerObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AsyncHTTPRequestSequencerObject.m; sourceTree = "<group>"; };
-		872FCEC5272A4C5F002434B1 /* ServerItemViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ServerItemViewController.h; sourceTree = "<group>"; };
-		872FCEC6272A4C5F002434B1 /* ServerItemViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ServerItemViewController.m; sourceTree = "<group>"; };
-		872FCECB272A4CDA002434B1 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/ServerItemViewController.xib; sourceTree = "<group>"; };
 		872FCED5272A5902002434B1 /* FlippedClipView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FlippedClipView.h; sourceTree = "<group>"; };
 		872FCED6272A5902002434B1 /* FlippedClipView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FlippedClipView.m; sourceTree = "<group>"; };
 		873E712D2D0E7F3200427A00 /* NSTextField+DynamicHeight.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSTextField+DynamicHeight.h"; sourceTree = "<group>"; };
@@ -214,7 +226,6 @@
 		877F4DD828ED2DCB00183257 /* ServerStatusIndicatorView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ServerStatusIndicatorView.m; sourceTree = "<group>"; };
 		8782FE0C274C40B800ECA836 /* DLServerMember.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DLServerMember.h; sourceTree = "<group>"; };
 		8782FE0D274C40B800ECA836 /* DLServerMember.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DLServerMember.m; sourceTree = "<group>"; };
-		87877CDB273050A50062B796 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/ChannelItemViewController.xib; sourceTree = "<group>"; };
 		8788B61628EE2F0A00B338DF /* attach.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = attach.png; sourceTree = "<group>"; };
 		8788B61828EE984B00B338DF /* DLServerFolder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DLServerFolder.h; sourceTree = "<group>"; };
 		8788B61928EE984B00B338DF /* DLServerFolder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DLServerFolder.m; sourceTree = "<group>"; };
@@ -247,8 +258,6 @@
 		87A38DD527330B49002385EE /* NSView+Border.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSView+Border.m"; sourceTree = "<group>"; };
 		87A38DD7273330C0002385EE /* AttachmentPreviewViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AttachmentPreviewViewController.h; sourceTree = "<group>"; };
 		87A38DD8273330C0002385EE /* AttachmentPreviewViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AttachmentPreviewViewController.m; sourceTree = "<group>"; };
-		87A38DDC27336E14002385EE /* DirectMessageItemViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DirectMessageItemViewController.h; sourceTree = "<group>"; };
-		87A38DDD27336E14002385EE /* DirectMessageItemViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DirectMessageItemViewController.m; sourceTree = "<group>"; };
 		87A38DE127337386002385EE /* DLDirectMessageChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DLDirectMessageChannel.h; sourceTree = "<group>"; };
 		87A38DE227337386002385EE /* DLDirectMessageChannel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DLDirectMessageChannel.m; sourceTree = "<group>"; };
 		87A38DE827338E48002385EE /* f5k.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f5k.png; sourceTree = "<group>"; };
@@ -259,7 +268,6 @@
 		87A6E2C02735E392000DC06E /* BadgeTextField.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BadgeTextField.m; sourceTree = "<group>"; };
 		87A6E2C2273612B5000DC06E /* BezierPathRoundedRect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BezierPathRoundedRect.h; sourceTree = "<group>"; };
 		87A6E2C3273612B5000DC06E /* BezierPathRoundedRect.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BezierPathRoundedRect.m; sourceTree = "<group>"; };
-		87A7E7982A4935FB00CA0671 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/DirectMessageItemViewController.xib; sourceTree = "<group>"; };
 		87AD27D52741D3230092F428 /* HorizontalDynamicScrollView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HorizontalDynamicScrollView.h; sourceTree = "<group>"; };
 		87AD27D62741D3230092F428 /* HorizontalDynamicScrollView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HorizontalDynamicScrollView.m; sourceTree = "<group>"; };
 		87AD27D82741EF9C0092F428 /* PendingAttachmentViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PendingAttachmentViewController.h; sourceTree = "<group>"; };
@@ -291,6 +299,48 @@
 		87C11C912728DB7B000046F2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		87C11C922728DB7B000046F2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		87C11C932728DB7B000046F2 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		D10000000000000000000002 /* DLReplayFixtureProvider.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLReplayFixtureProvider.h; sourceTree = "<group>"; };
+		D10000000000000000000003 /* DLReplayFixtureProvider.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLReplayFixtureProvider.m; sourceTree = "<group>"; };
+		D10000000000000000000004 /* DevLocal.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = DevLocal.xcconfig; sourceTree = "<group>"; };
+		D10000000000000000000008 /* DLUIDiagnostics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLUIDiagnostics.h; sourceTree = "<group>"; };
+		D10000000000000000000009 /* DLUIDiagnostics.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLUIDiagnostics.m; sourceTree = "<group>"; };
+		D20000000000000000000002 /* DLCompatibilityPopover.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLCompatibilityPopover.h; sourceTree = "<group>"; };
+		D20000000000000000000003 /* DLCompatibilityPopover.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLCompatibilityPopover.m; sourceTree = "<group>"; };
+		F10000000000000000000002 /* DLTwemojiRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLTwemojiRenderer.h; sourceTree = "<group>"; };
+		F10000000000000000000003 /* DLTwemojiRenderer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLTwemojiRenderer.m; sourceTree = "<group>"; };
+		F10000000000000000000005 /* Twemoji72 */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Twemoji72; sourceTree = "<group>"; };
+		D30000000000000000000002 /* DLMessageComposerControls.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMessageComposerControls.h; sourceTree = "<group>"; };
+		D30000000000000000000003 /* DLMessageComposerControls.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMessageComposerControls.m; sourceTree = "<group>"; };
+		D40000000000000000000002 /* DLMainWindowChromeControls.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMainWindowChromeControls.h; sourceTree = "<group>"; };
+		D40000000000000000000003 /* DLMainWindowChromeControls.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMainWindowChromeControls.m; sourceTree = "<group>"; };
+		D50000000000000000000002 /* DLMessageReadStateController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMessageReadStateController.h; sourceTree = "<group>"; };
+		D50000000000000000000003 /* DLMessageReadStateController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMessageReadStateController.m; sourceTree = "<group>"; };
+		D60000000000000000000002 /* DLServerNavigationController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLServerNavigationController.h; sourceTree = "<group>"; };
+		D60000000000000000000003 /* DLServerNavigationController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLServerNavigationController.m; sourceTree = "<group>"; };
+		D70000000000000000000002 /* DLChannelNavigationController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLChannelNavigationController.h; sourceTree = "<group>"; };
+		D70000000000000000000003 /* DLChannelNavigationController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLChannelNavigationController.m; sourceTree = "<group>"; };
+		D80000000000000000000002 /* DLMemberListController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMemberListController.h; sourceTree = "<group>"; };
+		D80000000000000000000003 /* DLMemberListController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMemberListController.m; sourceTree = "<group>"; };
+		D90000000000000000000002 /* DLUserProfileController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLUserProfileController.h; sourceTree = "<group>"; };
+		D90000000000000000000003 /* DLUserProfileController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLUserProfileController.m; sourceTree = "<group>"; };
+		DA0000000000000000000002 /* DLThreadController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLThreadController.h; sourceTree = "<group>"; };
+		DA0000000000000000000003 /* DLThreadController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLThreadController.m; sourceTree = "<group>"; };
+		DB0000000000000000000002 /* DLMessageSearchController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMessageSearchController.h; sourceTree = "<group>"; };
+		DB0000000000000000000003 /* DLMessageSearchController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMessageSearchController.m; sourceTree = "<group>"; };
+		DC0000000000000000000002 /* DLPinsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLPinsController.h; sourceTree = "<group>"; };
+		DC0000000000000000000003 /* DLPinsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLPinsController.m; sourceTree = "<group>"; };
+		DD0000000000000000000002 /* DLEmojiPickerController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLEmojiPickerController.h; sourceTree = "<group>"; };
+		DD0000000000000000000003 /* DLEmojiPickerController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLEmojiPickerController.m; sourceTree = "<group>"; };
+		DE0000000000000000000002 /* DLStickerPickerController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLStickerPickerController.h; sourceTree = "<group>"; };
+		DE0000000000000000000003 /* DLStickerPickerController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLStickerPickerController.m; sourceTree = "<group>"; };
+		DF0000000000000000000002 /* DLMessageComposerController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMessageComposerController.h; sourceTree = "<group>"; };
+		DF0000000000000000000003 /* DLMessageComposerController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMessageComposerController.m; sourceTree = "<group>"; };
+		E00000000000000000000002 /* DLDirectMessageController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLDirectMessageController.h; sourceTree = "<group>"; };
+		E00000000000000000000003 /* DLDirectMessageController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLDirectMessageController.m; sourceTree = "<group>"; };
+		E10000000000000000000002 /* DLMessagePresentationController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMessagePresentationController.h; sourceTree = "<group>"; };
+		E10000000000000000000003 /* DLMessagePresentationController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMessagePresentationController.m; sourceTree = "<group>"; };
+		E20000000000000000000002 /* DLMainHeaderController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMainHeaderController.h; sourceTree = "<group>"; };
+		E20000000000000000000003 /* DLMainHeaderController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMainHeaderController.m; sourceTree = "<group>"; };
 		87C11C952728DB7B000046F2 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		87C11C972728DB7B000046F2 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		87C11CA02728DB7B000046F2 /* Discord LiteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Discord LiteTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -301,8 +351,6 @@
 		87C2CF90272F77AD00F10466 /* NSView+BGColor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSView+BGColor.h"; sourceTree = "<group>"; };
 		87C2CF91272F77AD00F10466 /* NSView+BGColor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSView+BGColor.m"; sourceTree = "<group>"; };
 		87C6E6962730510500090639 /* uI4.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = uI4.png; sourceTree = "<group>"; };
-		87C6E698273052B100090639 /* ChannelItemViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ChannelItemViewController.h; sourceTree = "<group>"; };
-		87C6E699273052B100090639 /* ChannelItemViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ChannelItemViewController.m; sourceTree = "<group>"; };
 		87C6E69E273053F000090639 /* DynamicScrollView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicScrollView.h; sourceTree = "<group>"; };
 		87C6E69F273053F000090639 /* DynamicScrollView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DynamicScrollView.m; sourceTree = "<group>"; };
 		87C6E6A127305A9400090639 /* DLChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DLChannel.h; sourceTree = "<group>"; };
@@ -394,15 +442,6 @@
 				87AD27D62741D3230092F428 /* HorizontalDynamicScrollView.m */,
 				87D9D1692731CCA700162F22 /* ChatScrollView.h */,
 				87D9D16A2731CCA700162F22 /* ChatScrollView.m */,
-				872FCEC5272A4C5F002434B1 /* ServerItemViewController.h */,
-				872FCEC6272A4C5F002434B1 /* ServerItemViewController.m */,
-				872FCECC272A4CDA002434B1 /* ServerItemViewController.xib */,
-				87C6E698273052B100090639 /* ChannelItemViewController.h */,
-				87C6E699273052B100090639 /* ChannelItemViewController.m */,
-				87877CDC273050A50062B796 /* ChannelItemViewController.xib */,
-				87A38DDC27336E14002385EE /* DirectMessageItemViewController.h */,
-				87A38DDD27336E14002385EE /* DirectMessageItemViewController.m */,
-				87A7E7992A4935FB00CA0671 /* DirectMessageItemViewController.xib */,
 				8742C8662730EE47005359DC /* ChatItemViewController.h */,
 				8742C8672730EE47005359DC /* ChatItemViewController.m */,
 				8742C86D2730EE85005359DC /* ChatItemViewController.xib */,
@@ -462,6 +501,38 @@
 		877F4DD328ED2BF800183257 /* Custom Views */ = {
 			isa = PBXGroup;
 			children = (
+				D40000000000000000000002 /* DLMainWindowChromeControls.h */,
+				D40000000000000000000003 /* DLMainWindowChromeControls.m */,
+				D50000000000000000000002 /* DLMessageReadStateController.h */,
+				D50000000000000000000003 /* DLMessageReadStateController.m */,
+				D60000000000000000000002 /* DLServerNavigationController.h */,
+				D60000000000000000000003 /* DLServerNavigationController.m */,
+				D70000000000000000000002 /* DLChannelNavigationController.h */,
+				D70000000000000000000003 /* DLChannelNavigationController.m */,
+				D80000000000000000000002 /* DLMemberListController.h */,
+				D80000000000000000000003 /* DLMemberListController.m */,
+				D90000000000000000000002 /* DLUserProfileController.h */,
+				D90000000000000000000003 /* DLUserProfileController.m */,
+				DA0000000000000000000002 /* DLThreadController.h */,
+				DA0000000000000000000003 /* DLThreadController.m */,
+				DB0000000000000000000002 /* DLMessageSearchController.h */,
+				DB0000000000000000000003 /* DLMessageSearchController.m */,
+				DC0000000000000000000002 /* DLPinsController.h */,
+				DC0000000000000000000003 /* DLPinsController.m */,
+				DD0000000000000000000002 /* DLEmojiPickerController.h */,
+				DD0000000000000000000003 /* DLEmojiPickerController.m */,
+				DE0000000000000000000002 /* DLStickerPickerController.h */,
+				DE0000000000000000000003 /* DLStickerPickerController.m */,
+				DF0000000000000000000002 /* DLMessageComposerController.h */,
+				DF0000000000000000000003 /* DLMessageComposerController.m */,
+				E00000000000000000000002 /* DLDirectMessageController.h */,
+				E00000000000000000000003 /* DLDirectMessageController.m */,
+				E10000000000000000000002 /* DLMessagePresentationController.h */,
+				E10000000000000000000003 /* DLMessagePresentationController.m */,
+				E20000000000000000000002 /* DLMainHeaderController.h */,
+				E20000000000000000000003 /* DLMainHeaderController.m */,
+				D30000000000000000000002 /* DLMessageComposerControls.h */,
+				D30000000000000000000003 /* DLMessageComposerControls.m */,
 				877F4DD728ED2DCB00183257 /* ServerStatusIndicatorView.h */,
 				877F4DD828ED2DCB00183257 /* ServerStatusIndicatorView.m */,
 				873E71302D0E899E00427A00 /* PopoutView.h */,
@@ -537,6 +608,8 @@
 				87F066DD28B553D000FE92A2 /* DLPreferencesWindowController.h */,
 				87F066DE28B553D000FE92A2 /* DLPreferencesWindowController.m */,
 				87F066E428B553DC00FE92A2 /* DLPreferencesWindowController.xib */,
+				D10000000000000000000002 /* DLReplayFixtureProvider.h */,
+				D10000000000000000000003 /* DLReplayFixtureProvider.m */,
 			);
 			name = WindowControllers;
 			sourceTree = "<group>";
@@ -613,6 +686,14 @@
 			children = (
 				87C11C912728DB7B000046F2 /* Info.plist */,
 				87C11C952728DB7B000046F2 /* main.m */,
+				D10000000000000000000004 /* DevLocal.xcconfig */,
+				D10000000000000000000008 /* DLUIDiagnostics.h */,
+				D10000000000000000000009 /* DLUIDiagnostics.m */,
+				D20000000000000000000002 /* DLCompatibilityPopover.h */,
+				D20000000000000000000003 /* DLCompatibilityPopover.m */,
+				F10000000000000000000002 /* DLTwemojiRenderer.h */,
+				F10000000000000000000003 /* DLTwemojiRenderer.m */,
+				F10000000000000000000005 /* Twemoji72 */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -783,21 +864,19 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1B2C3D4E5F60718293A4B5C /* cacert.pem in Resources */,
+				F10000000000000000000004 /* Twemoji72 in Resources */,
 				87A38DEF27339557002385EE /* at.png in Resources */,
 				87C6E6972730510500090639 /* uI4.png in Resources */,
 				87DA40172739F4DB007E7455 /* AppIcon.icns in Resources */,
 				8706277E278EB2BB0056BD71 /* captcha_recaptcha.html in Resources */,
 				87C11C982728DB7B000046F2 /* Images.xcassets in Resources */,
-				87A7E7972A4935FB00CA0671 /* DirectMessageItemViewController.xib in Resources */,
 				87C0835E2728E28500C8F933 /* Discord-Logo.png in Resources */,
-				87877CDA273050A50062B796 /* ChannelItemViewController.xib in Resources */,
 				8788B61728EE2F0A00B338DF /* attach.png in Resources */,
 				87DA40092739DB28007E7455 /* mention_notification.mp3 in Resources */,
 				8791ACC32794AF0D005672AB /* DLTwoFactorWindowController.xib in Resources */,
 				878B0B2A2738FC6400547D61 /* discord_purple.png in Resources */,
 				87AD27DD2741EFBC0092F428 /* PendingAttachmentViewController.xib in Resources */,
 				87BE740D278B811A00F61BF7 /* reply_curve.png in Resources */,
-				872FCECA272A4CDA002434B1 /* ServerItemViewController.xib in Resources */,
 				8714B1B12729FCF200DA4AF9 /* DLMainWindowController.xib in Resources */,
 				87C11C9B2728DB7B000046F2 /* MainMenu.xib in Resources */,
 				879E31E12743502A00A21FF5 /* settings.png in Resources */,
@@ -836,7 +915,6 @@
 				87A38DD02732FEDB002385EE /* HTTPCache.m in Sources */,
 				8759138A274D9EBD003B7128 /* RegexKitLite.m in Sources */,
 				873E712F2D0E7F3200427A00 /* NSTextField+DynamicHeight.m in Sources */,
-				872FCEC8272A4C5F002434B1 /* ServerItemViewController.m in Sources */,
 				87BCAA732A4CD8DA00EEFFB0 /* NSString+Base64.m in Sources */,
 				87AD27D72741D3230092F428 /* HorizontalDynamicScrollView.m in Sources */,
 				87A6E2C12735E392000DC06E /* BadgeTextField.m in Sources */,
@@ -853,6 +931,7 @@
 				8759138F274DB5BD003B7128 /* TagSelectionViewController.m in Sources */,
 				87C083572728E1A800C8F933 /* DLLoginWindowController.m in Sources */,
 				87994C6A2753450300A27326 /* DLTextParser.m in Sources */,
+				F10000000000000000000001 /* DLTwemojiRenderer.m in Sources */,
 				87D9D1682731C77600162F22 /* PaddedTextView.m in Sources */,
 				878EA5FA275477E5002F173A /* DLMessageEditor.m in Sources */,
 				87C2CF92272F77AD00F10466 /* NSView+BGColor.m in Sources */,
@@ -863,6 +942,25 @@
 				87F066E728B5854600FE92A2 /* NSData+Compress.m in Sources */,
 				8788B61A28EE984B00B338DF /* DLServerFolder.m in Sources */,
 				87C11C942728DB7B000046F2 /* AppDelegate.m in Sources */,
+				D10000000000000000000001 /* DLReplayFixtureProvider.m in Sources */,
+				D10000000000000000000007 /* DLUIDiagnostics.m in Sources */,
+				D20000000000000000000001 /* DLCompatibilityPopover.m in Sources */,
+				D30000000000000000000001 /* DLMessageComposerControls.m in Sources */,
+				D40000000000000000000001 /* DLMainWindowChromeControls.m in Sources */,
+				D50000000000000000000001 /* DLMessageReadStateController.m in Sources */,
+				D60000000000000000000001 /* DLServerNavigationController.m in Sources */,
+				D70000000000000000000001 /* DLChannelNavigationController.m in Sources */,
+				D80000000000000000000001 /* DLMemberListController.m in Sources */,
+				D90000000000000000000001 /* DLUserProfileController.m in Sources */,
+				DA0000000000000000000001 /* DLThreadController.m in Sources */,
+				DB0000000000000000000001 /* DLMessageSearchController.m in Sources */,
+				DC0000000000000000000001 /* DLPinsController.m in Sources */,
+				DD0000000000000000000001 /* DLEmojiPickerController.m in Sources */,
+				DE0000000000000000000001 /* DLStickerPickerController.m in Sources */,
+				DF0000000000000000000001 /* DLMessageComposerController.m in Sources */,
+				E00000000000000000000001 /* DLDirectMessageController.m in Sources */,
+				E10000000000000000000001 /* DLMessagePresentationController.m in Sources */,
+				E20000000000000000000001 /* DLMainHeaderController.m in Sources */,
 				87A38DE327337386002385EE /* DLDirectMessageChannel.m in Sources */,
 				87A38DD9273330C0002385EE /* AttachmentPreviewViewController.m in Sources */,
 				87A32B26273F149A003D64BD /* NSView+Events.m in Sources */,
@@ -870,7 +968,6 @@
 				8791ACC82794B7C9005672AB /* TwoFactorEntryFormatter.m in Sources */,
 				8714B1AF2729FC5000DA4AF9 /* DLMainWindowController.m in Sources */,
 				87D9D17127320C1000162F22 /* DLUser.m in Sources */,
-				87A38DDE27336E14002385EE /* DirectMessageItemViewController.m in Sources */,
 				87450D2C27370833007B4C08 /* DLUserSettings.m in Sources */,
 				8714B1B9272A0C6900DA4AF9 /* DLServer.m in Sources */,
 				877F4DD228ECEF2F00183257 /* NSScroller+BGColor.m in Sources */,
@@ -888,7 +985,6 @@
 				87A38DD32732FF76002385EE /* HTTPCacheData.m in Sources */,
 				87C2CF8C272F438600F10466 /* ViewController.m in Sources */,
 				87DA400C2739DD58007E7455 /* DLAudioPlayer.m in Sources */,
-				87C6E69A273052B100090639 /* ChannelItemViewController.m in Sources */,
 				87B8863F2CEF05AC005117BE /* AsyncHTTPRequestSettings.m in Sources */,
 				878E498527347A4900BBB18B /* DLWSController.m in Sources */,
 				87A38DD627330B49002385EE /* NSView+Border.m in Sources */,
@@ -937,14 +1033,6 @@
 			name = DLMainWindowController.xib;
 			sourceTree = "<group>";
 		};
-		872FCECC272A4CDA002434B1 /* ServerItemViewController.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				872FCECB272A4CDA002434B1 /* en */,
-			);
-			name = ServerItemViewController.xib;
-			sourceTree = "<group>";
-		};
 		8742C86D2730EE85005359DC /* ChatItemViewController.xib */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -959,14 +1047,6 @@
 				87591393274DB5D7003B7128 /* en */,
 			);
 			name = TagSelectionViewController.xib;
-			sourceTree = "<group>";
-		};
-		87877CDC273050A50062B796 /* ChannelItemViewController.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				87877CDB273050A50062B796 /* en */,
-			);
-			name = ChannelItemViewController.xib;
 			sourceTree = "<group>";
 		};
 		8791ACC52794AF0D005672AB /* DLTwoFactorWindowController.xib */ = {
@@ -991,14 +1071,6 @@
 				87A32B30273F1ADC003D64BD /* en */,
 			);
 			name = DLAttachmentWindowController.xib;
-			sourceTree = "<group>";
-		};
-		87A7E7992A4935FB00CA0671 /* DirectMessageItemViewController.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				87A7E7982A4935FB00CA0671 /* en */,
-			);
-			name = DirectMessageItemViewController.xib;
 			sourceTree = "<group>";
 		};
 		87AD27DF2741EFBC0092F428 /* PendingAttachmentViewController.xib */ = {
@@ -1070,7 +1142,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -1106,7 +1178,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
 			};
@@ -1135,7 +1207,7 @@
 					"$(PROJECT_DIR)",
 				);
 				LINK_WITH_STANDARD_LIBRARIES = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"-framework",
@@ -1177,7 +1249,7 @@
 					"$(PROJECT_DIR)",
 				);
 				LINK_WITH_STANDARD_LIBRARIES = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"-framework",
@@ -1189,6 +1261,31 @@
 				SDKROOT = macosx;
 			};
 			name = Release;
+		};
+		D10000000000000000000005 /* DevLocal */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000004 /* DevLocal.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CLANG_LINK_OBJC_RUNTIME = YES;
+				CLANG_MODULES_AUTOLINK = NO;
+				CODE_SIGN_IDENTITY = "";
+				INFOPLIST_FILE = "Discord Lite/Info.plist";
+				OTHER_LDFLAGS = ("-framework", Security, "-framework", SystemConfiguration);
+				SDKROOT = macosx;
+			};
+			name = DevLocal;
+		};
+		D10000000000000000000006 /* DevLocal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				SDKROOT = macosx;
+			};
+			name = DevLocal;
 		};
 		87C11CAE2728DB7B000046F2 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1234,6 +1331,7 @@
 			buildConfigurations = (
 				87C11CA82728DB7B000046F2 /* Debug */,
 				87C11CA92728DB7B000046F2 /* Release */,
+				D10000000000000000000006 /* DevLocal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1243,6 +1341,7 @@
 			buildConfigurations = (
 				87C11CAB2728DB7B000046F2 /* Debug */,
 				87C11CAC2728DB7B000046F2 /* Release */,
+				D10000000000000000000005 /* DevLocal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

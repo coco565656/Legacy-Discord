@@ -134,7 +134,7 @@
         [appearancePane addSubview:themeButton];
     }
     NSTextField *betaNote = [self labelWithFrame:NSMakeRect(40.0, 112.0, 455.0, 48.0)
-                                            text:@"Changes are saved immediately. Aurora uses only native gradients so it remains usable on Mountain Lion and Mavericks."
+                                            text:@"Changes are saved immediately. Aurora uses native gradients compatible with Snow Leopard through Mountain Lion."
                                             font:[NSFont systemFontOfSize:11.0]
                                            color:[DLUtil nativeSecondaryTextColor]];
     [[betaNote cell] setWraps:YES];

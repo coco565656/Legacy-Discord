@@ -76,6 +76,12 @@
 -(void)setSearchHighlighted:(BOOL)highlighted;
 -(void)setCompactDisplay:(BOOL)compact;
 -(void)setGroupedMessageFollows:(BOOL)follows;
+#if LEGACY_DISCORD_UI_DIAGNOSTICS
+-(BOOL)isCompactDisplay;
+-(CGFloat)diagnosticAvailableMessageWidth;
+-(CGFloat)diagnosticCalculatedTextHeight;
+-(CGFloat)diagnosticDisplayedTextHeight;
+#endif
 -(BOOL)isMessageActionBarVisible;
 -(void)hideMessageActionBar;
 -(void)populateMessageActionBar:(NSView *)actionBar;
