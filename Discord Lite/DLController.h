@@ -125,6 +125,9 @@ typedef enum {
 -(void)loadMessagesForChannel:(DLChannel *)c afterMessage:(DLMessage *)m quantity:(NSInteger)numMsgs;
 -(void)sendMessage:(DLMessage *)m toChannel:(DLChannel *)c;
 -(void)acknowledgeMessage:(DLMessage *)m;
+// Acknowledge the newest known message and clear unread/mention state.
+-(void)markChannelAsRead:(DLChannel *)channel;
+-(void)markServerAsRead:(DLServer *)server;
 -(void)deleteMessage:(DLMessage *)m;
 -(void)logOutUser;
 -(void)informTypingInChannel:(DLChannel *)c;

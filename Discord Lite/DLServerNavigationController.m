@@ -6,6 +6,8 @@
 #import "DLServerNavigationController.h"
 #import "DLController.h"
 #import "DLUtil.h"
+#import "DLMainWindowChromeControls.h"
+#import "DLPreferencesHandler.h"
 #import "DynamicScrollView.h"
 
 @interface DLServerTableCell : NSCell {
@@ -117,7 +119,7 @@
     [column setResizingMask:NSTableColumnAutoresizingMask];
     [column setDataCell:[[[DLServerTableCell alloc] init] autorelease]];
 
-    tableView = [[NSTableView alloc] initWithFrame:[[scrollView contentView] bounds]];
+    tableView = [[DLContextTableView alloc] initWithFrame:[[scrollView contentView] bounds]];
     [tableView addTableColumn:column];
     [tableView setHeaderView:nil];
     [tableView setDataSource:self];
@@ -130,7 +132,57 @@
     [tableView setBackgroundColor:[DLUtil nativeServerRailColor]];
     [tableView setFocusRingType:NSFocusRingTypeNone];
     [tableView setGridStyleMask:NSTableViewGridNone];
+    // Right-click menu, rebuilt for the clicked server in menuNeedsUpdate:.
+    NSMenu *menu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    [menu setDelegate:(id)self];
+    [tableView setMenu:menu];
     [scrollView setDocumentView:tableView];
+}
+
+-(DLServer *)clickedServer {
+    NSInteger row = [(DLContextTableView *)tableView menuRow];
+    return (row >= 0 && row < (NSInteger)[serverItems count]) ? [serverItems objectAtIndex:row] : nil;
+}
+
+-(NSMenuItem *)menuItemWithTitle:(NSString *)title action:(SEL)action server:(DLServer *)server {
+    NSMenuItem *item = [[[NSMenuItem alloc] initWithTitle:title action:action keyEquivalent:@""] autorelease];
+    [item setTarget:self];
+    [item setRepresentedObject:server];
+    return item;
+}
+
+// Same order as the official server menu, limited to actions this client
+// performs.
+-(void)menuNeedsUpdate:(NSMenu *)menu {
+    [menu removeAllItems];
+    DLServer *server = [self clickedServer];
+    if (!server) return;
+    BOOL isHome = [server isEqual:[[DLController sharedInstance] myServerItem]];
+    if (isHome) {
+        return;
+    }
+    NSMenuItem *markRead = [self menuItemWithTitle:@"Mark As Read" action:@selector(markServerAsRead:) server:server];
+    [markRead setEnabled:([server hasUnreadMessages] || [server mentionCount] > 0)];
+    [menu addItem:markRead];
+    [menu addItem:[NSMenuItem separatorItem]];
+    [menu addItem:[self menuItemWithTitle:@"Copy Server Link" action:@selector(copyServerLink:) server:server]];
+    if ([[DLPreferencesHandler sharedInstance] developerMode]) {
+        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:[self menuItemWithTitle:@"Copy Server ID" action:@selector(copyServerID:) server:server]];
+    }
+}
+
+-(void)markServerAsRead:(NSMenuItem *)sender {
+    [[DLController sharedInstance] markServerAsRead:[sender representedObject]];
+    [tableView setNeedsDisplay:YES];
+}
+
+-(void)copyServerLink:(NSMenuItem *)sender {
+    [DLUtil copyStringToPasteboard:[NSString stringWithFormat:@"https://discord.com/channels/%@", [[sender representedObject] serverID]]];
+}
+
+-(void)copyServerID:(NSMenuItem *)sender {
+    [DLUtil copyStringToPasteboard:[[[sender representedObject] serverID] description]];
 }
 
 -(void)displayServerItems:(NSArray *)items {

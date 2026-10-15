@@ -10,6 +10,7 @@
 #import "DLServerChannel.h"
 #import "DLServerMember.h"
 #import "DLUtil.h"
+#import "DLMainWindowChromeControls.h"
 #import "DLPreferencesHandler.h"
 #import "NSView+BGColor.h"
 #import "NSView+Border.h"
@@ -210,7 +211,7 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     [column setWidth:paneWidth];
     [column setResizingMask:NSTableColumnAutoresizingMask];
     [column setDataCell:[[[DLMemberListCell alloc] init] autorelease]];
-    tableView = [[NSTableView alloc] initWithFrame:[[scrollView contentView] bounds]];
+    tableView = [[DLContextTableView alloc] initWithFrame:[[scrollView contentView] bounds]];
     [tableView setFocusRingType:NSFocusRingTypeNone];
     [scrollView setFocusRingType:NSFocusRingTypeNone];
     [tableView addTableColumn:column];
@@ -222,6 +223,9 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     [tableView setAllowsEmptySelection:YES];
     [tableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
     [tableView setBackgroundColor:[DLUtil nativeSidebarColor]];
+    NSMenu *memberMenu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    [memberMenu setDelegate:(id)self];
+    [tableView setMenu:memberMenu];
     [scrollView setDocumentView:tableView];
     [[scrollView contentView] setPostsBoundsChangedNotifications:YES];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(boundsDidChange:)
@@ -447,6 +451,51 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     DLUser *user = [member user];
     [delegate memberListController:self didSelectUser:user
                     relativeToRect:[tableView rectOfRow:row] ofView:tableView];
+}
+
+#pragma mark Context menu
+
+-(NSMenuItem *)memberMenuItem:(NSString *)title action:(SEL)action member:(DLServerMember *)member {
+    NSMenuItem *item = [[[NSMenuItem alloc] initWithTitle:title action:action keyEquivalent:@""] autorelease];
+    [item setTarget:self];
+    [item setRepresentedObject:member];
+    return item;
+}
+
+// Official user menu order, limited to actions this client performs.
+-(void)menuNeedsUpdate:(NSMenu *)menu {
+    [menu removeAllItems];
+    DLServerMember *member = [self memberAtRow:[(DLContextTableView *)tableView menuRow]];
+    if (!member) return;
+    [menu addItem:[self memberMenuItem:@"Profile" action:@selector(showMemberProfile:) member:member]];
+    if ([delegate respondsToSelector:@selector(memberListController:requestsMentionOfUser:)]) {
+        [menu addItem:[self memberMenuItem:@"Mention" action:@selector(mentionMember:) member:member]];
+    }
+    [menu addItem:[NSMenuItem separatorItem]];
+    [menu addItem:[self memberMenuItem:@"Copy Username" action:@selector(copyMemberUsername:) member:member]];
+    if ([[DLPreferencesHandler sharedInstance] developerMode]) {
+        [menu addItem:[self memberMenuItem:@"Copy User ID" action:@selector(copyMemberID:) member:member]];
+    }
+}
+
+-(void)showMemberProfile:(NSMenuItem *)sender {
+    DLServerMember *member = [sender representedObject];
+    NSInteger row = [items indexOfObjectIdenticalTo:member];
+    if (row == NSNotFound) return;
+    [delegate memberListController:self didSelectUser:[member user]
+                    relativeToRect:[tableView rectOfRow:row] ofView:tableView];
+}
+
+-(void)mentionMember:(NSMenuItem *)sender {
+    [delegate memberListController:self requestsMentionOfUser:[(DLServerMember *)[sender representedObject] user]];
+}
+
+-(void)copyMemberUsername:(NSMenuItem *)sender {
+    [DLUtil copyStringToPasteboard:[[(DLServerMember *)[sender representedObject] user] username]];
+}
+
+-(void)copyMemberID:(NSMenuItem *)sender {
+    [DLUtil copyStringToPasteboard:[[[(DLServerMember *)[sender representedObject] user] userID] description]];
 }
 
 -(void)user:(DLUser *)user avatarDidUpdateWithData:(NSData *)data {

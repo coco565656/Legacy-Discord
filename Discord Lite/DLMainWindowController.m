@@ -592,6 +592,10 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [userProfileController showProfileForUser:user relativeToRect:rect ofView:view];
 }
 
+-(void)memberListController:(DLMemberListController *)controller requestsMentionOfUser:(DLUser *)user {
+    [messageComposerController insertMentionForUser:user];
+}
+
 -(void)memberListController:(DLMemberListController *)controller avatarDidUpdateForUser:(DLUser *)user {
     [userProfileController avatarDidUpdateForUser:user data:[user avatarImageData]];
 }

@@ -202,3 +202,15 @@
     [chevron stroke];
 }
 @end
+
+@implementation DLContextTableView
+-(NSInteger)menuRow {
+    return menuRow;
+}
+// Not calling super skips the Aqua context-menu row outline; the menu's
+// delegate builds items for menuRow.
+-(NSMenu *)menuForEvent:(NSEvent *)event {
+    menuRow = [self rowAtPoint:[self convertPoint:[event locationInWindow] fromView:nil]];
+    return menuRow >= 0 ? [self menu] : nil;
+}
+@end

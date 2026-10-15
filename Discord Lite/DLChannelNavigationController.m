@@ -6,6 +6,7 @@
 #import "DLChannelNavigationController.h"
 #import "DLController.h"
 #import "DLUtil.h"
+#import "DLPreferencesHandler.h"
 #import "DLTwemojiRenderer.h"
 #import "DynamicScrollView.h"
 #if LEGACY_DISCORD_UI_DIAGNOSTICS
@@ -16,8 +17,10 @@
     NSInteger hoveredRow;
     NSInteger pendingHoveredRow;
     NSTrackingArea *hoverTrackingArea;
+    NSInteger menuRow;
 }
 -(NSInteger)hoveredRow;
+-(NSInteger)menuRow;
 @end
 
 @implementation DLChannelOutlineView
@@ -33,6 +36,16 @@
 
 -(NSInteger)hoveredRow {
     return hoveredRow;
+}
+
+-(NSInteger)menuRow {
+    return menuRow;
+}
+
+// Not calling super avoids AppKit's blue outline around the right-clicked row.
+-(NSMenu *)menuForEvent:(NSEvent *)event {
+    menuRow = [self rowAtPoint:[self convertPoint:[event locationInWindow] fromView:nil]];
+    return menuRow >= 0 ? [self menu] : nil;
 }
 
 // A click on a category row expands or collapses it. Done here rather than in
@@ -382,6 +395,10 @@
     [outlineView setDataSource:self];
     [outlineView setDelegate:self];
     [outlineView setRowHeight:32.0];
+    // Right-click menu, rebuilt for the clicked row in menuNeedsUpdate:.
+    NSMenu *channelMenu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    [channelMenu setDelegate:(id)self];
+    [outlineView setMenu:channelMenu];
     [outlineView setIntercellSpacing:NSMakeSize(0.0, 1.0)];
     [outlineView setIndentationPerLevel:14.0];
     [outlineView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
@@ -490,6 +507,90 @@
         [(DLChannelTableCell *)cell setRepresentedChannel:(DLChannel *)item];
     }
     [cell setLineBreakMode:NSLineBreakByTruncatingTail];
+}
+
+#pragma mark Context menu
+
+-(NSMenuItem *)channelMenuItem:(NSString *)title action:(SEL)action channel:(DLChannel *)channel {
+    NSMenuItem *item = [[[NSMenuItem alloc] initWithTitle:title action:action keyEquivalent:@""] autorelease];
+    [item setTarget:self];
+    [item setRepresentedObject:channel];
+    return item;
+}
+
+-(BOOL)channelOrChildrenHaveUnread:(DLChannel *)channel {
+    if ([channel hasUnreadMessages] || [channel mentionCount] > 0) return YES;
+    NSEnumerator *enumerator = [[channel children] objectEnumerator];
+    DLChannel *child;
+    while (child = [enumerator nextObject]) {
+        if ([self channelOrChildrenHaveUnread:child]) return YES;
+    }
+    return NO;
+}
+
+// Menus follow the official client's order for text channels, categories and
+// direct messages, limited to actions this client performs.
+-(void)menuNeedsUpdate:(NSMenu *)menu {
+    [menu removeAllItems];
+    NSInteger row = [(DLChannelOutlineView *)outlineView menuRow];
+    DLChannel *channel = row >= 0 ? [outlineView itemAtRow:row] : nil;
+    if (!channel) return;
+    BOOL isCategory = [channel type] == ChannelTypeHeader;
+    NSMenuItem *markRead = [self channelMenuItem:@"Mark As Read" action:@selector(markChannelAsRead:) channel:channel];
+    [markRead setEnabled:[self channelOrChildrenHaveUnread:channel]];
+    [menu addItem:markRead];
+    [menu addItem:[NSMenuItem separatorItem]];
+    if (isCategory) {
+        BOOL expanded = [outlineView isItemExpanded:channel];
+        [menu addItem:[self channelMenuItem:(expanded ? @"Collapse Category" : @"Expand Category")
+                                     action:@selector(toggleCategory:) channel:channel]];
+        [menu addItem:[self channelMenuItem:@"Collapse All Categories" action:@selector(collapseAllCategories:) channel:channel]];
+    } else {
+        [menu addItem:[self channelMenuItem:@"Copy Link" action:@selector(copyChannelLink:) channel:channel]];
+    }
+    if ([[DLPreferencesHandler sharedInstance] developerMode]) {
+        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:[self channelMenuItem:(isCategory ? @"Copy Category ID" : @"Copy Channel ID")
+                                     action:@selector(copyChannelID:) channel:channel]];
+    }
+}
+
+-(void)markChannelAsRead:(NSMenuItem *)sender {
+    DLChannel *channel = [sender representedObject];
+    if ([channel type] == ChannelTypeHeader) {
+        NSEnumerator *enumerator = [[channel children] objectEnumerator];
+        DLChannel *child;
+        while (child = [enumerator nextObject]) [[DLController sharedInstance] markChannelAsRead:child];
+    } else {
+        [[DLController sharedInstance] markChannelAsRead:channel];
+    }
+    [outlineView setNeedsDisplay:YES];
+}
+
+-(void)toggleCategory:(NSMenuItem *)sender {
+    id item = [sender representedObject];
+    if ([outlineView isItemExpanded:item]) [outlineView collapseItem:item];
+    else [outlineView expandItem:item];
+}
+
+-(void)collapseAllCategories:(NSMenuItem *)sender {
+    NSEnumerator *enumerator = [channelItems objectEnumerator];
+    DLChannel *item;
+    while (item = [enumerator nextObject]) {
+        if ([item type] == ChannelTypeHeader) [outlineView collapseItem:item];
+    }
+}
+
+-(void)copyChannelLink:(NSMenuItem *)sender {
+    DLChannel *channel = [sender representedObject];
+    BOOL isDirect = [channel type] == ChannelTypeDM || [channel type] == ChannelTypeGroup;
+    NSString *guild = isDirect ? @"@me"
+        : ([channel respondsToSelector:@selector(serverID)] ? [[(DLServerChannel *)channel serverID] description] : @"@me");
+    [DLUtil copyStringToPasteboard:[NSString stringWithFormat:@"https://discord.com/channels/%@/%@", guild, [channel channelID]]];
+}
+
+-(void)copyChannelID:(NSMenuItem *)sender {
+    [DLUtil copyStringToPasteboard:[[[sender representedObject] channelID] description]];
 }
 
 // Categories are toggled by DLChannelOutlineView's mouseDown and never selected.

@@ -40,6 +40,7 @@
 +(NSColor *)nativeBorderColor;
 +(NSColor *)nativeScrollerKnobColor;
 +(NSColor *)nativeUserPanelColor;
++(void)copyStringToPasteboard:(NSString *)string;
 // Chat background of a named theme, for theme previews.
 +(NSColor *)nativeContentColorForTheme:(NSString *)theme;
 +(NSColor *)nativeOnlineStatusColor;

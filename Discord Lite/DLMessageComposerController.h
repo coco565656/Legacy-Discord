@@ -90,6 +90,8 @@ pendingAttachmentScroller:(NSScroller_BGColor *)pendingAttachmentScroller;
 -(void)userDidStopTyping:(DLUser *)user;
 -(void)showReactionPickerForChatView:(ChatItemViewController *)chatView relativeToView:(NSView *)anchorView;
 -(void)focusInput;
+// Appends an @mention of the user, as the official "Mention" menu item does.
+-(void)insertMentionForUser:(DLUser *)user;
 #if LEGACY_DISCORD_LOCAL_DEV
 -(void)configureOfflineReplayStateNamed:(NSString *)stateName
                            replyMessage:(DLMessage *)replyMessage

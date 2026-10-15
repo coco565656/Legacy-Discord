@@ -32,6 +32,14 @@ enum {
     DLUserPanelIconHeadphones = 1
 };
 
+// Table that shows its menu without AppKit's blue "clicked row" outline.
+// menuRow is the row under the right-click, for the menu delegate.
+@interface DLContextTableView : NSTableView {
+    NSInteger menuRow;
+}
+-(NSInteger)menuRow;
+@end
+
 // Discord-style dark dropdown in place of the white Aqua pop-up bezel. The
 // menu itself stays the native AppKit menu.
 @interface DLDarkPopUpButtonCell : NSPopUpButtonCell

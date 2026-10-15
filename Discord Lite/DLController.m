@@ -481,6 +481,26 @@ static DLController* sharedObject = nil;
     [req start];
 }
 
+-(void)markChannelAsRead:(DLChannel *)channel {
+    if (!channel) return;
+    if ([channel lastMessage] && [[channel lastMessage] messageID]) [self acknowledgeMessage:[channel lastMessage]];
+    [channel setHasUnreadMessages:NO];
+    [channel setMentionCount:0];
+}
+
+-(void)markServerAsRead:(DLServer *)server {
+    if (!server) return;
+    NSEnumerator *enumerator = [[loadedChannels allValues] objectEnumerator];
+    DLChannel *channel;
+    while (channel = [enumerator nextObject]) {
+        if (![channel isKindOfClass:[DLServerChannel class]]) continue;
+        if (![[(DLServerChannel *)channel serverID] isEqualToString:[server serverID]]) continue;
+        if ([channel hasUnreadMessages] || [channel mentionCount] > 0) [self markChannelAsRead:channel];
+    }
+    [server setHasUnreadMessages:NO];
+    [server setMentionCount:0];
+}
+
 -(void)logOutUser {
     AsyncHTTPPostRequest *req = [[AsyncHTTPPostRequest alloc] init];
     [req setDelegate:self];

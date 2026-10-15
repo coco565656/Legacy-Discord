@@ -47,6 +47,22 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Context menus for servers, channels and members
+
+- Added right-click menus in the official order, limited to working actions:
+  server (Mark As Read, Copy Server Link), channel/DM (Mark As Read, Copy
+  Link), category (Mark As Read, Collapse/Expand Category, Collapse All
+  Categories), member (Profile, Mention, Copy Username); Developer Mode adds
+  the matching Copy ID item. Mark As Read acknowledges the newest known
+  message per channel and clears unread/mention state.
+- Tables show their menu without AppKit's blue clicked-row outline
+  (`DLContextTableView`, `DLChannelOutlineView menuForEvent:`).
+- The hover toolbar's "Reply" text button is now a reply arrow icon.
+- Verified on 10.6.8: server, channel and member menus; no blue outline;
+  Mention inserted an `@256` mention into the composer, which was then
+  cleared (no message sent; the composer's typing notification may have
+  been sent briefly). Mark As Read was not exercised.
+
 #### Server rail and settings dropdowns
 
 - Server rail: selected pill (40pt) and unread dot (8pt) now hang off the

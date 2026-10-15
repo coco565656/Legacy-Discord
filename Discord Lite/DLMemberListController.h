@@ -19,6 +19,7 @@
                      ofView:(NSView *)view;
 @optional
 -(void)memberListController:(DLMemberListController *)controller avatarDidUpdateForUser:(DLUser *)user;
+-(void)memberListController:(DLMemberListController *)controller requestsMentionOfUser:(DLUser *)user;
 @end
 
 @interface DLMemberListController : NSObject <NSTableViewDataSource, NSTableViewDelegate, DLUserDelegate> {

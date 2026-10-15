@@ -866,6 +866,17 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
     [self updateEditorAfterTextChange];
 }
 
+-(void)insertMentionForUser:(DLUser *)user {
+    if (!user || ![textView isEditable]) return;
+    NSString *current = [textView string];
+    NSString *separator = ([current length] && ![current hasSuffix:@" "] && ![current hasSuffix:@"\n"]) ? @" " : @"";
+    NSString *base = [current stringByAppendingString:separator];
+    [messageEditor setContent:base];
+    [messageEditor addMentionedUser:user byReplacingStringInRange:NSMakeRange([base length], 0)];
+    [self focusInput];
+    [textView setSelectedRange:NSMakeRange([[textView string] length], 0)];
+}
+
 -(void)updateEditorAfterTextChange {
     [messageEditor setContent:[textView string]];
     if (madeMentionChange) {

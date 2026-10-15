@@ -160,6 +160,12 @@ static NSDictionary *superPropertiesDict;
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.045 green:0.075 blue:0.072 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.102 green:0.106 blue:0.118 alpha:1.0];
 }
++(void)copyStringToPasteboard:(NSString *)string {
+    if (![string length]) return;
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    [pasteboard declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
+    [pasteboard setString:string forType:NSStringPboardType];
+}
 // The account panel under the channel list is one step darker than the sidebar.
 +(NSColor *)nativeUserPanelColor {
     NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];

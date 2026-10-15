@@ -750,9 +750,12 @@ const NSInteger ATTACHMENT_SPACING = 15;
         }
     }
     NSView *barParent = [actionBar superview];
-    CGFloat availableWidth = MAX(86.0, NSWidth([(barParent ? barParent : view) bounds]) - 8.0);
-    NSInteger recentCount = MIN(3, MAX(0, (NSInteger)((availableWidth - 86.0) / 34.0)));
-    [actionBar setFrameSize:NSMakeSize(86.0 + recentCount * 34.0, 30.0)];
+    // Fixed part: Add Reaction and Reply icon buttons (34pt each), like the
+    // official hover toolbar.
+    CGFloat fixedWidth = 68.0;
+    CGFloat availableWidth = MAX(fixedWidth, NSWidth([(barParent ? barParent : view) bounds]) - 8.0);
+    NSInteger recentCount = MIN(3, MAX(0, (NSInteger)((availableWidth - fixedWidth) / 34.0)));
+    [actionBar setFrameSize:NSMakeSize(fixedWidth + recentCount * 34.0, 30.0)];
     CGFloat x = 0;
     for (NSInteger index = 0; index < recentCount; index++) {
         NSString *identifier = [recent objectAtIndex:index];
@@ -805,10 +808,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [pickerButton setAction:@selector(showReactionPicker:)];
     [actionBar addSubview:pickerButton];
     [pickerButton release];
-    NSButton *replyButton = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(x + 34.0, 1, 52, 28)];
+    NSButton *replyButton = [[DLMessageActionButton alloc] initWithFrame:NSMakeRect(x + 34.0, 1, 34, 28)];
     [replyButton setBordered:NO];
     [replyButton setRefusesFirstResponder:YES];
-    [replyButton setTitle:@"Reply"];
+    [replyButton setTitle:@"\u21A9"];
     [replyButton setToolTip:@"Reply"];
     [replyButton setTarget:self];
     [replyButton setAction:@selector(addReply)];
