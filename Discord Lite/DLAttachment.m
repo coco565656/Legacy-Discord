@@ -59,7 +59,9 @@
     NSString *format = ([extension isEqualToString:@"jpg"] || [extension isEqualToString:@"jpeg"]) ? @"jpeg" : @"png";
     scaledURL = [scaledURL stringByAppendingString:[NSString stringWithFormat:@"width=%ld&height=%ld&format=%@", (NSInteger)[self scaledWidth], (NSInteger)[self scaledHeight], format]];
     [req setUrl:scaledURL];
-    [req setCached:NO];
+    // Previews are cached (memory + bounded disk) so revisiting a channel or
+    // relaunching does not download every image again.
+    [req setCached:YES];
     [req setIdentifier:AttachmentRequestPreview];
     [req start];
 }

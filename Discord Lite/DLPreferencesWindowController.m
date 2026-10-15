@@ -7,6 +7,7 @@
 //
 
 #import "DLPreferencesWindowController.h"
+#import "HTTPCache.h"
 #import "DLController.h"
 #import "DLUtil.h"
 #import "DLMainWindowChromeControls.h"
@@ -148,6 +149,7 @@ enum {
 -(NSView *)buildNotificationsPane;
 -(NSView *)buildAdvancedPane;
 -(void)selectSection:(NSInteger)section;
+-(void)refreshCacheUsage;
 -(void)syncThemeButtons;
 @end
 
@@ -510,10 +512,43 @@ enum {
 -(NSView *)buildAdvancedPane {
     NSView *pane = [self newPaneWithTitle:@"Advanced"];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
-    [self addToggleToPane:pane top:top title:@"Developer Mode"
-                     help:@"Adds Copy Message ID and Copy User ID to the message context menu."
-                      tag:DLSettingsToggleDeveloperMode on:[[DLPreferencesHandler sharedInstance] developerMode]];
+    top = [self addToggleToPane:pane top:top title:@"Developer Mode"
+                           help:@"Adds Copy Message ID and Copy User ID to the message context menu."
+                            tag:DLSettingsToggleDeveloperMode on:[[DLPreferencesHandler sharedInstance] developerMode]];
+    // Image cache: avatars, emoji and previews kept on disk (up to 200 MB).
+    NSTextField *cacheTitle = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft, top - 20.0, DLSettingsContentWidth - 140.0, 18.0)
+                                              text:@"Image Cache"
+                                              font:[NSFont boldSystemFontOfSize:13.0]
+                                             color:[DLUtil nativePrimaryTextColor]];
+    [cacheTitle setAutoresizingMask:NSViewMinYMargin];
+    [pane addSubview:cacheTitle];
+    cacheUsageField = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft, top - 52.0, DLSettingsContentWidth - 140.0, 30.0)
+                                      text:@""
+                                      font:[NSFont systemFontOfSize:11.0]
+                                     color:[DLUtil nativeSecondaryTextColor]];
+    [[cacheUsageField cell] setWraps:YES];
+    [cacheUsageField setAutoresizingMask:NSViewMinYMargin];
+    [pane addSubview:cacheUsageField];
+    NSButton *clearCache = [[[DLPrimaryButton alloc] initWithFrame:
+                             NSMakeRect(DLSettingsContentLeft + DLSettingsContentWidth - 120.0, top - 28.0, 120.0, 28.0)] autorelease];
+    [clearCache setTitle:@"Clear Cache"];
+    [clearCache setTarget:self];
+    [clearCache setAction:@selector(clearImageCache:)];
+    [clearCache setAutoresizingMask:NSViewMinYMargin];
+    [pane addSubview:clearCache];
+    [self refreshCacheUsage];
     return pane;
+}
+
+-(void)refreshCacheUsage {
+    double megabytes = [[HTTPCache sharedInstance] diskUsage] / (1024.0 * 1024.0);
+    [cacheUsageField setStringValue:[NSString stringWithFormat:
+        @"Avatars, emoji and image previews are kept on disk so channels open faster. Using %.1f MB of 200 MB.", megabytes]];
+}
+
+-(IBAction)clearImageCache:(id)sender {
+    [[HTTPCache sharedInstance] clearDiskCache];
+    [self refreshCacheUsage];
 }
 
 #pragma mark State
@@ -555,6 +590,7 @@ enum {
 -(void)selectSection:(NSInteger)section {
     if (section < 0 || section >= DLSettingsSectionCount) return;
     selectedSection = section;
+    if (section == DLSettingsSectionAdvanced) [self refreshCacheUsage];
     for (NSInteger index = 0; index < (NSInteger)[settingsPanes count]; index++) {
         [[settingsPanes objectAtIndex:index] setHidden:(index != section)];
     }

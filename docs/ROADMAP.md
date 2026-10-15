@@ -31,7 +31,7 @@
 - [x] Unread and mention state that survives relaunch (Discord read state from READY; verified on 10.6.8)
 - [ ] Member/profile inspector
 - [ ] Link embed cards with a strict native renderer
-- [ ] Image cache with bounded disk usage
+- [x] Image cache with bounded disk usage (32 MB memory + 200 MB disk LRU, Clear Cache in Settings)
 - [ ] Connection state and reconnect indicator
 
 ## Milestone 2: modern channel features

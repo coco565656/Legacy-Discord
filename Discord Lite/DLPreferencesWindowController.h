@@ -27,6 +27,7 @@
     NSMutableArray *settingsSidebarButtons;
     NSMutableArray *themeButtons;
     NSInteger selectedSection;
+    NSTextField *cacheUsageField;
 }
 - (IBAction)useProxyToggled:(id)sender;
 - (IBAction)useSOCKSPasswordToggled:(id)sender;

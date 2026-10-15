@@ -60,6 +60,18 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Image disk cache
+
+- Avatars, emoji, stickers, banners and attachment previews are cached in
+  `~/Library/Caches/<bundle id>/Images`: a 32 MB in-memory LRU in front of a
+  200 MB disk cache trimmed (oldest first, down to 150 MB) at launch and every
+  200 writes. Signed CDN parameters (`ex`, `is`, `hm`) are dropped from the
+  cache key so the same image is reused across sessions. Settings > Advanced
+  shows the usage and has Clear Cache.
+- Verified on 10.6.8: files appear in the cache directory; after a relaunch a
+  server's avatars, image preview and reaction emoji were all visible within
+  two seconds of opening it.
+
 #### New forum posts
 
 - Forum lists have the official blurple "New Post" button. It opens a draft
