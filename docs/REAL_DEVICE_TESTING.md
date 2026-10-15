@@ -47,6 +47,27 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### User panel, Discord sizing and expanded settings
+
+- Same remote build procedure as below; the new `DLUserPanelController` was
+  added to the project and compiled by Xcode 4.2 without changes.
+- Verified: 240-point channel sidebar (the split autosave name changed so
+  existing installs start at 240 once), 32-point channel rows, user panel with
+  darker background, green presence dot and disabled microphone/headphone
+  buttons beside the settings gear.
+- Opened Settings from the gear menu: web-style USER SETTINGS / APP SETTINGS
+  sidebar, Appearance (theme swatches, chat font scaling, zoom level), My
+  Account (real avatar, display name and username, read-only), Chat toggles.
+- Turned "Show emoji reactions on messages" off: the open channel re-rendered
+  without reaction bars and without layout gaps; turned it back on and the
+  reactions returned. The preference was left at its original value (on).
+- Final executable SHA256: `d140d32c3de22b0b3b7609f39ed3c0a6377ea4b6983076c9e4fbba9022e79db5`.
+- Screenshots: `panel-server.png`, `settings-open.png`, `settings-account.png`,
+  `settings-chat.png`, `reactions-off.png`, `reactions-restored.png`.
+- Not verified on the device: chat font sizes other than the default, role
+  color / animated emoji / embed / mention sound / Developer Mode toggles,
+  Log Out from Settings.
+
 #### Discord look pass (scrollers, popouts, role colors, day dividers, composer)
 
 - Built the normal Release target on the `MacBook` Snow Leopard machine with

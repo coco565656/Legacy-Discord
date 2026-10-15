@@ -54,6 +54,63 @@ static DLPreferencesHandler* sharedObject = nil;
     return @"default";
 }
 
+// Boolean settings that default to YES when never written.
+-(BOOL)boolForKey:(NSString *)key defaultValue:(BOOL)defaultValue {
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:key];
+    return value ? [value boolValue] : defaultValue;
+}
+-(void)setBool:(BOOL)value forKey:(NSString *)key notify:(NSString *)notificationName {
+    [[NSUserDefaults standardUserDefaults] setBool:value forKey:key];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    if (notificationName) [[NSNotificationCenter defaultCenter] postNotificationName:notificationName object:self];
+}
+-(CGFloat)chatFontSize {
+    CGFloat size = [[NSUserDefaults standardUserDefaults] floatForKey:@kChatFontSize];
+    return size >= 12.0 && size <= 20.0 ? size : 13.0;
+}
+-(BOOL)showRoleColors {
+    return [self boolForKey:@kShowRoleColors defaultValue:YES];
+}
+-(BOOL)autoplayAnimatedEmoji {
+    return [self boolForKey:@kAutoplayAnimatedEmoji defaultValue:YES];
+}
+-(BOOL)showReactions {
+    return [self boolForKey:@kShowReactions defaultValue:YES];
+}
+-(BOOL)showEmbeds {
+    return [self boolForKey:@kShowEmbeds defaultValue:YES];
+}
+-(BOOL)playMentionSound {
+    return [self boolForKey:@kPlayMentionSound defaultValue:YES];
+}
+-(BOOL)developerMode {
+    return [self boolForKey:@kDeveloperMode defaultValue:NO];
+}
+-(void)setChatFontSize:(CGFloat)size {
+    size = MAX(12.0, MIN(20.0, size));
+    [[NSUserDefaults standardUserDefaults] setFloat:size forKey:@kChatFontSize];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLChatDisplayPreferencesDidChangeNotification object:self];
+}
+-(void)setShowRoleColors:(BOOL)show {
+    [self setBool:show forKey:@kShowRoleColors notify:DLChatDisplayPreferencesDidChangeNotification];
+}
+-(void)setAutoplayAnimatedEmoji:(BOOL)autoplay {
+    [self setBool:autoplay forKey:@kAutoplayAnimatedEmoji notify:DLChatDisplayPreferencesDidChangeNotification];
+}
+-(void)setShowReactions:(BOOL)show {
+    [self setBool:show forKey:@kShowReactions notify:DLChatDisplayPreferencesDidChangeNotification];
+}
+-(void)setShowEmbeds:(BOOL)show {
+    [self setBool:show forKey:@kShowEmbeds notify:DLChatDisplayPreferencesDidChangeNotification];
+}
+-(void)setPlayMentionSound:(BOOL)play {
+    [self setBool:play forKey:@kPlayMentionSound notify:nil];
+}
+-(void)setDeveloperMode:(BOOL)enabled {
+    [self setBool:enabled forKey:@kDeveloperMode notify:nil];
+}
+
 -(void)setShouldUseSOCKSProxy:(BOOL)shouldUse {
     [[NSUserDefaults standardUserDefaults] setBool:shouldUse forKey:@kShouldUseSOCKSProxy];
     [[NSUserDefaults standardUserDefaults] synchronize];

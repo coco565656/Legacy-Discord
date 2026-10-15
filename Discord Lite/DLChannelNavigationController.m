@@ -325,7 +325,7 @@
     [outlineView setHeaderView:nil];
     [outlineView setDataSource:self];
     [outlineView setDelegate:self];
-    [outlineView setRowHeight:28.0];
+    [outlineView setRowHeight:32.0];
     [outlineView setIntercellSpacing:NSMakeSize(0.0, 1.0)];
     [outlineView setIndentationPerLevel:14.0];
     [outlineView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
@@ -359,7 +359,7 @@
             selectedChannel:(DLChannel *)selectedChannel {
     [channelItems release];
     channelItems = [items retain];
-    [outlineView setRowHeight:(showingDirectMessages ? 42.0 : 28.0)];
+    [outlineView setRowHeight:(showingDirectMessages ? 42.0 : 32.0)];
     [outlineView setIndentationPerLevel:(showingDirectMessages ? 0.0 : 14.0)];
     [outlineView reloadData];
 

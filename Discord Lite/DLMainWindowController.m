@@ -158,6 +158,10 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [messageSearchController setDelegate:self];
     [pinsController setDelegate:self];
     [self installResizableMainSplitView];
+    userPanelController = [[DLUserPanelController alloc] initWithPanelView:userInfoView
+                                                                avatarView:myUserAvatarImage
+                                                                 nameField:myUsernameTextField
+                                                             usernameField:myDiscTextField];
     [messageSearchController attachToHostView:chatPaneView];
     messageReadStateController = [[DLMessageReadStateController alloc] initWithChatScrollView:chatScrollView
                                                                                        window:self.window];
@@ -213,10 +217,6 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [serverLabel setFont:[NSFont boldSystemFontOfSize:13.0]];
     [chatHeaderLabel setFont:[NSFont boldSystemFontOfSize:14.0]];
 
-    [userInfoView setBackgroundColor:[DLUtil nativeChromeColor]];
-    [userInfoView setBottomBorderColor:[DLUtil nativeBorderColor]];
-    [myUsernameTextField setTextColor:[DLUtil nativePrimaryTextColor]];
-    [myDiscTextField setTextColor:[DLUtil nativeSecondaryTextColor]];
 
     messageComposerController = [[DLMessageComposerController alloc] initWithWindow:self.window
                                                                       containerView:messageEntryContainerView
@@ -240,6 +240,8 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 #endif
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageDisplayScaleDidChange:) name:DLMessageDisplayScaleDidChangeNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appearanceThemeDidChange:) name:DLAppearanceThemeDidChangeNotification object:nil];
+    // Chat display settings re-render messages the same way a scale change does.
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageDisplayScaleDidChange:) name:DLChatDisplayPreferencesDidChangeNotification object:nil];
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
     [myUserAvatarImage setImage:[DLUtil imageResize:[[[NSImage alloc] initWithContentsOfFile:[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"discord_placeholder.png"]] autorelease] newSize:myUserAvatarImage.frame.size cornerRadius:MY_USER_AVATAR_RADIUS]];
     userProfileController = [[DLUserProfileController alloc] initWithHostWindow:self.window
@@ -275,7 +277,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     CGFloat serverRailWidth = NSWidth([serversScrollView frame]);
     CGFloat paneHeight = NSHeight(contentBounds);
     CGFloat splitWidth = NSWidth(contentBounds) - serverRailWidth;
-    CGFloat initialChannelWidth = NSWidth([channelsScrollView frame]);
+    // Discord's channel sidebar is 240 points wide. A width the user dragged
+    // to is still restored from the split view autosave below.
+    CGFloat initialChannelWidth = 240.0;
     CGFloat dividerWidth = 1.0;
 
     mainSplitView = [[DLDarkSplitView alloc] initWithFrame:NSMakeRect(serverRailWidth, 0.0, splitWidth, paneHeight)];
@@ -334,7 +338,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
         }
     }
 
-    NSString *autosaveName = @"LegacyDiscordMainSplit";
+    // Renamed when the default sidebar width became 240 so that existing
+    // installs start from the Discord width once; later drags are kept.
+    NSString *autosaveName = @"LegacyDiscordMainSplit240";
     NSString *autosaveKey = [NSString stringWithFormat:@"NSSplitView Subview Frames %@", autosaveName];
     BOOL hasSavedPosition = ([[NSUserDefaults standardUserDefaults] objectForKey:autosaveKey] != nil);
     [mainSplitView setAutosaveName:autosaveName];
@@ -489,7 +495,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [chatViewHeader setGradientStartColor:[DLUtil nativeHeaderTopColor] endColor:[DLUtil nativeHeaderBottomColor]];
     [channelViewHeader setBottomBorderColor:[DLUtil nativeBorderColor]];
     [chatViewHeader setBottomBorderColor:[DLUtil nativeBorderColor]];
-    [userInfoView setBackgroundColor:[DLUtil nativeChromeColor]];
+    [userPanelController applyCurrentTheme];
     [mainHeaderController applyCurrentTheme];
     [messageComposerController applyCurrentTheme];
     [directMessageController applyCurrentTheme];
@@ -499,6 +505,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 
 -(void)connectionStateDidChange:(DLWSConnectionState)state {
     [mainHeaderController setConnectionState:state];
+    [userPanelController setConnectionState:state];
 }
 
 -(void)mainHeaderControllerDidRequestReload:(DLMainHeaderController *)controller {
@@ -738,6 +745,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [channelPaneView release];
     [chatPaneView release];
     [mainSplitView release];
+    [userPanelController release];
     [super dealloc];
 }
 

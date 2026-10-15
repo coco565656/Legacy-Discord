@@ -28,6 +28,7 @@
 #import "DLDirectMessageController.h"
 #import "DLMessagePresentationController.h"
 #import "DLMainHeaderController.h"
+#import "DLUserPanelController.h"
 
 @protocol DLMainWindowDelegate <NSObject>
 @optional
@@ -54,6 +55,7 @@
     IBOutlet DynamicScrollView *serversScrollView;
     DLServerNavigationController *serverNavigationController;
     DLMainHeaderController *mainHeaderController;
+    DLUserPanelController *userPanelController;
     NSSplitView *mainSplitView;
     NSView *channelPaneView;
     NSView *chatPaneView;

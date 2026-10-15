@@ -51,6 +51,16 @@
     return NSMakeSize(width, height);
 }
 - (void)captureLocalFixtureScreenshot:(NSString *)path {
+    if (preferencesWindow && [[preferencesWindow window] isVisible]) {
+        NSView *content = [[preferencesWindow window] contentView];
+        NSBitmapImageRep *image = [content bitmapImageRepForCachingDisplayInRect:[content bounds]];
+        [content cacheDisplayInRect:[content bounds] toBitmapImageRep:image];
+        if (![[image representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]] writeToFile:path atomically:YES]) {
+            NSLog(@"Unable to save settings screenshot to %@", path);
+        }
+        [NSApp terminate:nil];
+        return;
+    }
     if (![mainWindow captureLocalReplayPNGToPath:path]) {
         NSLog(@"Unable to save local replay screenshot to %@", path);
         return;
@@ -79,8 +89,15 @@
     mainWindow = [[DLMainWindowController alloc] initWithWindowNibName:@"DLMainWindowController"];
     [mainWindow setDelegate:self];
     [mainWindow showWindow:self];
-    [mainWindow showLocalReplayFixtureNamed:[self localFixtureNameFromLaunchArguments]
+    NSString *fixtureName = [self localFixtureNameFromLaunchArguments];
+    [mainWindow showLocalReplayFixtureNamed:fixtureName
                                  windowSize:[self localWindowSizeFromLaunchArguments]];
+    // "settings-<section>" opens the production settings window on that section.
+    if ([fixtureName hasPrefix:@"settings-"]) {
+        preferencesWindow = [[DLPreferencesWindowController alloc] initWithWindowNibName:@"DLPreferencesWindowController"];
+        [preferencesWindow showWindow:self];
+        [preferencesWindow selectSettingsSectionNamed:[fixtureName substringFromIndex:[@"settings-" length]]];
+    }
     if ([self localDiagnosticsRequestedFromLaunchArguments]) {
         [self performSelector:@selector(saveSanitizedUIDiagnostics:) withObject:nil afterDelay:0.25];
     }

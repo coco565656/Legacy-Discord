@@ -7,6 +7,7 @@
 //
 
 #import "DLAudioPlayer.h"
+#import "DLPreferencesHandler.h"
 
 #define kOutputBus 0
 #define kInputBus 1
@@ -31,7 +32,7 @@ static DLAudioPlayer* sharedObject = nil;
 -(void)playAudioWithID:(AudioID)audioID {
     switch (audioID) {
         case AudioIDNotificationNewMention:
-            [newMention play];
+            if ([[DLPreferencesHandler sharedInstance] playMentionSound]) [newMention play];
             break;
     }
 }

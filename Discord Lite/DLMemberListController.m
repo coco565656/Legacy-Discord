@@ -10,6 +10,7 @@
 #import "DLServerChannel.h"
 #import "DLServerMember.h"
 #import "DLUtil.h"
+#import "DLPreferencesHandler.h"
 #import "NSView+BGColor.h"
 #import "NSView+Border.h"
 #import "NSScroller+BGColor.h"
@@ -47,7 +48,7 @@
     cellFrame = NSIntersectionRect(cellFrame, [controlView visibleRect]);
     DLUser *user = [representedMember user];
     if (!user) return;
-    NSRect avatarRect = NSMakeRect(NSMinX(cellFrame) + 9.0, NSMidY(cellFrame) - 14.0, 28.0, 28.0);
+    NSRect avatarRect = NSMakeRect(NSMinX(cellFrame) + 12.0, NSMidY(cellFrame) - 16.0, 32.0, 32.0);
     NSImage *avatar = [[[NSImage alloc] initWithData:[user avatarImageData]] autorelease];
     if (avatar) {
         [NSGraphicsContext saveGraphicsState];
@@ -61,15 +62,15 @@
     NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
     [style setLineBreakMode:NSLineBreakByTruncatingTail];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                [NSFont systemFontOfSize:11.0], NSFontAttributeName,
+                                [NSFont systemFontOfSize:13.0], NSFontAttributeName,
                                 (nameColor ? nameColor : [DLUtil nativePrimaryTextColor]), NSForegroundColorAttributeName,
                                 style, NSParagraphStyleAttributeName, nil];
     NSMutableAttributedString *displayName = [[[NSMutableAttributedString alloc]
         initWithString:(name ? name : @"") attributes:attributes] autorelease];
-    [DLTwemojiRenderer replaceEmojiInAttributedString:displayName size:11.0
+    [DLTwemojiRenderer replaceEmojiInAttributedString:displayName size:13.0
                                    excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
-    [displayName drawInRect:NSMakeRect(NSMaxX(avatarRect) + 8.0, NSMidY(cellFrame) - 8.0,
-                                NSWidth(cellFrame) - NSMaxX(avatarRect) - 16.0, 17.0)
+    [displayName drawInRect:NSMakeRect(NSMaxX(avatarRect) + 12.0, NSMidY(cellFrame) - 9.0,
+                                NSWidth(cellFrame) - NSMaxX(avatarRect) - 20.0, 18.0)
         ];
 }
 
@@ -99,7 +100,9 @@
         avatarRequests = [[NSMutableSet alloc] init];
         requestedUpperBound = 99;
         [self installPane];
-        [hostView setPostsFrameChangedNotifications:YES];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(chatDisplayPreferencesDidChange:)
+                                                 name:DLChatDisplayPreferencesDidChangeNotification object:nil];
+    [hostView setPostsFrameChangedNotifications:YES];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(hostFrameDidChange:)
                                                      name:NSViewFrameDidChangeNotification object:hostView];
     }
@@ -115,7 +118,7 @@
 }
 
 -(void)installPane {
-    CGFloat paneWidth = 220.0;
+    CGFloat paneWidth = 240.0;
     NSRect bounds = [hostView bounds];
     pane = [[NSView_BGColor alloc] initWithFrame:
             NSMakeRect(NSWidth(bounds) - paneWidth, 0.0, paneWidth, NSHeight(bounds) - 42.0)];
@@ -157,7 +160,7 @@
     [tableView setHeaderView:nil];
     [tableView setDataSource:self];
     [tableView setDelegate:self];
-    [tableView setRowHeight:40.0];
+    [tableView setRowHeight:44.0];
     [tableView setIntercellSpacing:NSMakeSize(0.0, 0.0)];
     [tableView setAllowsEmptySelection:YES];
     [tableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
@@ -217,7 +220,7 @@
 
 -(void)layoutPanes {
     CGFloat hostWidth = NSWidth([hostView bounds]);
-    CGFloat paneWidth = visible ? MIN(220.0, MAX(0.0, hostWidth - 180.0)) : 0.0;
+    CGFloat paneWidth = visible ? MIN(240.0, MAX(0.0, hostWidth - 180.0)) : 0.0;
     NSRect paneFrame = [pane frame];
     paneFrame.origin.x = hostWidth - paneWidth;
     paneFrame.size.width = paneWidth;
@@ -229,6 +232,10 @@
     [chatScrollView setFrame:chatFrame];
     [composerView setFrame:entryFrame];
     [chatScrollView screenResize];
+}
+
+-(void)chatDisplayPreferencesDidChange:(NSNotification *)notification {
+    [tableView reloadData];
 }
 
 -(void)hostFrameDidChange:(NSNotification *)notification {

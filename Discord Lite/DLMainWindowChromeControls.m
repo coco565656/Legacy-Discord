@@ -98,3 +98,69 @@
     [NSGraphicsContext restoreGraphicsState];
 }
 @end
+
+@implementation DLStatusDotView
+-(void)setDotColor:(NSColor *)color ringColor:(NSColor *)ring {
+    [color retain]; [dotColor release]; dotColor = color;
+    [ring retain]; [ringColor release]; ringColor = ring;
+    [self setNeedsDisplay:YES];
+}
+-(BOOL)isOpaque {
+    return NO;
+}
+-(NSView *)hitTest:(NSPoint)point {
+    return nil;
+}
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = [self bounds];
+    if (ringColor) {
+        [ringColor setFill];
+        [[NSBezierPath bezierPathWithOvalInRect:bounds] fill];
+    }
+    [(dotColor ? dotColor : [DLUtil nativeOfflineStatusColor]) setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSInsetRect(bounds, 2.5, 2.5)] fill];
+}
+-(void)dealloc {
+    [dotColor release];
+    [ringColor release];
+    [super dealloc];
+}
+@end
+
+@implementation DLUserPanelIconButton
+-(void)setIconKind:(NSInteger)kind {
+    iconKind = kind;
+    [self setNeedsDisplay:YES];
+}
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = [self bounds];
+    NSColor *color = [DLUtil nativeSecondaryTextColor];
+    if (![self isEnabled]) color = [color colorWithAlphaComponent:0.45];
+    else if ([[self cell] isHighlighted]) color = [DLUtil nativePrimaryTextColor];
+    [color set];
+    CGFloat cx = floor(NSMidX(bounds)) + 0.5;
+    CGFloat cy = floor(NSMidY(bounds));
+    BOOL flipped = [self isFlipped];
+    CGFloat up = flipped ? -1.0 : 1.0;
+    if (iconKind == DLUserPanelIconMicrophone) {
+        NSRect capsule = NSMakeRect(cx - 3.5, cy - (flipped ? 6.0 : 1.0), 7.0, 9.0);
+        [[NSBezierPath bezierPathWithRoundedRect:capsule xRadius:3.5 yRadius:3.5] fill];
+        NSBezierPath *cup = [NSBezierPath bezierPath];
+        [cup appendBezierPathWithArcWithCenter:NSMakePoint(cx, cy + 2.0 * up) radius:6.0
+                                    startAngle:(flipped ? 0.0 : 180.0) endAngle:(flipped ? 180.0 : 360.0) clockwise:NO];
+        [cup moveToPoint:NSMakePoint(cx, cy - 4.0 * up)];
+        [cup lineToPoint:NSMakePoint(cx, cy - 7.0 * up)];
+        [cup setLineWidth:1.6];
+        [cup stroke];
+    } else {
+        NSBezierPath *band = [NSBezierPath bezierPath];
+        [band appendBezierPathWithArcWithCenter:NSMakePoint(cx, cy) radius:7.0
+                                     startAngle:(flipped ? 180.0 : 0.0) endAngle:(flipped ? 360.0 : 180.0) clockwise:NO];
+        [band setLineWidth:1.8];
+        [band stroke];
+        CGFloat earY = flipped ? cy : cy - 7.0;
+        [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(cx - 8.0, earY, 4.5, 7.0) xRadius:1.5 yRadius:1.5] fill];
+        [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(cx + 3.5, earY, 4.5, 7.0) xRadius:1.5 yRadius:1.5] fill];
+    }
+}
+@end

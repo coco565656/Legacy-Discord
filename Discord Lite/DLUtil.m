@@ -132,7 +132,9 @@ static NSDictionary *superPropertiesDict;
     return [NSColor colorWithCalibratedRed:0.169 green:0.176 blue:0.192 alpha:1.0];
 }
 +(NSColor *)nativeContentColor {
-    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    return [self nativeContentColorForTheme:[[DLPreferencesHandler sharedInstance] appearanceTheme]];
+}
++(NSColor *)nativeContentColorForTheme:(NSString *)theme {
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.115 green:0.122 blue:0.153 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.125 green:0.180 blue:0.170 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.192 green:0.200 blue:0.220 alpha:1.0];
@@ -158,6 +160,19 @@ static NSDictionary *superPropertiesDict;
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.045 green:0.075 blue:0.072 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.102 green:0.106 blue:0.118 alpha:1.0];
 }
+// The account panel under the channel list is one step darker than the sidebar.
++(NSColor *)nativeUserPanelColor {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
+    if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.072 green:0.078 blue:0.102 alpha:1.0];
+    if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.088 green:0.122 blue:0.122 alpha:1.0];
+    return [NSColor colorWithCalibratedRed:0.137 green:0.141 blue:0.157 alpha:1.0];
+}
++(NSColor *)nativeOnlineStatusColor {
+    return [NSColor colorWithCalibratedRed:0.137 green:0.647 blue:0.353 alpha:1.0];
+}
++(NSColor *)nativeOfflineStatusColor {
+    return [NSColor colorWithCalibratedRed:0.502 green:0.518 blue:0.557 alpha:1.0];
+}
 // Discord stores colors as 0xRRGGBB integers; 0 means "no color".
 +(NSColor *)colorFromDiscordColorValue:(id)value {
     if (![value isKindOfClass:[NSNumber class]]) return nil;
@@ -170,6 +185,7 @@ static NSDictionary *superPropertiesDict;
 // The displayed name color is the color of the highest-positioned role that
 // has one, matching the official client. Returns nil when no role is colored.
 +(NSColor *)roleColorForRoleIDs:(NSArray *)roleIDs inServer:(DLServer *)server {
+    if (![[DLPreferencesHandler sharedInstance] showRoleColors]) return nil;
     if (![roleIDs isKindOfClass:[NSArray class]] || !server) return nil;
     NSColor *bestColor = nil;
     NSInteger bestPosition = NSIntegerMin;

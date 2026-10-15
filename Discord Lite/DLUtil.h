@@ -39,6 +39,11 @@
 +(NSColor *)nativeInputColor;
 +(NSColor *)nativeBorderColor;
 +(NSColor *)nativeScrollerKnobColor;
++(NSColor *)nativeUserPanelColor;
+// Chat background of a named theme, for theme previews.
++(NSColor *)nativeContentColorForTheme:(NSString *)theme;
++(NSColor *)nativeOnlineStatusColor;
++(NSColor *)nativeOfflineStatusColor;
 +(NSColor *)colorFromDiscordColorValue:(id)value;
 +(NSColor *)roleColorForRoleIDs:(NSArray *)roleIDs inServer:(DLServer *)server;
 +(NSColor *)nativeHeaderTopColor;

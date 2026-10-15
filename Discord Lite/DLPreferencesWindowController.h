@@ -9,8 +9,10 @@
 #import <Cocoa/Cocoa.h>
 #import "DLPreferencesHandler.h"
 
+// Discord-style settings window. The XIB still provides the window and the
+// legacy (hidden, unused) proxy controls; every visible view is built in code.
 @interface DLPreferencesWindowController : NSWindowController {
-    
+
     IBOutlet NSButton *useSOCKSCheckbox;
     IBOutlet NSTextField *hostTextField;
     IBOutlet NSTextField *portTextField;
@@ -19,10 +21,12 @@
     IBOutlet NSSecureTextField *SOCKSPasswordTextField;
     IBOutlet NSButton *applyButton;
     NSPopUpButton *displayScalePopup;
-    NSView *appearancePane;
-    NSView *comingSoonPane;
-    NSTextField *comingSoonTitle;
+    NSPopUpButton *chatFontPopup;
+    NSView *contentHost;
+    NSMutableArray *settingsPanes;
     NSMutableArray *settingsSidebarButtons;
+    NSMutableArray *themeButtons;
+    NSInteger selectedSection;
 }
 - (IBAction)useProxyToggled:(id)sender;
 - (IBAction)useSOCKSPasswordToggled:(id)sender;
@@ -30,5 +34,10 @@
 - (IBAction)displayScaleChanged:(id)sender;
 - (IBAction)themeChanged:(id)sender;
 - (IBAction)showSettingsSection:(id)sender;
+#if LEGACY_DISCORD_LOCAL_DEV
+// DevLocal capture route: "account", "appearance", "accessibility", "chat",
+// "notifications" or "advanced".
+-(void)selectSettingsSectionNamed:(NSString *)name;
+#endif
 
 @end

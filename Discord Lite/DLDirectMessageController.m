@@ -256,7 +256,7 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
         return;
     }
     compactLayout = NO;
-    CGFloat restoredWidth = expandedChannelPaneWidth >= 180.0 ? expandedChannelPaneWidth : 220.0;
+    CGFloat restoredWidth = expandedChannelPaneWidth >= 180.0 ? expandedChannelPaneWidth : 240.0;
     [mainSplitView setPosition:MIN(restoredWidth, 300.0) ofDividerAtIndex:0];
 }
 

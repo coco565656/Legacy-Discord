@@ -14,7 +14,6 @@
 
 @implementation DLTextParser
 
-const CGFloat MESSAGE_VIEW_FONT_SIZE = 13.0;
 static NSString * const DLCodeSpanAttributeName = @"DLCodeSpanAttributeName";
 
 static void DLApplyDelimitedAttributes(NSMutableAttributedString *text, NSString *delimiter, NSDictionary *attributes) {
@@ -134,7 +133,7 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
     if ([[m content] length] > 0) {
         CGFloat displayScale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
         BOOL jumboEmoji = [self isEmojiOnlyMessage:m];
-        CGFloat messageFontSize = (jumboEmoji ? 52.0 : MESSAGE_VIEW_FONT_SIZE) * displayScale;
+        CGFloat messageFontSize = (jumboEmoji ? 52.0 : [[DLPreferencesHandler sharedInstance] chatFontSize]) * displayScale;
         NSMutableAttributedString *as = [[NSMutableAttributedString alloc] initWithString:[m content]];
         [as addAttribute:NSFontAttributeName value:[NSFont systemFontOfSize:messageFontSize] range:NSMakeRange(0, [m content].length)];
         [as addAttribute:NSForegroundColorAttributeName value:[DLTextParser DEFAULT_TEXT_COLOR] range:NSMakeRange(0, [m content].length)];

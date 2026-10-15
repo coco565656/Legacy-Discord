@@ -150,7 +150,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [chatTextView setLinkTextAttributes:linkTextAttributes];
     [chatTextView setEditable:NO];
     CGFloat displayScale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
-    [chatTextView setFont:[NSFont systemFontOfSize:13 * displayScale]];
+    [chatTextView setFont:[NSFont systemFontOfSize:[[DLPreferencesHandler sharedInstance] chatFontSize] * displayScale]];
     [chatTextView setMenuDelegate:self];
     [chatTextView setDrawsBackground:NO];
     [chatTextView setDelegate:self];
@@ -484,7 +484,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
 
 -(void)refreshAnimatedEmojiTimer {
     [self stopAnimatedEmojiPlayback];
-    if ([self containsAnimatedEmojiAttachments]) {
+    if ([[DLPreferencesHandler sharedInstance] autoplayAnimatedEmoji] && [self containsAnimatedEmojiAttachments]) {
         animatedEmojiTimer = [[NSTimer scheduledTimerWithTimeInterval:0.08
             target:self selector:@selector(animatedEmojiTimerDidFire:) userInfo:nil repeats:YES] retain];
     }
@@ -615,6 +615,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         [oldButton removeFromSuperview];
     }
     [reactionButtons removeAllObjects];
+    if (![[DLPreferencesHandler sharedInstance] showReactions]) return;
 
     NSEnumerator *enumerator = [[representedObject reactions] objectEnumerator];
     NSDictionary *reaction;
@@ -956,6 +957,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     }
     [embedViews removeAllObjects];
     embedsHeight = 0.0;
+    if (![[DLPreferencesHandler sharedInstance] showEmbeds]) return;
 
     CGFloat displayScale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
     CGFloat cardWidth = MIN(410.0 * displayScale, MAX(240.0, NSWidth([insetView bounds]) - 88.0));
@@ -1224,7 +1226,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
 
     NSString *reactionSummary = [representedObject reactionSummary];
     [reactionTextField setAttributedStringValue:[self attributedReactionSummary]];
-    [reactionTextField setHidden:[reactionSummary length] == 0];
+    [reactionTextField setHidden:([reactionSummary length] == 0 || ![[DLPreferencesHandler sharedInstance] showReactions])];
     [self rebuildReactionButtons];
     [self updateReactionMenu];
     [editedInfoLabel setHidden:YES];
@@ -1534,12 +1536,49 @@ const NSInteger ATTACHMENT_SPACING = 15;
 #endif
 }
 
+// Developer Mode (Settings > Advanced) adds Discord's "Copy ID" items.
+static const NSInteger DLDeveloperMenuItemTag = 9001;
+
+-(void)copyStringToPasteboard:(NSString *)string {
+    if (![string length]) return;
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    [pasteboard declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
+    [pasteboard setString:string forType:NSStringPboardType];
+}
+
+-(void)copyMessageID:(id)sender {
+    [self copyStringToPasteboard:[[representedObject messageID] description]];
+}
+
+-(void)copyAuthorID:(id)sender {
+    [self copyStringToPasteboard:[[[representedObject author] userID] description]];
+}
+
+-(void)syncDeveloperMenuItems {
+    NSMenuItem *existing;
+    while ((existing = [contextMenu itemWithTag:DLDeveloperMenuItemTag])) [contextMenu removeItem:existing];
+    if (![[DLPreferencesHandler sharedInstance] developerMode]) return;
+    NSMenuItem *separator = [NSMenuItem separatorItem];
+    [separator setTag:DLDeveloperMenuItemTag];
+    [contextMenu addItem:separator];
+    NSMenuItem *messageItem = [[[NSMenuItem alloc] initWithTitle:@"Copy Message ID" action:@selector(copyMessageID:) keyEquivalent:@""] autorelease];
+    [messageItem setTarget:self];
+    [messageItem setTag:DLDeveloperMenuItemTag];
+    [contextMenu addItem:messageItem];
+    NSMenuItem *authorItem = [[[NSMenuItem alloc] initWithTitle:@"Copy User ID" action:@selector(copyAuthorID:) keyEquivalent:@""] autorelease];
+    [authorItem setTarget:self];
+    [authorItem setTag:DLDeveloperMenuItemTag];
+    [contextMenu addItem:authorItem];
+}
+
 -(void)mouseWasDepressedWithEvent:(NSEvent *)event {
     if ((event.modifierFlags & NSControlKeyMask) == NSControlKeyMask) {
+        [self syncDeveloperMenuItems];
         [NSMenu popUpContextMenu:contextMenu withEvent:event forView:nil];
     }
 }
 -(void)mouseRightButtonWasDepressedWithEvent:(NSEvent *)event {
+    [self syncDeveloperMenuItems];
     [NSMenu popUpContextMenu:contextMenu withEvent:event forView:nil];
 }
 -(void)mouseEnteredView:(NSView *)hoveredView {
@@ -1554,6 +1593,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
 }
 
 -(NSMenu *)textViewContextMenu {
+    [self syncDeveloperMenuItems];
     return contextMenu;
 }
 -(void)escapeKeyWasPressed {
