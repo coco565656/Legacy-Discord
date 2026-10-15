@@ -8,6 +8,7 @@
 
 #import "PaddedTextView.h"
 #import "DLUtil.h"
+#import "DLTwemojiRenderer.h"
 
 @implementation PaddedTextView
 
@@ -15,24 +16,38 @@
     [super drawRect:dirtyRect];
     if ([placeholderString length] == 0 || [[self string] length] > 0) return;
     NSFont *font = [self font] ? [self font] : [NSFont systemFontOfSize:[NSFont systemFontSize]];
-    NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
-    [style setLineBreakMode:NSLineBreakByTruncatingTail];
-    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                font, NSFontAttributeName,
-                                [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName,
-                                style, NSParagraphStyleAttributeName, nil];
+    // Channel names often contain emoji; Snow Leopard has no emoji font, so
+    // the placeholder goes through the shared Twemoji path like other labels.
+    if (!placeholderDisplay || ![placeholderDisplayFont isEqual:font]) {
+        NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
+        [style setLineBreakMode:NSLineBreakByTruncatingTail];
+        NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                    font, NSFontAttributeName,
+                                    [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName,
+                                    style, NSParagraphStyleAttributeName, nil];
+        NSMutableAttributedString *display = [[[NSMutableAttributedString alloc]
+            initWithString:placeholderString attributes:attributes] autorelease];
+        [DLTwemojiRenderer replaceEmojiInAttributedString:display size:[font pointSize]
+                                       excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
+        [placeholderDisplay release];
+        placeholderDisplay = [display copy];
+        [placeholderDisplayFont release];
+        placeholderDisplayFont = [font retain];
+    }
     NSPoint origin = [self textContainerOrigin];
     CGFloat padding = [[self textContainer] lineFragmentPadding];
     NSRect rect = NSMakeRect(origin.x + padding, origin.y,
                              MAX(0.0, NSWidth([self bounds]) - origin.x - padding * 2.0),
                              ceil([font ascender] - [font descender] + [font leading]) + 2.0);
-    [placeholderString drawInRect:rect withAttributes:attributes];
+    [placeholderDisplay drawInRect:rect];
 }
 
 -(void)setPlaceholderString:(NSString *)placeholder {
     if (placeholderString == placeholder || [placeholderString isEqualToString:placeholder]) return;
     [placeholderString release];
     placeholderString = [placeholder copy];
+    [placeholderDisplay release];
+    placeholderDisplay = nil;
     [self setNeedsDisplay:YES];
 }
 
@@ -48,6 +63,8 @@
 
 -(void)dealloc {
     [placeholderString release];
+    [placeholderDisplay release];
+    [placeholderDisplayFont release];
     [super dealloc];
 }
 

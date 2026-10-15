@@ -45,6 +45,39 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ## Recorded results
 
+### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
+
+#### Discord look pass (scrollers, popouts, role colors, day dividers, composer)
+
+- Built the normal Release target on the `MacBook` Snow Leopard machine with
+  Xcode 4.2 (x86_64, deployment target 10.6, XIB compilation excluded, the 11
+  existing compatible nibs kept). Remote source matched commit `e9abf06` before
+  the changed files were copied; every copied file was checksum-verified.
+- The previous Release app is kept as `build-production/Release-before-20261015`
+  on the remote machine.
+- Launched with the existing Keychain session (the user approved the Keychain
+  prompt each time the unsigned binary changed). Navigation only: server and
+  channel selection, member list, one member profile, emoji picker open/close.
+  No message, reaction, typing notification or settings write was triggered.
+- Verified: dark thin scroller thumbs in channel list, chat and member list;
+  member-list selection drawn as a dark rounded row with readable names;
+  borderless rounded profile card and emoji picker, both closed with Escape;
+  role colors on chat author names (REST history once member data arrived) and
+  member-list names; Japanese-locale day dividers; attach button inside the
+  composer field and a `Message #channel` placeholder.
+- Found and fixed on the device: channel-name emoji in the placeholder and
+  emoji in profile role chips drew as missing-glyph boxes (now Twemoji); an
+  Aqua focus ring appeared on the member list after closing a popout (focus
+  rings disabled on member, search-result and thread tables). Re-verified after
+  rebuilding.
+- Final executable SHA256:
+  `f57f9c669211f6cd959f0565ef63b88c1028efe7806ab4baf8c3e449dd29f2b6`.
+- Screenshots: `artifacts/snow-leopard/20261015-ui/` (`rules.png`,
+  `members.png`, `profile-popout.png`, `emoji-popout.png`, `fix-rules.png`,
+  `fix-profile.png`, `fix-esc.png`).
+- Not verified: Lion / Mountain Lion, sticker picker, thread and search panes
+  on the device, other themes, write operations.
+
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-01
 
 #### User Profile follow-up — normal Release

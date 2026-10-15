@@ -151,6 +151,8 @@
     [column setResizingMask:NSTableColumnAutoresizingMask];
     [column setDataCell:[[[DLMemberListCell alloc] init] autorelease]];
     tableView = [[NSTableView alloc] initWithFrame:[[scrollView contentView] bounds]];
+    [tableView setFocusRingType:NSFocusRingTypeNone];
+    [scrollView setFocusRingType:NSFocusRingTypeNone];
     [tableView addTableColumn:column];
     [tableView setHeaderView:nil];
     [tableView setDataSource:self];

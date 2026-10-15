@@ -10,6 +10,8 @@
 
 @interface PaddedTextView : NSTextView {
     NSString *placeholderString;
+    NSAttributedString *placeholderDisplay;
+    NSFont *placeholderDisplayFont;
 }
 
 // Drawn in the secondary text color while the view is empty.

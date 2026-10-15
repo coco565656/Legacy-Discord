@@ -6,6 +6,7 @@
 #import "DLUserProfileController.h"
 #import "DLController.h"
 #import "DLUtil.h"
+#import "DLTwemojiRenderer.h"
 #import "DLServerMember.h"
 #import "HTTPCache.h"
 #import "AsyncHTTPGetRequest.h"
@@ -28,17 +29,30 @@
 @end
 
 @interface DLProfileRoleChipView : NSView {
-    NSString *roleName;
+    NSAttributedString *roleName;
     NSColor *roleColor;
 }
++(NSAttributedString *)displayStringForName:(NSString *)name;
 -(id)initWithFrame:(NSRect)frame name:(NSString *)name color:(NSColor *)color;
 @end
 
 @implementation DLProfileRoleChipView
+// Role names frequently contain emoji, which Snow Leopard cannot draw, so
+// measuring and drawing both use the shared Twemoji replacement.
++(NSAttributedString *)displayStringForName:(NSString *)name {
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont systemFontOfSize:10.0], NSFontAttributeName,
+                                [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName, nil];
+    NSMutableAttributedString *display = [[[NSMutableAttributedString alloc]
+        initWithString:(name ? name : @"") attributes:attributes] autorelease];
+    [DLTwemojiRenderer replaceEmojiInAttributedString:display size:10.0
+                                   excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
+    return display;
+}
 -(id)initWithFrame:(NSRect)frame name:(NSString *)name color:(NSColor *)color {
     self = [super initWithFrame:frame];
     if (self) {
-        roleName = [name copy];
+        roleName = [[DLProfileRoleChipView displayStringForName:name] copy];
         roleColor = [color retain];
     }
     return self;
@@ -53,10 +67,7 @@
     [pill stroke];
     [(roleColor ? roleColor : [NSColor grayColor]) set];
     [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(7.0, NSMidY(bounds) - 4.0, 8.0, 8.0)] fill];
-    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                [NSFont systemFontOfSize:10.0], NSFontAttributeName,
-                                [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName, nil];
-    [roleName drawAtPoint:NSMakePoint(19.0, NSMidY(bounds) - 6.0) withAttributes:attributes];
+    [roleName drawAtPoint:NSMakePoint(19.0, NSMidY(bounds) - 6.0)];
 }
 -(void)dealloc {
     [roleName release];
@@ -319,9 +330,7 @@
         NSDictionary *role = [profileServer roleWithID:[roleID description]];
         NSString *name = [role objectForKey:@"name"];
         if (![name isKindOfClass:[NSString class]] || [name length] == 0) name = @"Role";
-        NSDictionary *attributes = [NSDictionary dictionaryWithObject:[NSFont systemFontOfSize:10.0]
-                                                                 forKey:NSFontAttributeName];
-        CGFloat width = MIN(maxWidth, MAX(54.0, [name sizeWithAttributes:attributes].width + 29.0));
+        CGFloat width = MIN(maxWidth, MAX(54.0, [[DLProfileRoleChipView displayStringForName:name] size].width + 29.0));
         if (x > 0.0 && x + width > maxWidth) {
             x = 0.0;
             y -= 27.0;

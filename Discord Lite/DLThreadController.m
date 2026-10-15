@@ -136,6 +136,8 @@
     [threadColumn setResizingMask:NSTableColumnAutoresizingMask];
     [threadColumn setDataCell:[[[DLThreadListCell alloc] init] autorelease]];
     listTableView = [[NSTableView alloc] initWithFrame:[[listScrollView contentView] bounds]];
+    [listTableView setFocusRingType:NSFocusRingTypeNone];
+    [listScrollView setFocusRingType:NSFocusRingTypeNone];
     [listTableView addTableColumn:threadColumn];
     [listTableView setHeaderView:nil];
     [listTableView setDataSource:self];

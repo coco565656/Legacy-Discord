@@ -207,6 +207,8 @@
     [column setResizingMask:NSTableColumnAutoresizingMask];
     [column setDataCell:[[[DLSearchResultCell alloc] init] autorelease]];
     resultsTableView = [[NSTableView alloc] initWithFrame:[[resultsScrollView contentView] bounds]];
+    [resultsTableView setFocusRingType:NSFocusRingTypeNone];
+    [resultsScrollView setFocusRingType:NSFocusRingTypeNone];
     [resultsTableView addTableColumn:column];
     [resultsTableView setHeaderView:nil];
     [resultsTableView setDataSource:self];
