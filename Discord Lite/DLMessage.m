@@ -103,6 +103,24 @@
     if ([d objectForKey:@"mention_everyone"]) {
         mentionedEveryone = [[d objectForKey:@"mention_everyone"] boolValue];
     }
+    value = [d objectForKey:@"message_snapshots"];
+    if ([value isKindOfClass:[NSArray class]] && [value count] > 0 &&
+        [[value objectAtIndex:0] isKindOfClass:[NSDictionary class]]) {
+        NSDictionary *snapshot = [[value objectAtIndex:0] objectForKey:@"message"];
+        if ([snapshot isKindOfClass:[NSDictionary class]]) {
+            forwarded = YES;
+            NSArray *keys = [NSArray arrayWithObjects:@"content", @"attachments", @"embeds",
+                             @"sticker_items", @"stickers", @"mentions", nil];
+            NSMutableDictionary *snapshotContent = [NSMutableDictionary dictionary];
+            NSEnumerator *keyEnumerator = [keys objectEnumerator];
+            NSString *key;
+            while (key = [keyEnumerator nextObject]) {
+                id snapshotValue = [snapshot objectForKey:key];
+                if (snapshotValue) [snapshotContent setObject:snapshotValue forKey:key];
+            }
+            [self updateWithDict:snapshotContent];
+        }
+    }
     if ([[d objectForKey:@"mention_roles"] isKindOfClass:[NSArray class]]) {
         [mentionedRoleIDs release];
         mentionedRoleIDs = [[d objectForKey:@"mention_roles"] copy];
@@ -247,6 +265,9 @@
 }
 -(NSArray *)mentionedRoleIDs {
     return mentionedRoleIDs;
+}
+-(BOOL)isForwarded {
+    return forwarded;
 }
 
 -(void)setDelegate:(id<DLMessageDelegate>)inDelegate {

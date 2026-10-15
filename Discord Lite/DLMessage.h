@@ -32,6 +32,7 @@
     NSArray *stickerItems;
     NSArray *outgoingStickerIDs;
     BOOL mentionedEveryone;
+    BOOL forwarded;
     NSArray *mentionedRoleIDs;
     DLMessage *referencedMessage;
     id<DLMessageDelegate> delegate;
@@ -61,6 +62,9 @@
 -(void)applyReactionEmoji:(NSDictionary *)emoji added:(BOOL)added byCurrentUser:(BOOL)currentUser;
 -(DLMessage *)referencedMessage;
 -(BOOL)mentionedEveryone;
+// A forwarded message carries the original in message_snapshots; its content,
+// attachments, embeds and stickers are shown in place of the (empty) wrapper.
+-(BOOL)isForwarded;
 -(NSArray *)mentionedRoleIDs;
 
 -(void)setDelegate:(id<DLMessageDelegate>)inDelegate;

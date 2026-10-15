@@ -329,7 +329,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
 // inside insetView is computed from this value.
 -(CGFloat)messageContentHeight {
     CGFloat textViewHeight = 0;
-    if (![[representedObject content] isEqualToString:@""]) {
+    if ([[representedObject content] length] > 0 || [representedObject isForwarded]) {
         // Lay the text out at the current width before measuring. A text view
         // that had not laid out yet (or still had the nib's width) reported a
         // one-line height, and the row clipped the rest of the message.
@@ -1654,7 +1654,8 @@ const NSInteger ATTACHMENT_SPACING = 15;
     NSMenuItem *reactionRootItem = [[[NSMenuItem alloc] initWithTitle:@"Add Reaction" action:NULL keyEquivalent:@""] autorelease];
     [reactionRootItem setSubmenu:reactionMenu];
     [contextMenu addItem:reactionRootItem];
-    if (isMyContent) [contextMenu addItem:editItem];
+    // Forwarded messages cannot be edited, as in the official client.
+    if (isMyContent && ![representedObject isForwarded]) [contextMenu addItem:editItem];
     [contextMenu addItem:[self contextItemWithTitle:@"Reply" action:@selector(addReply)]];
     [contextMenu addItem:[NSMenuItem separatorItem]];
     if ([[representedObject content] length]) {

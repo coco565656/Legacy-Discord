@@ -60,6 +60,17 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Forwarded messages and signed builds
+
+- Forwarded messages (`message_snapshots`) now show a muted "↪ Forwarded"
+  line followed by the original text, attachments, embeds and stickers. They
+  never ping, are never shown as jumbo emoji, and offer no Edit item.
+- Verified on 10.6.8: the forwarded message from 13:44 in a test server,
+  previously an empty row, shows the label, the explanation text and the
+  full code block.
+- The first signed rebuild after choosing "Always Allow" launched and logged
+  in without any Keychain prompt.
+
 #### Clipped message text and avatars
 
 - Row heights were measured before the message text had been laid out at the

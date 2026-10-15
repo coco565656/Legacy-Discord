@@ -341,13 +341,15 @@ userProfileController:(DLUserProfileController *)inUserProfileController {
     NSEnumerator *enumerator = [[message mentionedUsers] objectEnumerator];
     DLUser *user;
     if (![[message author] isEqual:[controller myUser]]) {
-        while (user = [enumerator nextObject]) {
+        // Mentions inside a forwarded message do not ping, like Discord.
+        while (![message isForwarded] && (user = [enumerator nextObject])) {
             if ([user isEqual:[controller myUser]]) {
                 mentioned = YES;
             }
         }
         // @everyone/@here count unless the server suppresses them.
-        if ([message mentionedEveryone] && ![controller suppressesEveryoneInServerWithID:[server serverID]]) {
+        if ([message mentionedEveryone] && ![message isForwarded] &&
+            ![controller suppressesEveryoneInServerWithID:[server serverID]]) {
             mentioned = YES;
         }
         NSEnumerator *roleEnumerator = [[message mentionedRoleIDs] objectEnumerator];

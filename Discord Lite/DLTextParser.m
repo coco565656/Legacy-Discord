@@ -13,6 +13,10 @@
 #import "DLTwemojiRenderer.h"
 #import "DLController.h"
 
+@interface DLTextParser ()
++(NSAttributedString *)attributedBodyStringForMessage:(DLMessage *)m;
+@end
+
 @implementation DLTextParser
 
 static NSString * const DLCodeSpanAttributeName = @"DLCodeSpanAttributeName";
@@ -281,6 +285,8 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
 }
 
 +(BOOL)isEmojiOnlyMessage:(DLMessage *)m {
+    // The "Forwarded" line above keeps a forward at text size.
+    if ([m isForwarded]) return NO;
     NSString *content = [[m content] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if ([content length] == 0 || [content length] > 128) {
         return NO;
@@ -295,7 +301,28 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
     return [remainder isMatchedByRegex:@"^(?:\\s|[\\p{So}\\p{Sk}\\x{FE0F}\\x{200D}\\x{20E3}])+$"];
 }
 
+// Official forwards start with a muted "Forwarded" line above the original.
++(NSAttributedString *)forwardedLabelWithFontSize:(CGFloat)fontSize {
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont systemFontOfSize:fontSize], NSFontAttributeName,
+                                [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName, nil];
+    return [[[NSAttributedString alloc] initWithString:@"\u21AA Forwarded" attributes:attributes] autorelease];
+}
+
 +(NSAttributedString *)attributedContentStringForMessage:(DLMessage *)m {
+    NSAttributedString *body = [self attributedBodyStringForMessage:m];
+    if (![m isForwarded]) return body;
+    CGFloat displayScale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
+    NSMutableAttributedString *forwarded = [[[NSMutableAttributedString alloc] initWithAttributedString:
+        [self forwardedLabelWithFontSize:round(12.0 * displayScale)]] autorelease];
+    if ([body length] > 0) {
+        [forwarded appendAttributedString:[[[NSAttributedString alloc] initWithString:@"\n"] autorelease]];
+        [forwarded appendAttributedString:body];
+    }
+    return forwarded;
+}
+
++(NSAttributedString *)attributedBodyStringForMessage:(DLMessage *)m {
     if ([[m content] length] > 0) {
         CGFloat displayScale = [[DLPreferencesHandler sharedInstance] messageDisplayScale];
         BOOL jumboEmoji = [self isEmojiOnlyMessage:m];
