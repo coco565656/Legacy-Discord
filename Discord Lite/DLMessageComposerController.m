@@ -541,11 +541,28 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
     }
 }
 
+// Discord's upload limit without Nitro, and the most files per message.
+static const unsigned long long DLMaxUploadBytes = 10ULL * 1024 * 1024;
+static const NSUInteger DLMaxAttachmentsPerMessage = 10;
+
 -(void)updatePendingAttachmentsWithFilePaths:(NSArray *)paths {
-    [self showPendingAttachmentView];
+    NSMutableArray *tooLarge = [NSMutableArray array];
+    NSUInteger existing = [[pendingAttachmentsScrollView content] count];
     NSEnumerator *enumerator = [paths objectEnumerator];
     NSString *filePath;
     while (filePath = [enumerator nextObject]) {
+        NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:filePath error:NULL];
+        if (![[attributes fileType] isEqualToString:NSFileTypeRegular]) continue;
+        if ([attributes fileSize] > DLMaxUploadBytes) {
+            [tooLarge addObject:[filePath lastPathComponent]];
+            continue;
+        }
+        if (existing >= DLMaxAttachmentsPerMessage) {
+            NSBeep();
+            break;
+        }
+        existing++;
+        [self showPendingAttachmentView];
         NSData *fileData = [NSData dataWithContentsOfFile:filePath];
         DLAttachment *attachment = [[DLAttachment alloc] init];
         [attachment setFilename:[filePath lastPathComponent]];
@@ -557,6 +574,15 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
         [pendingAttachmentsScrollView appendContent:view];
         [view release];
         [attachment release];
+    }
+    if ([tooLarge count]) {
+        // The official client's wording for oversized uploads.
+        NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+        [alert setMessageText:@"Your files are too powerful"];
+        [alert setInformativeText:[NSString stringWithFormat:@"The max file size is 10 MB.\n\n%@",
+                                   [tooLarge componentsJoinedByString:@"\n"]]];
+        [alert addButtonWithTitle:@"OK"];
+        [alert beginSheetModalForWindow:hostWindow modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
     }
 }
 

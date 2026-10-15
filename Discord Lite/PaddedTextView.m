@@ -94,9 +94,12 @@
     }
     if (imageData &&
         [[self delegate] respondsToSelector:@selector(updatePendingAttachmentsWithFilePaths:)]) {
-        NSString *filename = [NSString stringWithFormat:@"pasted-image-%@.%@",
-                              [[NSProcessInfo processInfo] globallyUniqueString], @"png"];
-        NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:filename];
+        // Pasted images upload as "image.png" like the official client; each
+        // paste gets its own temporary folder so the names never collide.
+        NSString *folder = [NSTemporaryDirectory() stringByAppendingPathComponent:
+                            [[NSProcessInfo processInfo] globallyUniqueString]];
+        [[NSFileManager defaultManager] createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:nil error:NULL];
+        NSString *path = [folder stringByAppendingPathComponent:@"image.png"];
         if ([imageData writeToFile:path atomically:YES]) {
             [(id)[self delegate] updatePendingAttachmentsWithFilePaths:[NSArray arrayWithObject:path]];
             return;

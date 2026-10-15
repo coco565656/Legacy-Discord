@@ -530,11 +530,12 @@ static DLController* sharedObject = nil;
     [req setDelegate:self];
     [req setParameters:[m dictRepresentation]];
     if ([m attachments].count > 0) {
-        NSMutableDictionary *files = [[NSMutableDictionary alloc] init];
+        NSMutableArray *files = [NSMutableArray array];
         NSEnumerator *e = [[m attachments] objectEnumerator];
         DLAttachment *a;
         while (a = [e nextObject]) {
-            [files setObject:[a attachmentData] forKey:[a filename]];
+            if (![a attachmentData] || ![a filename]) continue;
+            [files addObject:[NSDictionary dictionaryWithObjectsAndKeys:[a filename], @"filename", [a attachmentData], @"data", nil]];
         }
         [req setFiles:files];
     }

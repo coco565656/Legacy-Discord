@@ -11,7 +11,7 @@
 
 @interface AsyncHTTPPostRequest : AsyncHTTPRequest {
     NSDictionary *parameters;
-    NSDictionary *files;
+    NSArray *files;
     NSString *method;
 }
 
@@ -20,6 +20,7 @@
 
 -(void)setParameters:(NSDictionary *)inParameters;
 -(void)setMethod:(NSString *)inMethod;
--(void)setFiles:(NSDictionary *)inFiles;
+// Array of {filename, data} dictionaries, sent with the parameters as payload_json.
+-(void)setFiles:(NSArray *)inFiles;
 
 @end

@@ -25,21 +25,37 @@
     NSData *jsonData = [[CJSONSerializer serializer] serializeDictionary:parameters error:nil];
     NSData *queryData = nil;
     if (files) {
-        NSMutableData *formData = [[NSMutableData alloc] init];
+        // Discord's multipart form: one payload_json part carrying the full
+        // message (content, reply, stickers) plus files[n] parts. Using an
+        // array keeps two attachments with the same name (image.png) apart.
+        NSMutableData *formData = [[[NSMutableData alloc] init] autorelease];
         NSString *boundary = [NSString stringWithFormat:@"---------------------------%@", [DLUtil randomStringWithLength:30]];
-        NSEnumerator *e = [[files allKeys] objectEnumerator];
-        NSString *fileName;
-        while (fileName = [e nextObject]) {
-            NSData *fileData = [files objectForKey:fileName];
-            NSString *mimeType = [DLUtil mimeTypeForExtension:[fileName pathExtension]];
-            [formData appendData:[[NSString stringWithFormat:@"--%@\r\nContent-Disposition: form-data; name=\"%@\"; filename=\"%@\"\r\nContent-Type: %@\r\n\r\n", boundary, fileName, fileName, mimeType] dataUsingEncoding:NSUTF8StringEncoding]];
-            [formData appendData:fileData];
-            [formData appendData:[@"\r\n\r\n" dataUsingEncoding:NSUTF8StringEncoding]];
+        NSMutableDictionary *payload = [NSMutableDictionary dictionaryWithDictionary:(parameters ? parameters : [NSDictionary dictionary])];
+        NSMutableArray *attachmentEntries = [NSMutableArray array];
+        NSUInteger index;
+        for (index = 0; index < [files count]; index++) {
+            NSDictionary *file = [files objectAtIndex:index];
+            [attachmentEntries addObject:[NSDictionary dictionaryWithObjectsAndKeys:
+                                          [NSNumber numberWithUnsignedInteger:index], @"id",
+                                          [file objectForKey:@"filename"], @"filename", nil]];
         }
-        
-        NSString *content = [NSString stringWithFormat:@"--%@\r\nContent-Disposition: form-data; name=\"content\"\r\n\r\n%@\r\n", boundary, [parameters objectForKey:@"content"]];
-        [formData appendData:[content dataUsingEncoding:NSUTF8StringEncoding]];
-        [formData appendData:[[NSString stringWithFormat:@"--%@--\r\n\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+        [payload setObject:attachmentEntries forKey:@"attachments"];
+        NSData *payloadData = [[CJSONSerializer serializer] serializeDictionary:payload error:nil];
+        [formData appendData:[[NSString stringWithFormat:@"--%@\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+        if (payloadData) [formData appendData:payloadData];
+        [formData appendData:[@"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];
+        for (index = 0; index < [files count]; index++) {
+            NSDictionary *file = [files objectAtIndex:index];
+            NSString *fileName = [file objectForKey:@"filename"];
+            NSString *headerName = [[[fileName stringByReplacingOccurrencesOfString:@"\"" withString:@"%22"]
+                                     stringByReplacingOccurrencesOfString:@"\r" withString:@""]
+                                    stringByReplacingOccurrencesOfString:@"\n" withString:@""];
+            NSString *mimeType = [DLUtil mimeTypeForExtension:[fileName pathExtension]];
+            [formData appendData:[[NSString stringWithFormat:@"--%@\r\nContent-Disposition: form-data; name=\"files[%lu]\"; filename=\"%@\"\r\nContent-Type: %@\r\n\r\n", boundary, (unsigned long)index, headerName, mimeType ? mimeType : @"application/octet-stream"] dataUsingEncoding:NSUTF8StringEncoding]];
+            [formData appendData:[file objectForKey:@"data"]];
+            [formData appendData:[@"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];
+        }
+        [formData appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
         
         queryData = formData;
         
@@ -88,7 +104,7 @@
     [inMethod retain];
     method = inMethod;
 }
--(void)setFiles:(NSDictionary *)inFiles {
+-(void)setFiles:(NSArray *)inFiles {
     [files release];
     [inFiles retain];
     files = inFiles;

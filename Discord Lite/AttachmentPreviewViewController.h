@@ -25,7 +25,9 @@
     IBOutlet NSTextField *sizeTextField;
     IBOutlet NSProgressIndicator *downloadProgressIndicator;
     IBOutlet NSButton *downloadButton;
-    
+    // SPOILER_ images stay blurred until the first click.
+    BOOL spoilerHidden;
+    NSView *spoilerLabel;
 }
 
 -(NSView *)attachmentView;

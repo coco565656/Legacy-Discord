@@ -60,6 +60,23 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Attachments
+
+- Uploads use Discord's documented multipart form: a `payload_json` part with
+  the full message (so replies and stickers keep their reference) and
+  `files[n]` parts. The old form named each part after its file, dropped
+  everything but `content`, and two files with the same name collided.
+- Files over 10 MB are refused with the official "Your files are too
+  powerful" message; at most 10 attachments per message. Pasted images are
+  named `image.png`.
+- Pending attachments have a menu with Mark as Spoiler / Remove Spoiler (the
+  `SPOILER_` prefix) and Remove Attachment. Received spoiler images are shown
+  blurred with a "SPOILER" pill until clicked.
+- Verified on 10.6.8: pasting an image adds it to the tray, Mark as Spoiler
+  dims it and labels it, an 11 MB file shows the alert, and removing the item
+  clears the tray. Actually sending an attachment and viewing a received
+  spoiler image were not exercised yet.
+
 #### Image disk cache
 
 - Avatars, emoji, stickers, banners and attachment previews are cached in

@@ -8,6 +8,51 @@
 
 #import "AttachmentPreviewViewController.h"
 #import <WebKit/WebKit.h>
+#import "DLUtil.h"
+
+// Black "SPOILER" pill centred over a hidden image, like the official client.
+@interface DLSpoilerLabelView : NSView
+@end
+
+@implementation DLSpoilerLabelView
+-(NSView *)hitTest:(NSPoint)point {
+    return nil;
+}
+-(void)drawRect:(NSRect)dirtyRect {
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont boldSystemFontOfSize:12.0], NSFontAttributeName,
+                                [NSColor whiteColor], NSForegroundColorAttributeName, nil];
+    NSSize size = [@"SPOILER" sizeWithAttributes:attributes];
+    NSRect pill = NSMakeRect(floor(NSMidX([self bounds]) - size.width / 2.0 - 12.0),
+                             floor(NSMidY([self bounds]) - size.height / 2.0 - 5.0),
+                             size.width + 24.0, size.height + 10.0);
+    [[NSColor colorWithCalibratedWhite:0.0 alpha:0.75] set];
+    [[NSBezierPath bezierPathWithRoundedRect:pill xRadius:NSHeight(pill) / 2.0 yRadius:NSHeight(pill) / 2.0] fill];
+    [@"SPOILER" drawAtPoint:NSMakePoint(NSMinX(pill) + 12.0, NSMinY(pill) + 5.0) withAttributes:attributes];
+}
+@end
+
+// Heavily blurred and darkened copy of a spoiler image: drawn at a tiny
+// size and scaled back up with smooth interpolation (no Core Image needed).
+static NSImage *DLSpoilerImage(NSData *data) {
+    NSImage *source = [[[NSImage alloc] initWithData:data] autorelease];
+    NSSize size = [source size];
+    if (size.width < 1.0 || size.height < 1.0) return nil;
+    NSSize tiny = NSMakeSize(MAX(2.0, round(size.width / 24.0)), MAX(2.0, round(size.height / 24.0)));
+    NSImage *small = [[[NSImage alloc] initWithSize:tiny] autorelease];
+    [small lockFocus];
+    [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationHigh];
+    [source drawInRect:NSMakeRect(0, 0, tiny.width, tiny.height) fromRect:NSZeroRect operation:NSCompositeCopy fraction:1.0];
+    [small unlockFocus];
+    NSImage *blurred = [[[NSImage alloc] initWithSize:size] autorelease];
+    [blurred lockFocus];
+    [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationHigh];
+    [small drawInRect:NSMakeRect(0, 0, size.width, size.height) fromRect:NSZeroRect operation:NSCompositeCopy fraction:1.0];
+    [[NSColor colorWithCalibratedWhite:0.0 alpha:0.35] set];
+    NSRectFillUsingOperation(NSMakeRect(0, 0, size.width, size.height), NSCompositeSourceOver);
+    [blurred unlockFocus];
+    return blurred;
+}
 
 @implementation AttachmentPreviewViewController
 
@@ -31,6 +76,12 @@
         eventHandlerView = [[NSView_Events alloc] initWithFrame:frame];
         [eventHandlerView setDelegate:self];
         [attachmentView addSubview:eventHandlerView];
+        spoilerHidden = [[representedObject filename] hasPrefix:@"SPOILER_"];
+        if (spoilerHidden) {
+            spoilerLabel = [[DLSpoilerLabelView alloc] initWithFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
+            [spoilerLabel setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+            [attachmentView addSubview:spoilerLabel positioned:NSWindowBelow relativeTo:eventHandlerView];
+        }
         NSData *previewData = [representedObject scaledAttachmentData];
         if (previewData) {
             [self attachment:representedObject previewDataWasUpdated:previewData];
@@ -88,6 +139,7 @@
 -(void)dealloc {
     [eventHandlerView setDelegate:nil];
     [eventHandlerView release];
+    [spoilerLabel release];
     if ([attachmentView isKindOfClass:[WebView class]]) {
         WebView *videoView = (WebView *)attachmentView;
         [videoView setFrameLoadDelegate:nil];
@@ -110,7 +162,9 @@
 -(void)attachment:(DLAttachment *)a previewDataWasUpdated:(NSData *)data {
     //Check type
     //if image:
-    [imageView setImage:[[[NSImage alloc] initWithData:data] autorelease]];
+    NSImage *image = spoilerHidden ? DLSpoilerImage(data) : nil;
+    if (!image) image = [[[NSImage alloc] initWithData:data] autorelease];
+    [imageView setImage:image];
 }
 -(void)attachment:(DLAttachment *)a downloadPercentageWasUpdated:(float)percent {
     if ([downloadProgressIndicator isIndeterminate]) {
@@ -127,6 +181,14 @@
     [[NSDistributedNotificationCenter defaultCenter] postNotificationName:@"com.apple.DownloadFileFinished" object:saveFilePath];
 }
 -(void)mouseWasDepressedWithEvent:(NSEvent *)event {
+    if (spoilerHidden) {
+        // First click reveals the spoiler; the next one opens the viewer.
+        spoilerHidden = NO;
+        [spoilerLabel removeFromSuperview];
+        NSData *data = [representedObject scaledAttachmentData];
+        if (data) [imageView setImage:[[[NSImage alloc] initWithData:data] autorelease]];
+        return;
+    }
     if (!attachmentViewerWindow) {
         attachmentViewerWindow = [[DLAttachmentWindowController alloc] initWithWindowNibName:@"DLAttachmentWindowController"];
         [attachmentViewerWindow setDelegate:self];

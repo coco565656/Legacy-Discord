@@ -8,6 +8,10 @@
 
 #import "PendingAttachmentViewController.h"
 
+@interface PendingAttachmentViewController ()
+-(void)updateSpoilerDisplay;
+@end
+
 @implementation PendingAttachmentViewController
 
 -(void)setDelegate:(id<PendingAttachmentItemDelegate>)inDelegate {
@@ -26,12 +30,51 @@
         [filenameTextField setHidden:NO];
         [filenameTextField setStringValue:[representedObject filename]];
     }
+    NSMenu *menu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    [menu setDelegate:(id)self];
+    [[self view] setMenu:menu];
+    [attachmentImageView setMenu:menu];
+    [self updateSpoilerDisplay];
     
     
 }
 
 -(DLAttachment *)representedObject {
     return representedObject;
+}
+
+// Discord marks spoilers by the SPOILER_ filename prefix.
+-(BOOL)isSpoiler {
+    return [[representedObject filename] hasPrefix:@"SPOILER_"];
+}
+
+-(void)updateSpoilerDisplay {
+    BOOL spoiler = [self isSpoiler];
+    if ([representedObject type] == AttachmentTypeImage) {
+        [filenameTextField setHidden:!spoiler];
+        [filenameTextField setStringValue:(spoiler ? @"SPOILER" : @"")];
+        [attachmentImageView setAlphaValue:(spoiler ? 0.35 : 1.0)];
+    } else {
+        [filenameTextField setStringValue:[representedObject filename]];
+    }
+}
+
+-(void)menuNeedsUpdate:(NSMenu *)menu {
+    [menu removeAllItems];
+    NSMenuItem *spoiler = [[[NSMenuItem alloc] initWithTitle:([self isSpoiler] ? @"Remove Spoiler" : @"Mark as Spoiler")
+                                                      action:@selector(toggleSpoiler:) keyEquivalent:@""] autorelease];
+    [spoiler setTarget:self];
+    [menu addItem:spoiler];
+    [menu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *remove = [[[NSMenuItem alloc] initWithTitle:@"Remove Attachment" action:@selector(deleteItem:) keyEquivalent:@""] autorelease];
+    [remove setTarget:self];
+    [menu addItem:remove];
+}
+
+-(void)toggleSpoiler:(id)sender {
+    NSString *name = [representedObject filename];
+    [representedObject setFilename:([self isSpoiler] ? [name substringFromIndex:8] : [@"SPOILER_" stringByAppendingString:name])];
+    [self updateSpoilerDisplay];
 }
 
 - (IBAction)deleteItem:(id)sender {
