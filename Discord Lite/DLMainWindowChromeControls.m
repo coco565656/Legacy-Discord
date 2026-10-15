@@ -251,3 +251,22 @@
     return menuRow >= 0 ? [self menu] : nil;
 }
 @end
+
+@implementation DLPrimaryButton
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = NSInsetRect([self bounds], 0.5, 0.5);
+    CGFloat alpha = [self isEnabled] ? 1.0 : 0.5;
+    NSColor *fill = [[self cell] isHighlighted]
+        ? [NSColor colorWithCalibratedRed:0.278 green:0.322 blue:0.769 alpha:alpha]
+        : [NSColor colorWithCalibratedRed:0.345 green:0.396 blue:0.949 alpha:alpha];
+    [fill setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:bounds xRadius:4.0 yRadius:4.0] fill];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont boldSystemFontOfSize:13.0], NSFontAttributeName,
+                                [[NSColor whiteColor] colorWithAlphaComponent:alpha], NSForegroundColorAttributeName, nil];
+    NSString *title = [self title] ? [self title] : @"";
+    NSSize size = [title sizeWithAttributes:attributes];
+    [title drawAtPoint:NSMakePoint(floor(NSMidX(bounds) - size.width / 2.0), floor(NSMidY(bounds) - size.height / 2.0))
+        withAttributes:attributes];
+}
+@end

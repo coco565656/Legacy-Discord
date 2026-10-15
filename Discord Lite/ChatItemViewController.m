@@ -1257,23 +1257,32 @@ const NSInteger ATTACHMENT_SPACING = 15;
     NSDateComponents *components = [[NSDateComponents alloc] init];
     [components setDay:-1];
     NSDate *yesterday = [cal dateByAddingComponents:components toDate:today options:0];
-    NSString *dateFormat = @"H:mm";
-    NSString *dateUserString = @"";
+    // Official format: "Today at 22:54", "Yesterday at 22:54", otherwise the
+    // system's short date and time (respecting its 12/24-hour setting).
+    NSDateFormatter *timeFormatter = [[[NSDateFormatter alloc] init] autorelease];
+    [timeFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
+    [timeFormatter setDateStyle:NSDateFormatterNoStyle];
+    [timeFormatter setTimeStyle:NSDateFormatterShortStyle];
+    NSString *displayTimestamp;
     if ([[representedObject timestamp] isGreaterThan:today]) {
-        dateUserString = @"";
+        displayTimestamp = [@"Today at " stringByAppendingString:[timeFormatter stringFromDate:[representedObject timestamp]]];
     } else if ([[representedObject timestamp] isGreaterThan:yesterday]) {
-        dateUserString = @"Yesterday";
+        displayTimestamp = [@"Yesterday at " stringByAppendingString:[timeFormatter stringFromDate:[representedObject timestamp]]];
     } else {
-        dateUserString = @"";
-        dateFormat = @"M/dd/yyyy H:mm";
+        NSDateFormatter *fullFormatter = [[[NSDateFormatter alloc] init] autorelease];
+        [fullFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
+        // The locale's short date with a four-digit year ("2022/05/04" in
+        // Japanese, "5/4/2022" in English). 10.6's short style uses "yy", and
+        // its templates produce 年月日 forms, so widen the year only.
+        [fullFormatter setDateStyle:NSDateFormatterShortStyle];
+        NSString *format = [fullFormatter dateFormat];
+        if (format && [format rangeOfString:@"yyyy"].location == NSNotFound && [format rangeOfString:@"yy"].location != NSNotFound) {
+            [fullFormatter setDateFormat:[format stringByReplacingOccurrencesOfString:@"yy" withString:@"yyyy"]];
+        }
+        displayTimestamp = [NSString stringWithFormat:@"%@ %@",
+                            [fullFormatter stringFromDate:[representedObject timestamp]],
+                            [timeFormatter stringFromDate:[representedObject timestamp]]];
     }
-    NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
-    [formatter setFormatterBehavior:NSDateFormatterBehavior10_4];
-    [formatter setDateFormat:dateFormat];
-    NSString *timestamp = [formatter stringFromDate:[representedObject timestamp]];
-    NSString *displayTimestamp = [dateUserString length]
-        ? [NSString stringWithFormat:@"%@ %@", dateUserString, timestamp]
-        : timestamp;
     [timestampTextField setStringValue:displayTimestamp];
     [self layoutMessageHeaderFields];
     

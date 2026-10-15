@@ -9,6 +9,7 @@
 #import "DLLoginWindowController.h"
 #import "DLUtil.h"
 #import "NSView+BGColor.h"
+#import "DLMainWindowChromeControls.h"
 
 @interface DLLoginWindowController ()
 
@@ -20,7 +21,7 @@
     [super windowDidLoad];
     [self.window setTitle:@"Legacy Discord — Login"];
     NSRect frame = [self.window frame];
-    frame.size = NSMakeSize(440.0, 430.0);
+    frame.size = NSMakeSize(440.0, 452.0);
     [self.window setFrame:frame display:NO];
 
     NSView *content = [self.window contentView];
@@ -28,71 +29,87 @@
     for (NSView *view in oldViews) [view setHidden:YES];
     [oldViews release];
 
+    // Laid out like the official login: blurple backdrop, a dark card with
+    // "Welcome back!", labelled inputs and a full-width Log In button.
     NSView_BGColor *background = [[NSView_BGColor alloc] initWithFrame:[content bounds]];
     [background setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-    [background setGradientStartColor:[DLUtil nativeHeaderTopColor] endColor:[DLUtil nativeServerRailColor]];
+    [background setBackgroundColor:[NSColor colorWithCalibratedRed:0.345 green:0.396 blue:0.949 alpha:1.0]];
     [content addSubview:background];
 
-    NSView_BGColor *card = [[NSView_BGColor alloc] initWithFrame:NSMakeRect(42.0, 36.0, 356.0, 350.0)];
+    NSView_BGColor *card = [[NSView_BGColor alloc] initWithFrame:NSMakeRect(32.0, 30.0, 376.0, 370.0)];
     [card setAutoresizingMask:NSViewMinXMargin | NSViewMaxXMargin | NSViewMinYMargin | NSViewMaxYMargin];
     [card setBackgroundColor:[DLUtil nativeContentColor]];
     [background addSubview:card];
 
-    NSTextField *brand = [self loginLabelWithFrame:NSMakeRect(26.0, 292.0, 304.0, 34.0)
-                                              text:@"Legacy Discord"
-                                              font:[NSFont boldSystemFontOfSize:25.0]
-                                             color:[DLUtil nativePrimaryTextColor]
-                                         alignment:NSCenterTextAlignment];
-    [card addSubview:brand];
-    NSTextField *welcome = [self loginLabelWithFrame:NSMakeRect(26.0, 262.0, 304.0, 22.0)
-                                                text:@"Welcome back — sign in to continue"
-                                                font:[NSFont systemFontOfSize:12.0]
-                                               color:[DLUtil nativeSecondaryTextColor]
-                                           alignment:NSCenterTextAlignment];
-    [card addSubview:welcome];
+    [card addSubview:[self loginLabelWithFrame:NSMakeRect(24.0, 316.0, 328.0, 30.0)
+                                          text:@"Welcome back!"
+                                          font:[NSFont boldSystemFontOfSize:22.0]
+                                         color:[DLUtil nativePrimaryTextColor]
+                                     alignment:NSCenterTextAlignment]];
+    [card addSubview:[self loginLabelWithFrame:NSMakeRect(24.0, 292.0, 328.0, 20.0)
+                                          text:@"We're so excited to see you again!"
+                                          font:[NSFont systemFontOfSize:13.0]
+                                         color:[DLUtil nativeSecondaryTextColor]
+                                     alignment:NSCenterTextAlignment]];
+    [card addSubview:[self loginLabelWithFrame:NSMakeRect(24.0, 254.0, 328.0, 16.0)
+                                          text:@"EMAIL OR PHONE NUMBER"
+                                          font:[NSFont boldSystemFontOfSize:10.0]
+                                         color:[DLUtil nativeSecondaryTextColor]
+                                     alignment:NSLeftTextAlignment]];
+    [card addSubview:[self loginLabelWithFrame:NSMakeRect(24.0, 186.0, 328.0, 16.0)
+                                          text:@"PASSWORD"
+                                          font:[NSFont boldSystemFontOfSize:10.0]
+                                         color:[DLUtil nativeSecondaryTextColor]
+                                     alignment:NSLeftTextAlignment]];
 
-    NSTextField *emailLabel = [self loginLabelWithFrame:NSMakeRect(30.0, 224.0, 296.0, 18.0)
-                                                   text:@"EMAIL ADDRESS"
-                                                   font:[NSFont boldSystemFontOfSize:10.0]
-                                                  color:[DLUtil nativeSecondaryTextColor]
-                                              alignment:NSLeftTextAlignment];
-    [card addSubview:emailLabel];
-    NSTextField *passwordLabel = [self loginLabelWithFrame:NSMakeRect(30.0, 151.0, 296.0, 18.0)
-                                                      text:@"PASSWORD"
-                                                      font:[NSFont boldSystemFontOfSize:10.0]
-                                                     color:[DLUtil nativeSecondaryTextColor]
-                                                 alignment:NSLeftTextAlignment];
-    [card addSubview:passwordLabel];
+    NSTextField *fields[2] = { emailField, passwordField };
+    CGFloat fieldY[2] = { 218.0, 150.0 };
+    for (NSUInteger index = 0; index < 2; index++) {
+        NSTextField *field = fields[index];
+        [field retain]; [field removeFromSuperviewWithoutNeedingDisplay];
+        [field setFrame:NSMakeRect(24.0, fieldY[index], 328.0, 30.0)];
+        [field setHidden:NO];
+        [field setBezeled:NO];
+        [field setBordered:NO];
+        [field setDrawsBackground:YES];
+        [field setBackgroundColor:[DLUtil nativeServerRailColor]];
+        [field setTextColor:[DLUtil nativePrimaryTextColor]];
+        [field setFont:[NSFont systemFontOfSize:14.0]];
+        [card addSubview:field]; [field release];
+    }
 
-    [emailField retain]; [emailField removeFromSuperviewWithoutNeedingDisplay];
-    [emailField setFrame:NSMakeRect(30.0, 190.0, 296.0, 28.0)];
-    [emailField setHidden:NO];
-    [emailField setBackgroundColor:[DLUtil nativeInputColor]];
-    [emailField setTextColor:[DLUtil nativePrimaryTextColor]];
-    [card addSubview:emailField]; [emailField release];
-    [passwordField retain]; [passwordField removeFromSuperviewWithoutNeedingDisplay];
-    [passwordField setFrame:NSMakeRect(30.0, 117.0, 296.0, 28.0)];
-    [passwordField setHidden:NO];
-    [passwordField setBackgroundColor:[DLUtil nativeInputColor]];
-    [passwordField setTextColor:[DLUtil nativePrimaryTextColor]];
-    [card addSubview:passwordField]; [passwordField release];
+    // The XIB's Aqua buttons stay hidden; Discord-style buttons take over
+    // their actions (resetUI enables/disables through the same ivars).
+    DLPrimaryButton *logInButton = [[[DLPrimaryButton alloc] initWithFrame:NSMakeRect(24.0, 88.0, 328.0, 40.0)] autorelease];
+    [logInButton setBordered:NO];
+    [logInButton setButtonType:NSMomentaryChangeButton];
+    [logInButton setTitle:@"Log In"];
+    [logInButton setTarget:self];
+    [logInButton setAction:@selector(login:)];
+    [logInButton setKeyEquivalent:@"\r"];
+    [card addSubview:logInButton];
+    [loginButton setHidden:YES];
+    loginButton = logInButton;
 
-    [loginButton retain]; [loginButton removeFromSuperviewWithoutNeedingDisplay];
-    [loginButton setFrame:NSMakeRect(218.0, 55.0, 108.0, 34.0)];
-    [loginButton setTitle:@"Sign In"];
-    [loginButton setHidden:NO];
-    [card addSubview:loginButton]; [loginButton release];
-    [useTokenButton retain]; [useTokenButton removeFromSuperviewWithoutNeedingDisplay];
-    [useTokenButton setFrame:NSMakeRect(25.0, 55.0, 125.0, 34.0)];
-    [useTokenButton setTitle:@"Use Token…"];
-    [useTokenButton setHidden:NO];
-    [card addSubview:useTokenButton]; [useTokenButton release];
+    NSButton *tokenLink = [[[NSButton alloc] initWithFrame:NSMakeRect(24.0, 56.0, 328.0, 20.0)] autorelease];
+    [tokenLink setBordered:NO];
+    [tokenLink setButtonType:NSMomentaryChangeButton];
+    [tokenLink setAlignment:NSLeftTextAlignment];
+    [tokenLink setAttributedTitle:[[[NSAttributedString alloc] initWithString:@"Log in with a token instead"
+        attributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSFont systemFontOfSize:12.0], NSFontAttributeName,
+                    [DLUtil nativeLinkColor], NSForegroundColorAttributeName, nil]] autorelease]];
+    [tokenLink setTarget:self];
+    [tokenLink setAction:@selector(showTokenEntryPanel:)];
+    [card addSubview:tokenLink];
+    [useTokenButton setHidden:YES];
+    useTokenButton = tokenLink;
+
     [progressIndicator retain]; [progressIndicator removeFromSuperviewWithoutNeedingDisplay];
-    [progressIndicator setFrame:NSMakeRect(194.0, 64.0, 16.0, 16.0)];
-    [card addSubview:progressIndicator]; [progressIndicator release];
+    [progressIndicator setFrame:NSMakeRect(180.0, 100.0, 16.0, 16.0)];
+    [card addSubview:progressIndicator positioned:NSWindowAbove relativeTo:logInButton]; [progressIndicator release];
 
-    NSTextField *compatibility = [self loginLabelWithFrame:NSMakeRect(30.0, 18.0, 296.0, 18.0)
-                                                       text:@"Built for Mac OS X Snow Leopard through OS X Mountain Lion"
+    NSTextField *compatibility = [self loginLabelWithFrame:NSMakeRect(24.0, 16.0, 328.0, 16.0)
+                                                       text:@"Legacy Discord · Mac OS X 10.6 – 10.8"
                                                        font:[NSFont systemFontOfSize:9.0]
                                                       color:[DLUtil nativeSecondaryTextColor]
                                                   alignment:NSCenterTextAlignment];
@@ -101,7 +118,9 @@
     [card release];
     
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
+#if !LEGACY_DISCORD_LOCAL_DEV
     [[DLController sharedInstance] setLoginDelegate:self];
+#endif
 }
 
 -(NSTextField *)loginLabelWithFrame:(NSRect)frame text:(NSString *)text font:(NSFont *)font color:(NSColor *)color alignment:(NSTextAlignment)alignment {

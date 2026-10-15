@@ -49,6 +49,10 @@ enum {
 @interface DLDarkPopUpButtonCell : NSPopUpButtonCell
 @end
 
+// Discord's filled blurple button (Log In and other primary actions).
+@interface DLPrimaryButton : NSButton
+@end
+
 // Microphone / headphone buttons of the account panel.
 @interface DLUserPanelIconButton : NSButton {
     NSInteger iconKind;

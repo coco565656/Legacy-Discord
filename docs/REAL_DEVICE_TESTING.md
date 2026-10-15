@@ -47,6 +47,18 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Message timestamps and login screen
+
+- Message headers use the official format: "Today at 22:54", "Yesterday at
+  22:54", otherwise the locale's short date with a four-digit year plus the
+  short time. On 10.6 the short style is "yy/MM/dd" and date templates return
+  年月日 forms, so only the year field is widened. Verified on 10.6.8
+  (Japanese): "2022/05/04 0:55".
+- Login window rebuilt like the official one (blurple backdrop, "Welcome
+  back!", labelled borderless inputs, full-width blurple Log In button, token
+  login as a link). Verified with the new `login-screen` DevLocal capture; not
+  shown on the device because that requires logging out.
+
 #### Hover states and sectioned emoji picker
 
 - `DLContextTableView` tracks the hovered row: server icons grow a 20pt edge

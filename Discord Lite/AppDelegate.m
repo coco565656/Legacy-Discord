@@ -51,8 +51,10 @@
     return NSMakeSize(width, height);
 }
 - (void)captureLocalFixtureScreenshot:(NSString *)path {
-    if (preferencesWindow && [[preferencesWindow window] isVisible]) {
-        NSView *content = [[preferencesWindow window] contentView];
+    NSWindowController *captureController = (preferencesWindow && [[preferencesWindow window] isVisible]) ? (NSWindowController *)preferencesWindow
+        : ((loginWindow && [[loginWindow window] isVisible]) ? (NSWindowController *)loginWindow : nil);
+    if (captureController) {
+        NSView *content = [[captureController window] contentView];
         NSBitmapImageRep *image = [content bitmapImageRepForCachingDisplayInRect:[content bounds]];
         [content cacheDisplayInRect:[content bounds] toBitmapImageRep:image];
         if (![[image representationUsingType:NSPNGFileType properties:[NSDictionary dictionary]] writeToFile:path atomically:YES]) {
@@ -93,6 +95,11 @@
     [mainWindow showLocalReplayFixtureNamed:fixtureName
                                  windowSize:[self localWindowSizeFromLaunchArguments]];
     // "settings-<section>" opens the production settings window on that section.
+    // "login-screen" opens the production login window (no network use).
+    if ([fixtureName isEqualToString:@"login-screen"]) {
+        loginWindow = [[DLLoginWindowController alloc] initWithWindowNibName:@"DLLoginWindowController"];
+        [loginWindow showWindow:self];
+    }
     if ([fixtureName hasPrefix:@"settings-"]) {
         preferencesWindow = [[DLPreferencesWindowController alloc] initWithWindowNibName:@"DLPreferencesWindowController"];
         [preferencesWindow showWindow:self];
