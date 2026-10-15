@@ -23,6 +23,19 @@ developed. Do not copy its token into source files or issue reports.
    image upload, typing state and reconnect after Wi-Fi is toggled.
 6. Log out and confirm the Keychain item is deleted.
 
+## Snow Leopard builds and signing
+
+`scripts/remote-build-snow-leopard.sh --run` syncs the tracked sources to the
+`MacBook` host, builds Release with Xcode 4.2, signs the app with the
+self-signed "Legacy Discord Dev" identity and relaunches it.
+
+The token is stored in the Keychain, which remembers "Always Allow" per code
+signature. Unsigned builds changed signature on every rebuild, so the Keychain
+asked each time. Run `--setup-signing` once per test Mac: it creates the
+identity in a dedicated `~/Library/LegacyDiscordSigning/signing.keychain`
+(random password in a file only that user can read; the login keychain is not
+touched). After that, choose "Always Allow" once for the signed app.
+
 ## Snow Leopard screen captures
 
 For current UI bug work, reproduce and verify changes in the normal Release
