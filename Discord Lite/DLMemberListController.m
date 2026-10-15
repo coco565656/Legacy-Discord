@@ -229,6 +229,8 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     NSMenu *memberMenu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
     [memberMenu setDelegate:(id)self];
     [tableView setMenu:memberMenu];
+    [tableView setTarget:self];
+    [tableView setAction:@selector(memberRowClicked:)];
     [scrollView setDocumentView:tableView];
     [[scrollView contentView] setPostsBoundsChangedNotifications:YES];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(boundsDidChange:)
@@ -451,6 +453,17 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     CGFloat textWidth = NSWidth([inTableView frameOfCellAtColumn:0 row:row]) - 64.0;
     if ([name sizeWithAttributes:attributes].width <= textWidth) return nil;
     return name;
+}
+
+// Every click opens the profile, also on the row that is already selected.
+-(void)memberRowClicked:(id)sender {
+    NSInteger row = [tableView clickedRow];
+    if (row < 0) return;
+    if ([tableView selectedRow] != row) {
+        [tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:row] byExtendingSelection:NO];
+        return;
+    }
+    [self tableViewSelectionDidChange:nil];
 }
 
 -(void)tableViewSelectionDidChange:(NSNotification *)notification {

@@ -892,6 +892,13 @@ static const NSUInteger DLMaxAttachmentsPerMessage = 10;
     [self updateEditorAfterTextChange];
 }
 
+-(void)setDraftText:(NSString *)text {
+    if (![textView isEditable]) return;
+    [textView setString:(text ? text : @"")];
+    [self updateEditorAfterTextChange];
+    [textView setSelectedRange:NSMakeRange([[textView string] length], 0)];
+}
+
 -(void)insertMentionForUser:(DLUser *)user {
     if (!user || ![textView isEditable]) return;
     NSString *current = [textView string];

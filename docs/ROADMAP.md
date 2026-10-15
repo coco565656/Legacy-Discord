@@ -29,7 +29,7 @@
 - [x] Private user notes in the expanded profile, adapted from Discord Messenger
 - [x] Confirmation before opening links in message text
 - [x] Unread and mention state that survives relaunch (Discord read state from READY; verified on 10.6.8)
-- [ ] Member/profile inspector
+- [x] Member/profile inspector (official popout, Message @user, full profile window)
 - [x] Link embed cards with a strict native renderer (official card style, accent colour, PNG media)
 - [x] Image cache with bounded disk usage (32 MB memory + 200 MB disk LRU, Clear Cache in Settings)
 - [ ] Connection state and reconnect indicator

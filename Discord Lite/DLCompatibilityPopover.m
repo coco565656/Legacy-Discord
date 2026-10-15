@@ -137,16 +137,27 @@ static const CGFloat DLPopoutScreenMargin = 8.0;
     CGFloat width = contentSize.width;
     CGFloat height = contentSize.height;
     NSPoint origin;
+    // Side popouts (profiles) line up with the top of the clicked row, like
+    // the official client, instead of centring on it.
+    CGFloat sideTop = anchor.y + NSHeight(windowRect);
     if (edge == NSMinXEdge) {
-        origin = NSMakePoint(anchor.x - width - DLPopoutAnchorGap, anchor.y + NSHeight(windowRect) / 2.0 - height / 2.0);
+        origin = NSMakePoint(anchor.x - width - DLPopoutAnchorGap, sideTop - height);
     } else if (edge == NSMaxXEdge) {
-        origin = NSMakePoint(anchor.x + NSWidth(windowRect) + DLPopoutAnchorGap, anchor.y + NSHeight(windowRect) / 2.0 - height / 2.0);
+        origin = NSMakePoint(anchor.x + NSWidth(windowRect) + DLPopoutAnchorGap, sideTop - height);
     } else if (edge == NSMinYEdge) {
         origin = NSMakePoint(anchor.x + NSWidth(windowRect) / 2.0 - width / 2.0, anchor.y - height - DLPopoutAnchorGap);
     } else {
         origin = NSMakePoint(anchor.x + NSWidth(windowRect) / 2.0 - width / 2.0, anchor.y + NSHeight(windowRect) + DLPopoutAnchorGap);
     }
 
+    // Keep it inside the window's content area (below the title bar) first.
+    NSWindow *window = [view window];
+    NSRect content = [window contentRectForFrameRect:[window frame]];
+    content = NSInsetRect(content, 8.0, 8.0);
+    if (height <= NSHeight(content)) {
+        if (origin.y + height > NSMaxY(content)) origin.y = NSMaxY(content) - height;
+        if (origin.y < NSMinY(content)) origin.y = NSMinY(content);
+    }
     NSScreen *screen = [[view window] screen] ? [[view window] screen] : [NSScreen mainScreen];
     if (screen) {
         NSRect visible = NSInsetRect([screen visibleFrame], DLPopoutScreenMargin, DLPopoutScreenMargin);

@@ -139,7 +139,8 @@ static void DLAppendScalarToKeys(NSMutableString *exact, NSMutableString *normal
 + (void)setText:(NSString *)text forLabel:(NSTextField *)label {
     NSMutableParagraphStyle *paragraph = [[[NSMutableParagraphStyle alloc] init] autorelease];
     [paragraph setAlignment:[label alignment]];
-    [paragraph setLineBreakMode:NSLineBreakByTruncatingTail];
+    // Wrapping labels (bios, statuses) keep wrapping; others truncate.
+    [paragraph setLineBreakMode:[[label cell] wraps] ? NSLineBreakByWordWrapping : NSLineBreakByTruncatingTail];
     NSFont *font = [label font] ? [label font] : [NSFont systemFontOfSize:[NSFont systemFontSize]];
     NSMutableAttributedString *display = [[[NSMutableAttributedString alloc]
         initWithString:(text ? text : @"") attributes:[NSDictionary dictionaryWithObjectsAndKeys:

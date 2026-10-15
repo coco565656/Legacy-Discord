@@ -513,6 +513,47 @@ static DLController* sharedObject = nil;
     [req start];
 }
 
+-(void)postDirectMessageReady:(DLChannel *)channel draft:(NSString *)draft {
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLDirectMessageChannelReadyNotification object:self
+        userInfo:[NSDictionary dictionaryWithObjectsAndKeys:channel, @"channel", (draft ? draft : @""), @"draft", nil]];
+}
+
+-(void)openDirectMessageWithUser:(DLUser *)user draft:(NSString *)draft {
+    if (![user userID]) return;
+    NSEnumerator *enumerator = [[loadedChannels allValues] objectEnumerator];
+    DLChannel *channel;
+    while (channel = [enumerator nextObject]) {
+        if ([channel isKindOfClass:[DLDirectMessageChannel class]] && ![(DLDirectMessageChannel *)channel isGroupMessage] &&
+            [(DLDirectMessageChannel *)channel recipientWithUserID:[[user userID] description]]) {
+            [self postDirectMessageReady:channel draft:draft];
+            return;
+        }
+    }
+    AsyncHTTPPostRequest *req = [[AsyncHTTPPostRequest alloc] init];
+    [req setParameters:[NSDictionary dictionaryWithObject:[[user userID] description] forKey:@"recipient_id"]];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDOpenDirectMessage];
+    [req setUserInfo:[NSDictionary dictionaryWithObject:(draft ? draft : @"") forKey:@"draft"]];
+    [req setUrl:[@API_ROOT stringByAppendingString:@"/users/@me/channels"]];
+    [req start];
+}
+
+-(void)handleOpenDirectMessageResponse:(AsyncHTTPRequest *)req {
+    if ([req result] != HTTPResultOK) {
+        [self handleHTTPRequestError:req];
+        return;
+    }
+    id response = [[CJSONDeserializer deserializer] deserialize:[req responseData] error:nil];
+    if (![response isKindOfClass:[NSDictionary class]] || ![response objectForKey:@"id"]) return;
+    DLChannel *channel = [loadedChannels objectForKey:[response objectForKey:@"id"]];
+    if (!channel) {
+        channel = [[[DLDirectMessageChannel alloc] initWithDict:response] autorelease];
+        [loadedChannels setObject:channel forKey:[channel channelID]];
+    }
+    [self postDirectMessageReady:channel draft:[[req userInfo] objectForKey:@"draft"]];
+}
+
 -(void)loadPinsForChannel:(DLChannel *)channel {
     if (!channel) return;
     AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
@@ -1348,6 +1389,9 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
             break;
         case RequestIDCreateForumPost:
             [self handleCreateForumPostResponse:request];
+            break;
+        case RequestIDOpenDirectMessage:
+            [self handleOpenDirectMessageResponse:request];
             break;
         case RequestIDDeleteThread:
             if ([request result] != HTTPResultOK) [self handleHTTPRequestError:request];

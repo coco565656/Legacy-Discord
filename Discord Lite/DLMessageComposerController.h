@@ -90,6 +90,8 @@ pendingAttachmentScroller:(NSScroller_BGColor *)pendingAttachmentScroller;
 -(void)userDidStopTyping:(DLUser *)user;
 -(void)showReactionPickerForChatView:(ChatItemViewController *)chatView relativeToView:(NSView *)anchorView;
 -(void)focusInput;
+// Puts text in the composer without sending it.
+-(void)setDraftText:(NSString *)text;
 // Appends an @mention of the user, as the official "Mention" menu item does.
 -(void)insertMentionForUser:(DLUser *)user;
 #if LEGACY_DISCORD_LOCAL_DEV

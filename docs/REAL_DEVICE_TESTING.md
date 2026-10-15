@@ -60,6 +60,21 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### User profile popout
+
+- Official layout: banner, 80 pt avatar with a ring and presence dot, custom
+  status bubble, name, "username \u2022 pronouns" (Twemoji), and an inner
+  panel with ABOUT ME (wrapping, hidden without a bio), MEMBER SINCE (Discord
+  account date from the ID, server join date) and all ROLES (the card grows
+  with them). Others' profiles end with a "Message @name" field: Return opens
+  the DM (created with `POST /users/@me/channels` if needed) and leaves the
+  text in the composer as a draft.
+- Side popouts line up with the clicked row and stay inside the window.
+  Clicking an already selected member opens the profile again.
+- Verified on 10.6.8 with three profiles, including Message @256 opening the
+  existing DM with the draft. During that test an extra Return sent by the
+  test script also sent the draft; it was deleted about a minute later.
+
 #### Search, pins and embeds
 
 - Search results and pinned messages use official-style cards: avatar,

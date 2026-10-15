@@ -51,6 +51,7 @@ static void DLSetSplitHoldingPriorityIfSupported(NSSplitView *splitView, float p
 -(void)dockBadgeInputsDidChange:(NSNotification *)notification;
 -(void)scheduleDockBadgeRefresh;
 -(void)refreshDockBadge;
+-(void)showDirectMessageChannel:(DLChannel *)channel draft:(NSString *)draft;
 -(void)appearanceThemeDidChange:(NSNotification *)notification;
 -(void)applyCurrentTheme;
 -(void)openUserSettings:(id)sender;
@@ -283,6 +284,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageDisplayScaleDidChange:) name:DLChatDisplayPreferencesDidChangeNotification object:nil];
     // Dock badge: mention and DM counts, like the official client's unread badge.
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(dockBadgeInputsDidChange:) name:DLServerMentionCountDidChangeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(directMessageChannelReady:) name:DLDirectMessageChannelReadyNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(dockBadgeInputsDidChange:) name:DLUnreadBadgePreferenceDidChangeNotification object:nil];
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
     [myUserAvatarImage setImage:[DLUtil imageResize:[[[NSImage alloc] initWithContentsOfFile:[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"discord_placeholder.png"]] autorelease] newSize:myUserAvatarImage.frame.size cornerRadius:MY_USER_AVATAR_RADIUS]];
@@ -602,6 +604,14 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
              showingDirectMessages:(BOOL)showingDirectMessages
                     selectedChannel:(DLChannel *)selectedChannel {
     isLoadingViews = NO;
+    if (showingDirectMessages && pendingDirectMessageChannel) {
+        DLChannel *channel = [pendingDirectMessageChannel autorelease];
+        NSString *draft = [pendingDirectMessageDraft autorelease];
+        pendingDirectMessageChannel = nil;
+        pendingDirectMessageDraft = nil;
+        [self showDirectMessageChannel:channel draft:draft];
+        return;
+    }
     if (showingDirectMessages && !selectedChannel) {
         [directMessageController showFriendsHomeWithChannels:items];
         [mainHeaderController setChannelControlsHidden:YES];
@@ -619,6 +629,37 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
         }
     }
 #endif
+}
+
+// "Message @name" in a profile: switch to Direct Messages and open the DM
+// with the typed text left in the composer, ready to send.
+-(void)directMessageChannelReady:(NSNotification *)notification {
+    DLChannel *channel = [[notification userInfo] objectForKey:@"channel"];
+    NSString *draft = [[notification userInfo] objectForKey:@"draft"];
+    if (!channel) return;
+    DLServer *home = [[DLController sharedInstance] myServerItem];
+    if ([[[DLController sharedInstance] selectedServer] isEqual:home]) {
+        [self showDirectMessageChannel:channel draft:draft];
+        return;
+    }
+    [pendingDirectMessageChannel release];
+    pendingDirectMessageChannel = [channel retain];
+    [pendingDirectMessageDraft release];
+    pendingDirectMessageDraft = [draft copy];
+    NSMutableArray *servers = [NSMutableArray arrayWithObject:home];
+    NSEnumerator *enumerator = [[[DLController sharedInstance] userServers] objectEnumerator];
+    DLServer *server;
+    while (server = [enumerator nextObject]) if (![server isEqual:home]) [servers addObject:server];
+    [serverNavigationController displayServerItems:servers selectedServer:home myServer:home];
+    [self selectServer:home];
+}
+
+-(void)showDirectMessageChannel:(DLChannel *)channel draft:(NSString *)draft {
+    [directMessageController hideFriendsHome];
+    [channelNavigationController selectChannelWithoutNotifying:channel];
+    [self selectChannel:channel];
+    if ([draft length]) [messageComposerController setDraftText:draft];
+    [messageComposerController focusInput];
 }
 
 -(void)relationshipsDidUpdate {
@@ -843,6 +884,8 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 -(void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
+    [pendingDirectMessageChannel release];
+    [pendingDirectMessageDraft release];
     [messagePresentationController setDelegate:nil];
     [messagePresentationController release];
     [messageSearchController setDelegate:nil];

@@ -19,7 +19,11 @@
     } else {
         NSColor *fillColor = backgroundColor ? backgroundColor : [NSColor clearColor];
         [fillColor set];
-        NSRectFillUsingOperation([self bounds], NSCompositeSourceOver);
+        if (cornerRadius > 0.0) {
+            [[NSBezierPath bezierPathWithRoundedRect:[self bounds] xRadius:cornerRadius yRadius:cornerRadius] fill];
+        } else {
+            NSRectFillUsingOperation([self bounds], NSCompositeSourceOver);
+        }
     }
 
     if (bottomBorderColor) {
@@ -31,6 +35,13 @@
         [leftBorderColor set];
         NSRectFill(NSMakeRect(0.0, 0.0, 1.0, NSHeight([self bounds])));
     }
+}
+-(void)setCornerRadius:(CGFloat)radius {
+    cornerRadius = radius;
+    [self setNeedsDisplay:YES];
+}
+-(BOOL)isOpaque {
+    return NO;
 }
 -(void)setBackgroundColor:(NSColor *)bgColor {
     [backgroundColor release];

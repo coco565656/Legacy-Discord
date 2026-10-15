@@ -7,6 +7,7 @@
 #import "DLController.h"
 #import "DLUtil.h"
 #import "DLTwemojiRenderer.h"
+#import "DLMainWindowChromeControls.h"
 #import "DLServerMember.h"
 #import "HTTPCache.h"
 #import "AsyncHTTPGetRequest.h"
@@ -195,7 +196,7 @@
         return;
     }
     CGFloat size = [[result objectForKey:@"size"] doubleValue];
-    if (size == 72.0 && profileAvatarButton) {
+    if (size == 80.0 && profileAvatarButton) {
         [profileAvatarButton setImage:image];
     } else if (size == 128.0 && profileDetailAvatarView) {
         [profileDetailAvatarView setImage:image];
@@ -311,6 +312,26 @@
         if ([status isKindOfClass:[NSString class]] && [status length] > 0) return status;
     }
     return nil;
+}
+
+// Height the role chips need at maxWidth (same wrapping as below).
+-(CGFloat)roleChipsHeightForRoleIDs:(NSArray *)roleIDs maxWidth:(CGFloat)maxWidth {
+    CGFloat x = 0.0;
+    NSInteger rows = 1;
+    NSEnumerator *enumerator = [roleIDs objectEnumerator];
+    NSString *roleID;
+    while (roleID = [enumerator nextObject]) {
+        if ([[roleID description] isEqualToString:[[profileServer serverID] description]]) continue;
+        NSString *name = [[profileServer roleWithID:[roleID description]] objectForKey:@"name"];
+        if (![name isKindOfClass:[NSString class]] || [name length] == 0) name = @"Role";
+        CGFloat width = MIN(maxWidth, MAX(54.0, [[DLProfileRoleChipView displayStringForName:name] size].width + 29.0));
+        if (x > 0.0 && x + width > maxWidth) {
+            x = 0.0;
+            rows++;
+        }
+        x += width + 5.0;
+    }
+    return rows * 27.0;
 }
 
 -(void)reloadRoleChipsInView:(NSView *)container roleIDs:(NSArray *)roleIDs maxWidth:(CGFloat)maxWidth {
@@ -435,8 +456,29 @@
     if ([mutualGuilds count] > 0) {
         [metadata addObject:[NSString stringWithFormat:@"%ld mutual server%@", (long)[mutualGuilds count], [mutualGuilds count] == 1 ? @"" : @"s"]];
     }
-    [profileBioField setStringValue:bio];
-    [profileMetadataField setStringValue:[metadata count] ? [metadata componentsJoinedByString:@"  •  "] : @"Profile loaded"];
+    // Popout: "username • pronouns", ABOUT ME only with a bio, and MEMBER
+    // SINCE with the account and server dates like the official card.
+    NSString *usernameLine = [profileUser username] ? [profileUser username] : @"";
+    if ([pronouns isKindOfClass:[NSString class]] && [pronouns length]) {
+        usernameLine = [NSString stringWithFormat:@"%@  \u2022  %@", usernameLine, pronouns];
+    }
+    [DLTwemojiRenderer setText:usernameLine forLabel:profileUsernameField];
+    [DLTwemojiRenderer setText:bio forLabel:profileBioField];
+    [profileAboutHeader setHidden:([bio length] == 0)];
+    if ([bio length] == 0) [profileBioField setStringValue:@""];
+    NSMutableArray *since = [NSMutableArray array];
+    NSDate *created = [DLUtil dateFromSnowflake:[[profileUser userID] description]];
+    NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+    [formatter setFormatterBehavior:NSDateFormatterBehavior10_4];
+    [formatter setDateStyle:NSDateFormatterMediumStyle];
+    [formatter setTimeStyle:NSDateFormatterNoStyle];
+    if (created) [since addObject:[NSString stringWithFormat:@"Discord %@", [formatter stringFromDate:created]]];
+    NSString *joinedAt = [guildMember objectForKey:@"joined_at"];
+    NSDate *joinedDate = [joinedAt isKindOfClass:[NSString class]] ? [DLUtil dateFromTimestampString:joinedAt] : nil;
+    if (joinedDate && ![profileServer isEqual:[[DLController sharedInstance] myServerItem]]) {
+        [since addObject:[NSString stringWithFormat:@"Server %@", [formatter stringFromDate:joinedDate]]];
+    }
+    [profileMetadataField setStringValue:[since componentsJoinedByString:@"   \u2022   "]];
     [profileDetailBioField setStringValue:bio];
     [profileDetailMetadataField setStringValue:[metadata count] ? [metadata componentsJoinedByString:@"  •  "] : @""];
     [profileMetadataField setToolTip:[profileMetadataField stringValue]];
@@ -444,7 +486,7 @@
     [self reloadRoleChipsInView:profileRoleContainer roleIDs:roles maxWidth:NSWidth([profileRoleContainer bounds])];
     [self reloadRoleChipsInView:profileDetailRoleContainer roleIDs:roles maxWidth:NSWidth([profileDetailRoleContainer bounds])];
     NSString *customStatus = [self profileCustomStatusFromData:profile];
-    [profileStatusField setStringValue:customStatus ? customStatus : @""];
+    [DLTwemojiRenderer setText:(customStatus ? customStatus : @"") forLabel:profileStatusField];
     [profileStatusBubble setHidden:customStatus == nil];
     [profileDetailStatusField setStringValue:customStatus ? customStatus : @""];
     [profileDetailStatusBubble setHidden:customStatus == nil];
@@ -477,6 +519,13 @@
             [request start];
         }
     }
+}
+
+-(IBAction)messageFromProfile:(id)sender {
+    NSString *text = [[profileMessageField stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    DLUser *user = [[profileUser retain] autorelease];
+    [profilePopover close];
+    [[DLController sharedInstance] openDirectMessageWithUser:user draft:text];
 }
 
 -(void)showProfileForUser:(DLUser *)user relativeToRect:(NSRect)rect ofView:(NSView *)view {
@@ -512,9 +561,16 @@
     [profileStatusBubble release]; profileStatusBubble = nil;
     [profileStatusField release]; profileStatusField = nil;
 
-    NSView_BGColor *card = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, 0.0, 340.0, 410.0)] autorelease];
+    // Official user popout: banner, avatar with a ring and presence dot,
+    // names, then ABOUT ME / MEMBER SINCE / ROLES in an inner panel and a
+    // "Message @name" field (not on one's own profile).
+    BOOL isMe = [[[user userID] description] isEqualToString:[[[[DLController sharedInstance] myUser] userID] description]];
+    CGFloat rolesHeight = MIN(6 * 27.0, [self roleChipsHeightForRoleIDs:[profileMember roles] maxWidth:292.0]);
+    CGFloat cardHeight = (isMe ? 403.0 : 447.0) + rolesHeight;
+    CGFloat base = isMe ? 0.0 : 44.0;
+    NSView_BGColor *card = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, 0.0, 340.0, cardHeight)] autorelease];
     [card setBackgroundColor:[DLUtil nativeContentColor]];
-    NSView_BGColor *banner = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, 305.0, 340.0, 105.0)] autorelease];
+    NSView_BGColor *banner = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, cardHeight - 105.0, 340.0, 105.0)] autorelease];
     [banner setBackgroundColor:[NSColor colorWithCalibratedRed:0.36 green:0.48 blue:0.72 alpha:1.0]];
     [card addSubview:banner];
     profileBannerView = [banner retain];
@@ -524,15 +580,20 @@
     [banner addSubview:bannerImage];
     profileBannerImageView = [bannerImage retain];
 
-    NSButton *avatarButton = [[[NSButton alloc] initWithFrame:NSMakeRect(20.0, 263.0, 76.0, 76.0)] autorelease];
+    CGFloat avatarY = cardHeight - 105.0 - 40.0;
+    NSView_BGColor *ring = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(12.0, avatarY - 6.0, 92.0, 92.0)] autorelease];
+    [ring setBackgroundColor:[DLUtil nativeContentColor]];
+    [ring setCornerRadius:46.0];
+    [card addSubview:ring];
+    NSButton *avatarButton = [[[NSButton alloc] initWithFrame:NSMakeRect(18.0, avatarY, 80.0, 80.0)] autorelease];
     [avatarButton setBordered:NO];
     [avatarButton setRefusesFirstResponder:YES];
     [avatarButton setTitle:@""];
-    NSImage *avatar = [self cachedProfileAvatarForUser:user size:72.0];
+    NSImage *avatar = [self cachedProfileAvatarForUser:user size:80.0];
     if (!avatar) {
         avatar = [[[NSImage alloc] initWithContentsOfFile:
                    [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"discord_placeholder.png"]] autorelease];
-        [avatar setSize:NSMakeSize(72.0, 72.0)];
+        [avatar setSize:NSMakeSize(80.0, 80.0)];
     }
     [avatarButton setImage:avatar];
     [avatarButton setImagePosition:NSImageOnly];
@@ -542,10 +603,16 @@
     [card addSubview:avatarButton];
     [profileAvatarButton release];
     profileAvatarButton = [avatarButton retain];
+    NSString *presence = isMe ? @"online" : [[DLController sharedInstance] presenceStatusForUserID:[user userID]];
+    if (!isMe && [profileMember presenceStatus]) presence = [profileMember presenceStatus];
+    DLStatusDotView *dot = [[[DLStatusDotView alloc] initWithFrame:NSMakeRect(74.0, avatarY - 2.0, 26.0, 26.0)] autorelease];
+    [dot setDotColor:[DLUtil statusColorForPresenceStatus:presence] ringColor:[DLUtil nativeContentColor]];
+    [card addSubview:dot];
+
     DLProfileStatusBubbleView *statusBubble = [[[DLProfileStatusBubbleView alloc]
-                                               initWithFrame:NSMakeRect(108.0, 270.0, 212.0, 54.0)] autorelease];
+                                               initWithFrame:NSMakeRect(112.0, avatarY + 12.0, 212.0, 60.0)] autorelease];
     [statusBubble setHidden:YES];
-    NSTextField *statusField = [self profileLabelWithFrame:NSMakeRect(14.0, 7.0, 184.0, 40.0)
+    NSTextField *statusField = [self profileLabelWithFrame:NSMakeRect(12.0, 5.0, 188.0, 50.0)
                                                        text:@"" font:[NSFont systemFontOfSize:11.0]
                                                       color:[DLUtil nativePrimaryTextColor]];
     [[statusField cell] setLineBreakMode:NSLineBreakByWordWrapping];
@@ -558,44 +625,85 @@
     profileStatusField = [statusField retain];
 
     NSString *displayName = [user globalName] ? [user globalName] : [user username];
-    [card addSubview:[self profileLabelWithFrame:NSMakeRect(20.0, 236.0, 300.0, 25.0)
-                                               text:displayName
-                                               font:[NSFont boldSystemFontOfSize:18.0]
-                                              color:[DLUtil nativePrimaryTextColor]]];
-    [card addSubview:[self profileLabelWithFrame:NSMakeRect(20.0, 213.0, 300.0, 20.0)
-                                               text:[user username]
-                                               font:[NSFont systemFontOfSize:12.0]
-                                              color:[DLUtil nativeSecondaryTextColor]]];
-    NSTextField *bioField = [self profileLabelWithFrame:NSMakeRect(20.0, 164.0, 300.0, 42.0)
-                                                   text:@"Loading profile details…"
-                                                   font:[NSFont systemFontOfSize:11.0]
+    NSTextField *nameField = [self profileLabelWithFrame:NSMakeRect(16.0, avatarY - 40.0, 308.0, 26.0)
+                                                    text:@"" font:[NSFont boldSystemFontOfSize:20.0]
+                                                   color:[DLUtil nativePrimaryTextColor]];
+    [DLTwemojiRenderer setText:displayName forLabel:nameField];
+    [card addSubview:nameField];
+    NSTextField *usernameField = [self profileLabelWithFrame:NSMakeRect(16.0, avatarY - 60.0, 308.0, 18.0)
+                                                        text:[user username]
+                                                        font:[NSFont systemFontOfSize:13.0]
+                                                       color:[DLUtil nativePrimaryTextColor]];
+    [card addSubview:usernameField];
+    [profileUsernameField release];
+    profileUsernameField = [usernameField retain];
+
+    // Inner panel with the sections.
+    CGFloat panelTop = avatarY - 70.0;
+    NSView_BGColor *panel = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(12.0, base + 12.0, 316.0, panelTop - base - 12.0)] autorelease];
+    [panel setBackgroundColor:[DLUtil nativeSidebarColor]];
+    [panel setCornerRadius:8.0];
+    [card addSubview:panel];
+    CGFloat panelHeight = NSHeight([panel bounds]);
+    NSTextField *aboutHeader = [self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 26.0, 290.0, 16.0)
+                                                      text:@"ABOUT ME" font:[NSFont boldSystemFontOfSize:11.0]
+                                                     color:[DLUtil nativePrimaryTextColor]];
+    [panel addSubview:aboutHeader];
+    [profileAboutHeader release];
+    profileAboutHeader = [aboutHeader retain];
+    NSTextField *bioField = [self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 78.0, 290.0, 50.0)
+                                                   text:@"Loading profile…"
+                                                   font:[NSFont systemFontOfSize:12.0]
                                                   color:[DLUtil nativePrimaryTextColor]];
     [[bioField cell] setLineBreakMode:NSLineBreakByWordWrapping];
     [[bioField cell] setWraps:YES];
     [[bioField cell] setScrollable:NO];
     [[bioField cell] setUsesSingleLineMode:NO];
-    [card addSubview:bioField];
+    [panel addSubview:bioField];
     profileBioField = [bioField retain];
-    NSTextField *metadataField = [self profileLabelWithFrame:NSMakeRect(20.0, 136.0, 300.0, 20.0)
-                                                        text:@"Loading membership details…"
-                                                        font:[NSFont systemFontOfSize:10.0]
+    [panel addSubview:[self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 102.0, 290.0, 16.0)
+                                             text:@"MEMBER SINCE" font:[NSFont boldSystemFontOfSize:11.0]
+                                            color:[DLUtil nativePrimaryTextColor]]];
+    NSTextField *metadataField = [self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 122.0, 290.0, 18.0)
+                                                        text:@""
+                                                        font:[NSFont systemFontOfSize:12.0]
                                                        color:[DLUtil nativeSecondaryTextColor]];
-    [card addSubview:metadataField];
+    [panel addSubview:metadataField];
     profileMetadataField = [metadataField retain];
-    [card addSubview:[self profileLabelWithFrame:NSMakeRect(20.0, 106.0, 300.0, 20.0)
-                                               text:@"ROLES"
-                                               font:[NSFont boldSystemFontOfSize:10.0]
-                                              color:[DLUtil nativeSecondaryTextColor]]];
-    NSView *roleContainer = [[[NSView alloc] initWithFrame:NSMakeRect(20.0, 14.0, 300.0, 88.0)] autorelease];
-    [card addSubview:roleContainer];
+    [panel addSubview:[self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 146.0, 290.0, 16.0)
+                                             text:@"ROLES" font:[NSFont boldSystemFontOfSize:11.0]
+                                            color:[DLUtil nativePrimaryTextColor]]];
+    NSView *roleContainer = [[[NSView alloc] initWithFrame:NSMakeRect(12.0, 6.0, 292.0, MAX(27.0, panelHeight - 156.0))] autorelease];
+    [panel addSubview:roleContainer];
     profileRoleContainer = [roleContainer retain];
-    [self reloadRoleChipsInView:roleContainer roleIDs:[profileMember roles] maxWidth:300.0];
+    [self reloadRoleChipsInView:roleContainer roleIDs:[profileMember roles] maxWidth:292.0];
+
+    [profileMessageField release];
+    profileMessageField = nil;
+    if (!isMe) {
+        NSTextField *messageField = [[[NSTextField alloc] initWithFrame:NSMakeRect(12.0, 12.0, 316.0, 32.0)] autorelease];
+        [messageField setBezeled:NO];
+        [messageField setBordered:NO];
+        [messageField setDrawsBackground:YES];
+        [messageField setBackgroundColor:[DLUtil nativeInputColor]];
+        [messageField setTextColor:[DLUtil nativePrimaryTextColor]];
+        [messageField setFont:[NSFont systemFontOfSize:13.0]];
+        [messageField setFocusRingType:NSFocusRingTypeNone];
+        [[messageField cell] setPlaceholderString:[NSString stringWithFormat:@"Message @%@", displayName]];
+        [[messageField cell] setScrollable:YES];
+        [messageField setTarget:self];
+        [messageField setAction:@selector(messageFromProfile:)];
+        [card addSubview:messageField];
+        profileMessageField = [messageField retain];
+    }
     [profilePopoverController setView:card];
     [profilePopover setContentViewController:profilePopoverController];
-    [profilePopover setContentSize:NSMakeSize(340.0, 410.0)];
+    [profilePopover setContentSize:NSMakeSize(340.0, NSHeight([card frame]))];
     NSRectEdge edge = [view isKindOfClass:[NSTableView class]] ? NSMinXEdge : NSMaxXEdge;
     [profilePopover showRelativeToRect:rect ofView:view preferredEdge:edge];
-    [self requestProfileAvatarForUser:user size:72.0 radius:36.0];
+    // Leave the message field unfocused so its "Message @name" placeholder shows.
+    [[card window] makeFirstResponder:nil];
+    [self requestProfileAvatarForUser:user size:80.0 radius:40.0];
     [self requestProfileDataForUser:user server:server];
 }
 
@@ -925,7 +1033,7 @@
                                           cornerRadius:size / 2.0]];
     }
     if (profileUser && [user isEqual:profileUser]) {
-        [self requestProfileAvatarForUser:user size:72.0 radius:36.0];
+        [self requestProfileAvatarForUser:user size:80.0 radius:40.0];
         if (profileDetailPanel) [self requestProfileAvatarForUser:user size:128.0 radius:64.0];
     }
 }

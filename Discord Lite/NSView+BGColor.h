@@ -15,11 +15,14 @@
     NSColor *gradientEndColor;
     NSColor *bottomBorderColor;
     NSColor *leftBorderColor;
+    CGFloat cornerRadius;
 }
 
 -(void)setBackgroundColor:(NSColor *)bgColor;
 -(void)setGradientStartColor:(NSColor *)startColor endColor:(NSColor *)endColor;
 -(void)setBottomBorderColor:(NSColor *)borderColor;
 -(void)setLeftBorderColor:(NSColor *)borderColor;
+// Rounds the filled background (0 = square, the default).
+-(void)setCornerRadius:(CGFloat)radius;
 
 @end

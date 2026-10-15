@@ -37,6 +37,9 @@
     NSView *profileRoleContainer;
     NSView *profileStatusBubble;
     NSTextField *profileStatusField;
+    NSTextField *profileUsernameField;
+    NSTextField *profileAboutHeader;
+    NSTextField *profileMessageField;
     NSView_BGColor *profileDetailBannerView;
     NSImageView *profileDetailBannerImageView;
     NSTextField *profileDetailBioField;

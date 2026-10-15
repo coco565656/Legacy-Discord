@@ -79,6 +79,12 @@ static NSDictionary *superPropertiesDict;
     long snowflake = (((long)date * 1000) - 1420070400000) * 4194304;
     return [NSString stringWithFormat:@"%ld", snowflake];
 }
++(NSDate *)dateFromSnowflake:(NSString *)snowflake {
+    unsigned long long value = strtoull([snowflake UTF8String], NULL, 10);
+    if (value == 0) return nil;
+    return [NSDate dateWithTimeIntervalSince1970:((value >> 22) + 1420070400000ULL) / 1000.0];
+}
+
 +(NSString *)discordTimestampStringForDate:(NSDate *)date {
     if (!date) return @"";
     NSCalendar *cal = [NSCalendar currentCalendar];

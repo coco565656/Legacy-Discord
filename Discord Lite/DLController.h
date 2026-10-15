@@ -26,6 +26,8 @@
 #define DLThreadStarterDidLoadNotification @"DLThreadStarterDidLoadNotification"
 // Posted after creating a forum post: userInfo {thread} on success or {error}.
 #define DLForumPostCreationDidFinishNotification @"DLForumPostCreationDidFinishNotification"
+// Posted when a 1:1 DM is ready to open: userInfo {channel, draft}.
+#define DLDirectMessageChannelReadyNotification @"DLDirectMessageChannelReadyNotification"
 
 #define kDefaultsToken "token"
 
@@ -55,7 +57,8 @@ typedef enum {
     RequestIDNotificationSettings = 22,
     RequestIDForumStarter = 23,
     RequestIDCreateForumPost = 24,
-    RequestIDDeleteThread = 25
+    RequestIDDeleteThread = 25,
+    RequestIDOpenDirectMessage = 26
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -193,6 +196,9 @@ typedef enum {
                         content:(NSString *)content tagIDs:(NSArray *)tagIDs;
 // DELETE /channels/{thread}; THREAD_DELETE then removes it from the lists.
 -(void)deleteThread:(DLChannel *)thread;
+// Finds the 1:1 DM with user (creating it with POST /users/@me/channels when
+// needed) and posts DLDirectMessageChannelReadyNotification with draft.
+-(void)openDirectMessageWithUser:(DLUser *)user draft:(NSString *)draft;
 
 
 -(DLServer *)myServerItem;

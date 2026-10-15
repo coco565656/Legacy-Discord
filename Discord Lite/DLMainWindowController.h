@@ -38,6 +38,9 @@
 @interface DLMainWindowController : NSWindowController <DLControllerDelegate, DLUserDelegate, DLServerNavigationControllerDelegate, DLChannelNavigationControllerDelegate, DLMemberListControllerDelegate, DLThreadControllerDelegate, DLMessageSearchControllerDelegate, DLPinsControllerDelegate, DLMessageComposerControllerDelegate, DLDirectMessageControllerDelegate, DLMessagePresentationControllerDelegate, DLMainHeaderControllerDelegate, NSSplitViewDelegate> {
     
     BOOL isLoadingViews;
+    // A DM to open once the Direct Messages list has been displayed.
+    DLChannel *pendingDirectMessageChannel;
+    NSString *pendingDirectMessageDraft;
 
     IBOutlet NSView_BGColor *messageEntryContainerView;
     IBOutlet NSView_BGColor *channelViewHeader;
