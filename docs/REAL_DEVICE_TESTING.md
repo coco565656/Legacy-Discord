@@ -47,6 +47,17 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Dark title bar
+
+- `DLDarkTitlebarView` paints a dark title bar (rail color, rounded top
+  corners, centered title dimmed when inactive) over the standard titled
+  window's title area, below the traffic-light buttons, and ignores the mouse
+  so the native frame keeps dragging, double-click and resizing. Installed on
+  the main, Settings and login windows.
+- Verified on 10.6.8: dark bar with traffic lights and title on the main
+  window; dragging the bar moved the window (then moved back). Settings and
+  login title bars, minimize/zoom and resizing were not exercised.
+
 #### Message timestamps and login screen
 
 - Message headers use the official format: "Today at 22:54", "Yesterday at

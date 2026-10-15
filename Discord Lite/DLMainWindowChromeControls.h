@@ -49,6 +49,16 @@ enum {
 @interface DLDarkPopUpButtonCell : NSPopUpButtonCell
 @end
 
+// Dark Discord-style title bar painted over a standard titled window's title
+// area. The native frame keeps the traffic-light buttons, dragging,
+// double-click and resizing; this view only draws and ignores the mouse.
+@interface DLDarkTitlebarView : NSView {
+    NSString *drawnTitle;
+}
+// Adds the overlay to window's frame view, below its standard buttons.
++(void)installInWindow:(NSWindow *)window;
+@end
+
 // Discord's filled blurple button (Log In and other primary actions).
 @interface DLPrimaryButton : NSButton
 @end

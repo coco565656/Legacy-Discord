@@ -23,6 +23,7 @@
     NSRect frame = [self.window frame];
     frame.size = NSMakeSize(440.0, 452.0);
     [self.window setFrame:frame display:NO];
+    [DLDarkTitlebarView installInWindow:self.window];
 
     NSView *content = [self.window contentView];
     NSArray *oldViews = [[content subviews] copy];

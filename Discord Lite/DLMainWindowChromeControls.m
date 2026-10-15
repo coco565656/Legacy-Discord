@@ -270,3 +270,77 @@
         withAttributes:attributes];
 }
 @end
+
+@implementation DLDarkTitlebarView
++(void)installInWindow:(NSWindow *)window {
+    NSView *frameView = [[window contentView] superview];
+    NSButton *closeButton = [window standardWindowButton:NSWindowCloseButton];
+    if (!frameView || !closeButton) return;
+    CGFloat titleHeight = NSHeight([window frame]) - NSHeight([window contentRectForFrameRect:[window frame]]);
+    if (titleHeight <= 0.0) return;
+    NSRect bounds = [frameView bounds];
+    DLDarkTitlebarView *bar = [[[DLDarkTitlebarView alloc] initWithFrame:
+        NSMakeRect(0.0, NSMaxY(bounds) - titleHeight, NSWidth(bounds), titleHeight)] autorelease];
+    [bar setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
+    NSView *anchor = [closeButton superview] == frameView ? closeButton : nil;
+    if (anchor) [frameView addSubview:bar positioned:NSWindowBelow relativeTo:anchor];
+    else [frameView addSubview:bar positioned:NSWindowBelow relativeTo:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:bar selector:@selector(windowDidUpdate:)
+                                                 name:NSWindowDidUpdateNotification object:window];
+    [[NSNotificationCenter defaultCenter] addObserver:bar selector:@selector(windowMainStateDidChange:)
+                                                 name:NSWindowDidBecomeMainNotification object:window];
+    [[NSNotificationCenter defaultCenter] addObserver:bar selector:@selector(windowMainStateDidChange:)
+                                                 name:NSWindowDidResignMainNotification object:window];
+}
+-(BOOL)isOpaque {
+    return NO;
+}
+-(NSView *)hitTest:(NSPoint)point {
+    return nil;
+}
+-(void)windowMainStateDidChange:(NSNotification *)notification {
+    [self setNeedsDisplay:YES];
+}
+// Window titles change in many places; redraw when the drawn one is stale.
+-(void)windowDidUpdate:(NSNotification *)notification {
+    NSString *title = [[self window] title];
+    if (title != drawnTitle && ![title isEqualToString:drawnTitle]) [self setNeedsDisplay:YES];
+}
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = [self bounds];
+    // Rounded top corners match the window frame's own corners.
+    NSBezierPath *shape = [NSBezierPath bezierPath];
+    CGFloat radius = 4.0;
+    [shape moveToPoint:NSMakePoint(NSMinX(bounds), NSMinY(bounds))];
+    [shape lineToPoint:NSMakePoint(NSMinX(bounds), NSMaxY(bounds) - radius)];
+    [shape appendBezierPathWithArcFromPoint:NSMakePoint(NSMinX(bounds), NSMaxY(bounds))
+                                    toPoint:NSMakePoint(NSMinX(bounds) + radius, NSMaxY(bounds)) radius:radius];
+    [shape lineToPoint:NSMakePoint(NSMaxX(bounds) - radius, NSMaxY(bounds))];
+    [shape appendBezierPathWithArcFromPoint:NSMakePoint(NSMaxX(bounds), NSMaxY(bounds))
+                                    toPoint:NSMakePoint(NSMaxX(bounds), NSMaxY(bounds) - radius) radius:radius];
+    [shape lineToPoint:NSMakePoint(NSMaxX(bounds), NSMinY(bounds))];
+    [shape closePath];
+    [[DLUtil nativeServerRailColor] setFill];
+    [shape fill];
+
+    NSString *title = [[self window] title] ? [[self window] title] : @"";
+    [drawnTitle release];
+    drawnTitle = [title copy];
+    NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
+    [style setAlignment:NSCenterTextAlignment];
+    [style setLineBreakMode:NSLineBreakByTruncatingTail];
+    BOOL active = [[self window] isMainWindow];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont boldSystemFontOfSize:12.0], NSFontAttributeName,
+                                (active ? [DLUtil nativeSecondaryTextColor] : [[DLUtil nativeSecondaryTextColor] colorWithAlphaComponent:0.5]), NSForegroundColorAttributeName,
+                                style, NSParagraphStyleAttributeName, nil];
+    NSSize size = [title sizeWithAttributes:attributes];
+    [title drawInRect:NSMakeRect(80.0, floor(NSMidY(bounds) - size.height / 2.0), MAX(0.0, NSWidth(bounds) - 160.0), size.height)
+       withAttributes:attributes];
+}
+-(void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [drawnTitle release];
+    [super dealloc];
+}
+@end

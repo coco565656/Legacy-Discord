@@ -160,6 +160,7 @@ enum {
     windowFrame.size = NSMakeSize(DLSettingsWindowWidth, DLSettingsWindowHeight);
     [self.window setFrame:windowFrame display:NO];
     [self.window setMinSize:NSMakeSize(680.0, 460.0)];
+    [DLDarkTitlebarView installInWindow:self.window];
 
     NSArray *oldViews = [[[self.window contentView] subviews] copy];
     NSEnumerator *oldViewEnumerator = [oldViews objectEnumerator];

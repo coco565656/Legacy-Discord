@@ -163,6 +163,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [messageSearchController setDelegate:self];
     [pinsController setDelegate:self];
     [self installResizableMainSplitView];
+    [DLDarkTitlebarView installInWindow:self.window];
     userPanelController = [[DLUserPanelController alloc] initWithPanelView:userInfoView
                                                                 avatarView:myUserAvatarImage
                                                                  nameField:myUsernameTextField
