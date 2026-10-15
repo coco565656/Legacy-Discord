@@ -65,8 +65,9 @@ the DevLocal view capture remains useful for deterministic local regression.
   first digits of the name as the ID, failed to load and showed `:name:` at
   jumbo size across several lines. The ID is now the digits after the last
   colon, and the not-yet-loaded fallback is drawn at text size.
-- Verified on 10.6.8: the user sent a custom emoji after the fixes without a
-  crash.
+- Verified on 10.6.8: the user sent custom emoji and received a DM with a
+  custom emoji after the fixes without a crash; the `20240614_214205` emoji
+  now renders as an image.
 
 #### Notifications and mute
 
@@ -89,9 +90,11 @@ the DevLocal view capture remains useful for deterministic local regression.
 - Fixed during the pass: a channel without a category has an `NSNull` parent
   ID; calling `length` on it raised in drawing and left the window half
   rendered.
-- Not yet seen on a device: the Dock badge and bounce (need an incoming mention
-  or DM). A duplicated separator in the server menu was removed after the
-  device build.
+- Dock badge verified on 10.6.8: with the app in the background, a DM from
+  another account showed "1" on the Dock icon (and on the home icon and DM
+  row); opening the DM cleared all three. A DM arriving while that DM was open
+  correctly added no badge. The bounce itself was not captured in a
+  screenshot. The duplicated server-menu separator was removed.
 
 #### Remaining checks and fixes
 

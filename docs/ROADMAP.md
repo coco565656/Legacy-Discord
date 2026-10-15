@@ -40,7 +40,7 @@
 - [ ] Forum channel post list
 - [ ] Channel message search
 - [ ] Pins and improved attachment handling
-- [x] Notification and per-channel mute controls (server/channel/category/DM mute with durations, Dock badge and bounce; badge and bounce not yet seen on a device)
+- [x] Notification and per-channel mute controls (server/channel/category/DM mute with durations, Dock badge and bounce; badge verified on 10.6.8)
 
 ## Milestone 3: voice
 
