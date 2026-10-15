@@ -36,8 +36,12 @@ enum {
 // menuRow is the row under the right-click, for the menu delegate.
 @interface DLContextTableView : NSTableView {
     NSInteger menuRow;
+    NSInteger hoveredRow;
+    NSTrackingArea *hoverTrackingArea;
 }
 -(NSInteger)menuRow;
+// Row under the mouse (-1 when none), for Discord-style hover states.
+-(NSInteger)hoveredRow;
 @end
 
 // Discord-style dark dropdown in place of the white Aqua pop-up bezel. The

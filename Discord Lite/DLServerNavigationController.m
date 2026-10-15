@@ -32,6 +32,8 @@
     if (!representedServer) return;
     NSInteger row = [(NSTableView *)controlView rowAtPoint:NSMakePoint(NSMidX(cellFrame), NSMidY(cellFrame))];
     BOOL selected = (row >= 0 && [[(NSTableView *)controlView selectedRowIndexes] containsIndex:(NSUInteger)row]);
+    BOOL hovered = (row >= 0 && [controlView isKindOfClass:[DLContextTableView class]] &&
+                    row == [(DLContextTableView *)controlView hoveredRow]);
 
     if (drawsSeparatorBefore) {
         [[NSColor colorWithCalibratedWhite:0.38 alpha:1.0] set];
@@ -42,7 +44,8 @@
     NSRect iconRect = NSMakeRect(NSMidX(cellFrame) - 22.0, NSMidY(cellFrame) - 22.0, 44.0, 44.0);
     NSImage *sourceImage = [[[NSImage alloc] initWithData:[representedServer iconImageData]] autorelease];
     if (sourceImage) {
-        CGFloat cornerRadius = selected ? 14.0 : 22.0;
+        // Circle at rest, rounded square when selected or hovered.
+        CGFloat cornerRadius = (selected || hovered) ? 14.0 : 22.0;
         NSImage *roundedImage = [DLUtil imageResize:sourceImage newSize:iconRect.size cornerRadius:cornerRadius];
         [roundedImage drawInRect:iconRect
                        fromRect:NSZeroRect
@@ -58,6 +61,10 @@
                                       NSMakeRect(NSMinX([controlView visibleRect]) - 4.0, NSMidY(cellFrame) - 20.0, 8.0, 40.0)
                                                                            xRadius:4.0 yRadius:4.0];
         [selectedPath fill];
+    } else if (hovered) {
+        [[NSColor whiteColor] set];
+        [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX([controlView visibleRect]) - 4.0, NSMidY(cellFrame) - 10.0, 8.0, 20.0)
+                                         xRadius:4.0 yRadius:4.0] fill];
     } else if ([representedServer hasUnreadMessages]) {
         [[NSColor whiteColor] set];
         NSBezierPath *unreadPath = [NSBezierPath bezierPathWithRoundedRect:

@@ -204,8 +204,45 @@
 @end
 
 @implementation DLContextTableView
+-(id)initWithFrame:(NSRect)frameRect {
+    self = [super initWithFrame:frameRect];
+    if (self) hoveredRow = -1;
+    return self;
+}
 -(NSInteger)menuRow {
     return menuRow;
+}
+-(NSInteger)hoveredRow {
+    return hoveredRow;
+}
+-(void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (hoverTrackingArea) {
+        [self removeTrackingArea:hoverTrackingArea];
+        [hoverTrackingArea release];
+        hoverTrackingArea = nil;
+    }
+    hoverTrackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
+        options:(NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect)
+        owner:self userInfo:nil];
+    [self addTrackingArea:hoverTrackingArea];
+}
+-(void)setHoveredRow:(NSInteger)row {
+    if (row == hoveredRow) return;
+    if (hoveredRow >= 0 && hoveredRow < [self numberOfRows]) [self setNeedsDisplayInRect:[self rectOfRow:hoveredRow]];
+    hoveredRow = row;
+    if (hoveredRow >= 0 && hoveredRow < [self numberOfRows]) [self setNeedsDisplayInRect:[self rectOfRow:hoveredRow]];
+}
+-(void)mouseMoved:(NSEvent *)event {
+    [self setHoveredRow:[self rowAtPoint:[self convertPoint:[event locationInWindow] fromView:nil]]];
+}
+-(void)mouseExited:(NSEvent *)event {
+    [self setHoveredRow:-1];
+}
+-(void)dealloc {
+    if (hoverTrackingArea) [self removeTrackingArea:hoverTrackingArea];
+    [hoverTrackingArea release];
+    [super dealloc];
 }
 // Not calling super skips the Aqua context-menu row outline; the menu's
 // delegate builds items for menuRow.

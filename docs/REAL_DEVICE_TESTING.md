@@ -47,6 +47,21 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Hover states and sectioned emoji picker
+
+- `DLContextTableView` tracks the hovered row: server icons grow a 20pt edge
+  pill and become rounded squares on hover; member rows get the hover
+  background.
+- Emoji picker: left category column (server icon, then People, Nature,
+  Food, Travel, Activities, Objects, Symbols, Flags; boundaries follow the
+  catalog's Unicode order), section headers in the grid, borderless emoji
+  cells. Search shows one unsectioned list.
+- Fixed: the picker read `[DLController sharedInstance]`, which made offline
+  replay read the Keychain and stall the emoji-picker fixture.
+- Verified on 10.6.8: hover pill on a server icon, category column with the
+  server icon, server-name header, and jumping to the FOOD section. Member
+  row hover was not exercised.
+
 #### Friends page and Gateway stall recovery
 
 - READY `relationships` and friends' `presences` are now stored (plus live

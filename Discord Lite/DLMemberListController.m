@@ -66,9 +66,12 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     // white member names unreadable. Draw the same rounded selection as the
     // channel list instead.
     NSInteger row = [(NSTableView *)controlView rowAtPoint:NSMakePoint(NSMidX(cellFrame), NSMidY(cellFrame))];
-    if (row >= 0 && [[(NSTableView *)controlView selectedRowIndexes] containsIndex:(NSUInteger)row]) {
+    BOOL selectedRow = row >= 0 && [[(NSTableView *)controlView selectedRowIndexes] containsIndex:(NSUInteger)row];
+    BOOL hoveredMemberRow = row >= 0 && [controlView isKindOfClass:[DLContextTableView class]] &&
+                            row == [(DLContextTableView *)controlView hoveredRow];
+    if (selectedRow || hoveredMemberRow) {
         NSRect selectionRect = NSInsetRect(NSIntersectionRect(cellFrame, [controlView visibleRect]), 6.0, 2.0);
-        [[DLUtil nativeSelectionColor] set];
+        [(selectedRow ? [DLUtil nativeSelectionColor] : [[DLUtil nativeSelectionColor] colorWithAlphaComponent:0.55]) set];
         [[NSBezierPath bezierPathWithRoundedRect:selectionRect xRadius:5.0 yRadius:5.0] fill];
     }
     cellFrame = NSIntersectionRect(cellFrame, [controlView visibleRect]);

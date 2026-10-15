@@ -21,6 +21,8 @@
     NSViewController *popoverController;
     NSSearchField *searchField;
     NSScrollView *scrollView;
+    NSView *categoryBar;
+    NSArray *visibleSections;
     NSArray *items;
     NSCache *pickerImageCache;
     ChatItemViewController *reactionChatView;
