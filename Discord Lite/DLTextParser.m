@@ -397,7 +397,7 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
             if ([as attribute:DLCodeSpanAttributeName atIndex:emojiRange.location effectiveRange:NULL]) {
                 continue;
             }
-            NSString *emojiID = [matchedEmoji stringByMatching:@"[0-9]+"];
+            NSString *emojiID = [matchedEmoji stringByMatching:@":([0-9]+)>$" capture:1L];
             NSArray *parts = [matchedEmoji componentsSeparatedByString:@":"];
             NSString *emojiName = [parts count] > 1 ? [parts objectAtIndex:1] : @"emoji";
             BOOL animated = [matchedEmoji hasPrefix:@"<a:"];
@@ -412,7 +412,13 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
                 [attachment setAttachmentCell:cell];
                 [as replaceCharactersInRange:emojiRange withAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
             } else {
-                [as replaceCharactersInRange:emojiRange withString:[NSString stringWithFormat:@":%@:", emojiName]];
+                // Until the image arrives, show the name at text size; at
+                // jumbo size a long name wrapped across several lines.
+                NSString *fallback = [NSString stringWithFormat:@":%@:", emojiName];
+                [as replaceCharactersInRange:emojiRange withString:fallback];
+                [as addAttribute:NSFontAttributeName
+                           value:[NSFont systemFontOfSize:[[DLPreferencesHandler sharedInstance] chatFontSize] * displayScale]
+                           range:NSMakeRange(emojiRange.location, [fallback length])];
             }
         }
         

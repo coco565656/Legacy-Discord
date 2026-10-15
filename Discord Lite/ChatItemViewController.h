@@ -90,6 +90,8 @@
 -(BOOL)isMessageActionBarVisible;
 -(void)hideMessageActionBar;
 -(void)populateMessageActionBar:(NSView *)actionBar;
+// Refreshes custom emoji images without rebuilding the buttons when possible.
+-(void)refreshMessageActionBar:(NSView *)actionBar;
 -(void)stopAnimatedEmojiPlayback;
 -(void)beginEditingContent;
 -(void)endEditingContent;

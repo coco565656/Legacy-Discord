@@ -77,7 +77,7 @@ static NSDictionary *superPropertiesDict;
 +(NSString *)generateSnowflake {
     NSTimeInterval date = [[NSDate date] timeIntervalSince1970];
     long snowflake = (((long)date * 1000) - 1420070400000) * 4194304;
-    return [[NSString stringWithFormat:@"%ld", snowflake] autorelease];
+    return [NSString stringWithFormat:@"%ld", snowflake];
 }
 +(NSDate *)dateFromTimestampString:(NSString *)timestampString {
     if ([timestampString rangeOfString:@"."].location != NSNotFound) {

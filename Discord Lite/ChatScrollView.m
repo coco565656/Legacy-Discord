@@ -256,7 +256,7 @@ const NSTimeInterval MESSAGE_GROUP_INTERVAL = 7.0 * 60.0;
 }
 -(void)messageActionBarCacheDidUpdate:(NSNotification *)notification {
     if (visibleActionBarItem && ![sharedMessageActionBar isHidden]) {
-        [visibleActionBarItem populateMessageActionBar:sharedMessageActionBar];
+        [visibleActionBarItem refreshMessageActionBar:sharedMessageActionBar];
     }
 }
 -(void)contentViewBoundsDidChange:(NSNotification *)notification {

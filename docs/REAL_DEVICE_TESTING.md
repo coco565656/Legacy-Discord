@@ -47,6 +47,27 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Crashes when sending emoji
+
+- Crash 1 (`-[NSControl _setWindow:]` from `populateMessageActionBar:` in
+  `cachedEmojiDidUpdate:`): every message using a newly downloaded custom
+  emoji rebuilt its own hover bar, which never joins a window; removing its
+  tooltip buttons crashed. That bar is now only rebuilt while on screen, and
+  the shared hover bar updates emoji images in place instead of recreating
+  buttons.
+- Crash 2 (`release` inside `-[AsyncHTTPPostRequest dealloc]`): the message
+  nonce from `+[DLUtil generateSnowflake]` was autoreleased twice, so any sent
+  message could crash once the request was freed. Fixed; the clang static
+  analyzer reports no other new over-releases (remaining reports are the
+  original `[self.view release]` pattern and a `finalizedMessage` naming false
+  positive; its `mutableCopy` leak was fixed).
+- Custom emoji whose name contains digits (`<:20240614_214205:ID>`) took the
+  first digits of the name as the ID, failed to load and showed `:name:` at
+  jumbo size across several lines. The ID is now the digits after the last
+  colon, and the not-yet-loaded fallback is drawn at text size.
+- Verified on 10.6.8: the user sent a custom emoji after the fixes without a
+  crash.
+
 #### Notifications and mute
 
 - READY `user_guild_settings` (and `USER_GUILD_SETTINGS_UPDATE`) are kept per

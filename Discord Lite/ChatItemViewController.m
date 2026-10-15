@@ -726,21 +726,17 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [delegate chatView:self showReactionPickerRelativeToView:(NSView *)sender];
 }
 
+// The hover toolbar shown on screen is ChatScrollView's shared bar, which it
+// repopulates itself. This controller's own bar never joins a window; tearing
+// down its tooltip buttons from an emoji-cache notification crashed on 10.6
+// (-[NSControl _setWindow:] messaging freed tracking state), so it is only
+// rebuilt while it is actually on screen.
 -(void)rebuildMessageActionBar {
+    if (![messageActionBar window]) return;
     [self populateMessageActionBar:messageActionBar];
 }
 
--(void)populateMessageActionBar:(NSView *)actionBar {
-    if (!actionBar) {
-        return;
-    }
-    NSArray *subviews = [[actionBar subviews] copy];
-    NSEnumerator *subviewEnumerator = [subviews objectEnumerator];
-    NSView *subview;
-    while (subview = [subviewEnumerator nextObject]) {
-        [subview removeFromSuperview];
-    }
-    [subviews release];
+-(NSArray *)recentReactionIdentifiers {
     NSMutableArray *recent = [NSMutableArray array];
     NSArray *savedRecent = [[NSUserDefaults standardUserDefaults] objectForKey:@"recentReactionEmoji"];
     if ([savedRecent isKindOfClass:[NSArray class]]) {
@@ -754,6 +750,63 @@ const NSInteger ATTACHMENT_SPACING = 15;
             [recent addObject:fallbackIdentifier];
         }
     }
+    return recent;
+}
+
+// When the bar already shows the same reactions, only fill in custom emoji
+// images that finished downloading. Removing buttons under the mouse (or
+// mid-click) is what makes AppKit message freed tracking state.
+-(BOOL)refreshMessageActionBarImagesInPlace:(NSView *)actionBar {
+    NSArray *recent = [self recentReactionIdentifiers];
+    NSMutableArray *quickButtons = [NSMutableArray array];
+    NSEnumerator *enumerator = [[actionBar subviews] objectEnumerator];
+    NSView *subview;
+    while (subview = [enumerator nextObject]) {
+        if (![subview isKindOfClass:[NSButton class]] || [(NSButton *)subview action] != @selector(quickReaction:)) continue;
+        if ([(NSButton *)subview target] != self) return NO;
+        [quickButtons addObject:subview];
+    }
+    if ([quickButtons count] == 0 || [quickButtons count] > [recent count]) return NO;
+    NSUInteger index;
+    for (index = 0; index < [quickButtons count]; index++) {
+        NSButton *button = [quickButtons objectAtIndex:index];
+        NSString *identifier = [recent objectAtIndex:index];
+        if (![[[button cell] representedObject] isEqual:identifier]) return NO;
+        if ([button image]) continue;
+        NSRange separator = [identifier rangeOfString:@":" options:NSBackwardsSearch];
+        if (separator.location == NSNotFound) continue;
+        NSString *emojiID = [identifier substringFromIndex:separator.location + 1];
+        NSData *data = [[HTTPCache sharedInstance] cachedDataForURL:DLCustomEmojiURL(emojiID, [self isCustomEmojiAnimated:emojiID])];
+        if (!data) continue;
+        NSImage *image = [[[NSImage alloc] initWithData:data] autorelease];
+        [image setSize:NSMakeSize(18, 18)];
+        [button setTitle:@""];
+        [button setImage:image];
+        [button setImagePosition:NSImageOnly];
+        [button setNeedsDisplay:YES];
+    }
+    return YES;
+}
+
+-(void)refreshMessageActionBar:(NSView *)actionBar {
+    if (!actionBar) return;
+    if (![self refreshMessageActionBarImagesInPlace:actionBar]) {
+        [self populateMessageActionBar:actionBar];
+    }
+}
+
+-(void)populateMessageActionBar:(NSView *)actionBar {
+    if (!actionBar) {
+        return;
+    }
+    NSArray *subviews = [[actionBar subviews] copy];
+    NSEnumerator *subviewEnumerator = [subviews objectEnumerator];
+    NSView *subview;
+    while (subview = [subviewEnumerator nextObject]) {
+        [subview removeFromSuperview];
+    }
+    [subviews release];
+    NSArray *recent = [self recentReactionIdentifiers];
     NSView *barParent = [actionBar superview];
     // Fixed part: Add Reaction and Reply icon buttons (34pt each), like the
     // official hover toolbar.
@@ -1155,7 +1208,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     NSEnumerator *enumerator = [matches objectEnumerator];
     NSString *match;
     while (match = [enumerator nextObject]) {
-        NSString *emojiID = [match stringByMatching:@"[0-9]+"];
+        NSString *emojiID = [match stringByMatching:@":([0-9]+)>$" capture:1L];
         if (!emojiID || [requestedIDs containsObject:emojiID]) {
             continue;
         }
@@ -1711,7 +1764,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         NSEnumerator *matchEnumerator = [matches objectEnumerator];
         NSString *match;
         while (match = [matchEnumerator nextObject]) {
-            NSString *emojiID = [match stringByMatching:@"[0-9]+"];
+            NSString *emojiID = [match stringByMatching:@":([0-9]+)>$" capture:1L];
             if ([DLCustomEmojiURL(emojiID, [match hasPrefix:@"<a:"]) isEqualToString:updatedURL]) {
                 messageUsesEmoji = YES;
                 break;

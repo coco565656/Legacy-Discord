@@ -135,6 +135,7 @@ const CGFloat MESSAGE_EDITOR_FONT_SIZE = 13.0;
     }
     DLMessage *m = [[DLMessage alloc] init];
     [m setContent:rawContent];
+    [rawContent release];
     [m setAttachments:attachments];
     [m setReferencedMessage:referencedMessage];
     return m;
