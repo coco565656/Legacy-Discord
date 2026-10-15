@@ -79,6 +79,36 @@ static NSDictionary *superPropertiesDict;
     long snowflake = (((long)date * 1000) - 1420070400000) * 4194304;
     return [NSString stringWithFormat:@"%ld", snowflake];
 }
++(NSString *)discordTimestampStringForDate:(NSDate *)date {
+    if (!date) return @"";
+    NSCalendar *cal = [NSCalendar currentCalendar];
+    NSDateComponents *comps = [cal components:(NSYearCalendarUnit | NSMonthCalendarUnit | NSDayCalendarUnit) fromDate:[NSDate date]];
+    NSDate *today = [cal dateFromComponents:comps];
+    NSDateComponents *components = [[[NSDateComponents alloc] init] autorelease];
+    [components setDay:-1];
+    NSDate *yesterday = [cal dateByAddingComponents:components toDate:today options:0];
+    NSDateFormatter *timeFormatter = [[[NSDateFormatter alloc] init] autorelease];
+    [timeFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
+    [timeFormatter setDateStyle:NSDateFormatterNoStyle];
+    [timeFormatter setTimeStyle:NSDateFormatterShortStyle];
+    if ([date isGreaterThan:today]) {
+        return [@"Today at " stringByAppendingString:[timeFormatter stringFromDate:date]];
+    }
+    if ([date isGreaterThan:yesterday]) {
+        return [@"Yesterday at " stringByAppendingString:[timeFormatter stringFromDate:date]];
+    }
+    NSDateFormatter *fullFormatter = [[[NSDateFormatter alloc] init] autorelease];
+    [fullFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
+    // 10.6's short style uses "yy" and its templates produce 年月日 forms, so
+    // only the year is widened.
+    [fullFormatter setDateStyle:NSDateFormatterShortStyle];
+    NSString *format = [fullFormatter dateFormat];
+    if (format && [format rangeOfString:@"yyyy"].location == NSNotFound && [format rangeOfString:@"yy"].location != NSNotFound) {
+        [fullFormatter setDateFormat:[format stringByReplacingOccurrencesOfString:@"yy" withString:@"yyyy"]];
+    }
+    return [NSString stringWithFormat:@"%@ %@", [fullFormatter stringFromDate:date], [timeFormatter stringFromDate:date]];
+}
+
 +(NSDate *)dateFromTimestampString:(NSString *)timestampString {
     if ([timestampString rangeOfString:@"."].location != NSNotFound) {
         timestampString = [timestampString substringToIndex:[timestampString rangeOfString:@"."].location];

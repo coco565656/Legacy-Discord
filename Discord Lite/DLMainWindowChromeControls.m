@@ -306,6 +306,24 @@
 }
 @end
 
+@implementation DLSecondaryButton
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = NSInsetRect([self bounds], 0.5, 0.5);
+    CGFloat alpha = [self isEnabled] ? 1.0 : 0.4;
+    NSColor *fill = [[self cell] isHighlighted] ? [[DLUtil nativeInputColor] blendedColorWithFraction:0.15 ofColor:[NSColor whiteColor]]
+                                                 : [DLUtil nativeInputColor];
+    [[fill colorWithAlphaComponent:alpha] setFill];
+    [[NSBezierPath bezierPathWithRoundedRect:bounds xRadius:4.0 yRadius:4.0] fill];
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSFont boldSystemFontOfSize:12.0], NSFontAttributeName,
+                                [[DLUtil nativePrimaryTextColor] colorWithAlphaComponent:alpha], NSForegroundColorAttributeName, nil];
+    NSString *title = [self title] ? [self title] : @"";
+    NSSize size = [title sizeWithAttributes:attributes];
+    [title drawAtPoint:NSMakePoint(floor(NSMidX(bounds) - size.width / 2.0), floor(NSMidY(bounds) - size.height / 2.0))
+        withAttributes:attributes];
+}
+@end
+
 @implementation DLDarkTitlebarView
 +(void)installInWindow:(NSWindow *)window {
     NSView *frameView = [[window contentView] superview];

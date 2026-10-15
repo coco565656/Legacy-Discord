@@ -30,7 +30,7 @@
 - [x] Confirmation before opening links in message text
 - [x] Unread and mention state that survives relaunch (Discord read state from READY; verified on 10.6.8)
 - [ ] Member/profile inspector
-- [ ] Link embed cards with a strict native renderer
+- [x] Link embed cards with a strict native renderer (official card style, accent colour, PNG media)
 - [x] Image cache with bounded disk usage (32 MB memory + 200 MB disk LRU, Clear Cache in Settings)
 - [ ] Connection state and reconnect indicator
 
@@ -38,7 +38,7 @@
 
 - [x] Thread navigation and thread message composer (Threads list, full-width threads with breadcrumb)
 - [x] Forum channel post list (official cards, search, New Post draft)
-- [ ] Channel message search
+- [x] Channel message search (official result cards, highlights, paging)
 - [ ] Pins and improved attachment handling
 - [x] Notification and per-channel mute controls (server/channel/category/DM mute with durations, Dock badge and bounce; badge verified on 10.6.8)
 

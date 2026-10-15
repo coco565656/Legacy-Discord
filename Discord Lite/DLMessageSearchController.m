@@ -4,6 +4,8 @@
 //
 
 #import "DLMessageSearchController.h"
+#import "DLTwemojiRenderer.h"
+#import "DLMainWindowChromeControls.h"
 #import "DLController.h"
 #import "DLMessage.h"
 #import "DLServerMember.h"
@@ -15,82 +17,108 @@
 
 @interface DLSearchResultCell : NSCell {
     DLMessage *representedMessage;
+    NSString *highlightTerm;
+    BOOL hovered;
 }
--(void)setRepresentedMessage:(DLMessage *)message;
+-(void)setRepresentedMessage:(DLMessage *)message highlight:(NSString *)term hovered:(BOOL)isHovered;
 @end
 
 @implementation DLSearchResultCell
 
--(void)setRepresentedMessage:(DLMessage *)message {
+-(void)setRepresentedMessage:(DLMessage *)message highlight:(NSString *)term hovered:(BOOL)isHovered {
     representedMessage = message;
+    highlightTerm = term;
+    hovered = isHovered;
 }
 
+// Official result card: avatar, role-coloured name and time on the first line,
+// up to three lines of message text with the search words highlighted.
 -(void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView {
     if (!representedMessage) {
         return;
     }
     DLMessage *message = representedMessage;
-    NSRect cardRect = NSInsetRect(cellFrame, 5.0, 4.0);
-    NSColor *background = [self isHighlighted] ? [DLUtil nativeSelectionColor]
-                                                : [DLUtil nativeChromeColor];
+    BOOL flipped = [controlView isFlipped];
+    // Stay inside the visible part (the legacy scroller takes width).
+    NSRect visibleFrame = NSIntersectionRect(cellFrame, [controlView visibleRect]);
+    visibleFrame.origin.y = NSMinY(cellFrame);
+    visibleFrame.size.height = NSHeight(cellFrame);
+    NSRect cardRect = NSInsetRect(visibleFrame, 8.0, 4.0);
+    NSColor *background = [DLUtil nativeContentColor];
+    if (hovered) background = [background blendedColorWithFraction:0.05 ofColor:[NSColor whiteColor]];
     [background set];
-    [[NSBezierPath bezierPathWithRoundedRect:cardRect xRadius:6.0 yRadius:6.0] fill];
+    [[NSBezierPath bezierPathWithRoundedRect:cardRect xRadius:8.0 yRadius:8.0] fill];
 
-    NSString *author = [[message author] globalName] ? [[message author] globalName] : [[message author] username];
-    NSString *contentText = [[message content] stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
-    if (!contentText) {
-        contentText = @"";
-    }
+    DLChannel *channel = [[DLController sharedInstance] loadedChannelWithID:[message channelID]];
+    DLServer *server = [[DLController sharedInstance] loadedServerWithID:[channel serverID]];
+    NSArray *roles = [message memberRoles];
+    if (!roles) roles = [[server memberWithUserID:[[message author] userID]] roles];
+    NSColor *nameColor = [DLUtil roleColorForRoleIDs:roles inServer:server];
+    if (!nameColor) nameColor = [DLUtil nativePrimaryTextColor];
+
     NSMutableParagraphStyle *truncate = [[[NSMutableParagraphStyle alloc] init] autorelease];
     [truncate setLineBreakMode:NSLineBreakByTruncatingTail];
-    DLChannel *channel = [[DLController sharedInstance] loadedChannelWithID:[message channelID]];
-    NSString *channelName = [channel name] ? [NSString stringWithFormat:@"#%@", [channel name]] : @"Unknown channel";
-    static NSDateFormatter *searchResultDateFormatter = nil;
-    if (!searchResultDateFormatter) {
-        searchResultDateFormatter = [[NSDateFormatter alloc] init];
-        [searchResultDateFormatter setDateFormat:@"yyyy/MM/dd HH:mm"];
-    }
-    NSString *dateText = [message timestamp] ? [searchResultDateFormatter stringFromDate:[message timestamp]] : @"";
-    NSString *metadata = [NSString stringWithFormat:@"%@  •  %@", channelName, dateText];
-    NSDictionary *authorAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                      [NSFont boldSystemFontOfSize:11.0], NSFontAttributeName,
-                                      [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName,
-                                      truncate, NSParagraphStyleAttributeName, nil];
-    NSDictionary *metadataAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                         [NSFont systemFontOfSize:9.0], NSFontAttributeName,
-                                         [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName,
-                                         truncate, NSParagraphStyleAttributeName, nil];
-    NSDictionary *contentAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                       [NSFont systemFontOfSize:10.0], NSFontAttributeName,
-                                       [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName,
-                                       truncate, NSParagraphStyleAttributeName, nil];
-    CGFloat topY = [controlView isFlipped] ? NSMinY(cardRect) + 6.0 : NSMaxY(cardRect) - 22.0;
-    CGFloat metadataY = [controlView isFlipped] ? topY + 17.0 : topY - 17.0;
-    CGFloat contentY = [controlView isFlipped] ? topY + 34.0 : topY - 34.0;
-    NSRect avatarRect = NSMakeRect(NSMinX(cardRect) + 8.0,
-                                   [controlView isFlipped] ? NSMinY(cardRect) + 12.0 : NSMidY(cardRect) - 16.0,
-                                   32.0, 32.0);
+    NSMutableParagraphStyle *wrapping = [[[NSMutableParagraphStyle alloc] init] autorelease];
+    [wrapping setLineBreakMode:NSLineBreakByWordWrapping];
+
+    NSRect avatarRect = NSMakeRect(NSMinX(cardRect) + 12.0, flipped ? NSMinY(cardRect) + 12.0 : NSMaxY(cardRect) - 44.0, 32.0, 32.0);
     NSData *avatarData = [[message author] avatarImageData];
     NSImage *avatar = avatarData ? [[[NSImage alloc] initWithData:avatarData] autorelease] : nil;
     if (avatar) {
         [NSGraphicsContext saveGraphicsState];
         [[NSBezierPath bezierPathWithOvalInRect:avatarRect] addClip];
-        [avatar drawInRect:avatarRect
-                  fromRect:NSZeroRect
-                 operation:NSCompositeSourceOver
-                  fraction:1.0
-            respectFlipped:YES
-                     hints:nil];
+        [avatar drawInRect:avatarRect fromRect:NSZeroRect operation:NSCompositeSourceOver
+                  fraction:1.0 respectFlipped:YES hints:nil];
         [NSGraphicsContext restoreGraphicsState];
     }
-    CGFloat textX = NSMinX(cardRect) + 48.0;
-    CGFloat textWidth = NSWidth(cardRect) - 57.0;
-    [author drawInRect:NSMakeRect(textX, topY, textWidth, 15.0)
-       withAttributes:authorAttributes];
-    [metadata drawInRect:NSMakeRect(textX, metadataY, textWidth, 13.0)
-          withAttributes:metadataAttributes];
-    [contentText drawInRect:NSMakeRect(textX, contentY, textWidth, 14.0)
-            withAttributes:contentAttributes];
+
+    CGFloat textX = NSMaxX(avatarRect) + 12.0;
+    CGFloat textWidth = NSMaxX(cardRect) - 12.0 - textX;
+    NSString *author = [[message author] globalName] ? [[message author] globalName] : [[message author] username];
+    NSMutableAttributedString *header = [[[NSMutableAttributedString alloc] initWithString:(author ? author : @"")
+        attributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSFont boldSystemFontOfSize:13.0], NSFontAttributeName,
+                    nameColor, NSForegroundColorAttributeName, truncate, NSParagraphStyleAttributeName, nil]] autorelease];
+    [header appendAttributedString:[[[NSAttributedString alloc] initWithString:
+        [@"  " stringByAppendingString:[DLUtil discordTimestampStringForDate:[message timestamp]]]
+        attributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSFont systemFontOfSize:11.0], NSFontAttributeName,
+                    [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName, truncate, NSParagraphStyleAttributeName, nil]] autorelease]];
+    [DLTwemojiRenderer replaceEmojiInAttributedString:header size:13.0 excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
+    CGFloat headerY = flipped ? NSMinY(cardRect) + 10.0 : NSMaxY(cardRect) - 28.0;
+    [header drawInRect:NSMakeRect(textX, headerY, textWidth, 18.0)];
+
+    NSString *contentText = [message content] ? [message content] : @"";
+    if (![contentText length] && [[message attachments] count]) contentText = @"Sent an attachment";
+    NSMutableAttributedString *body = [[[NSMutableAttributedString alloc] initWithString:contentText
+        attributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSFont systemFontOfSize:13.0], NSFontAttributeName,
+                    [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName, wrapping, NSParagraphStyleAttributeName, nil]] autorelease];
+    // Highlight each search word (from:/in: filters excluded).
+    NSEnumerator *words = [[highlightTerm componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] objectEnumerator];
+    NSString *word;
+    while (word = [words nextObject]) {
+        if ([word length] < 1 || [word rangeOfString:@":"].location != NSNotFound) continue;
+        NSRange searchRange = NSMakeRange(0, [contentText length]);
+        while (searchRange.length > 0) {
+            NSRange found = [contentText rangeOfString:word options:NSCaseInsensitiveSearch range:searchRange];
+            if (found.location == NSNotFound) break;
+            [body addAttribute:NSBackgroundColorAttributeName
+                         value:[NSColor colorWithCalibratedRed:0.98 green:0.66 blue:0.10 alpha:0.35] range:found];
+            [body addAttribute:NSFontAttributeName value:[NSFont boldSystemFontOfSize:13.0] range:found];
+            searchRange = NSMakeRange(NSMaxRange(found), [contentText length] - NSMaxRange(found));
+        }
+    }
+    [DLTwemojiRenderer replaceEmojiInAttributedString:body size:13.0 excludingAttribute:nil recordingAttribute:nil cursorLocation:NULL];
+    CGFloat bodyHeight = NSHeight(cardRect) - 40.0;
+    CGFloat bodyY = flipped ? NSMinY(cardRect) + 30.0 : NSMinY(cardRect) + 8.0;
+    [NSGraphicsContext saveGraphicsState];
+    NSRectClip(NSMakeRect(textX, bodyY, textWidth, bodyHeight));
+    // In a flipped view the rect's origin is its top; otherwise draw from the
+    // top of the area downwards by placing the origin at its top edge.
+    if (flipped) {
+        [body drawWithRect:NSMakeRect(textX, bodyY, textWidth, bodyHeight) options:NSStringDrawingUsesLineFragmentOrigin];
+    } else {
+        [body drawInRect:NSMakeRect(textX, bodyY, textWidth, bodyHeight)];
+    }
+    [NSGraphicsContext restoreGraphicsState];
 }
 
 @end
@@ -206,27 +234,30 @@
     [column setWidth:paneWidth];
     [column setResizingMask:NSTableColumnAutoresizingMask];
     [column setDataCell:[[[DLSearchResultCell alloc] init] autorelease]];
-    resultsTableView = [[NSTableView alloc] initWithFrame:[[resultsScrollView contentView] bounds]];
+    resultsTableView = [[DLContextTableView alloc] initWithFrame:[[resultsScrollView contentView] bounds]];
     [resultsTableView setFocusRingType:NSFocusRingTypeNone];
     [resultsScrollView setFocusRingType:NSFocusRingTypeNone];
     [resultsTableView addTableColumn:column];
     [resultsTableView setHeaderView:nil];
     [resultsTableView setDataSource:self];
     [resultsTableView setDelegate:self];
-    [resultsTableView setRowHeight:72.0];
+    [resultsTableView setRowHeight:96.0];
+    [resultsTableView setTarget:self];
+    [resultsTableView setAction:@selector(openClickedResult:)];
     [resultsTableView setIntercellSpacing:NSMakeSize(0.0, 0.0)];
+    [resultsTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
+    [resultsTableView setGridStyleMask:NSTableViewGridNone];
+    // Set after the highlight style, which resets the background on 10.6.
     [resultsTableView setBackgroundColor:[DLUtil nativeSidebarColor]];
-    [resultsTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleRegular];
+    [resultsTableView setColumnAutoresizingStyle:NSTableViewUniformColumnAutoresizingStyle];
     [resultsScrollView setDocumentView:resultsTableView];
     [resultsPane addSubview:resultsScrollView];
     [emptyStateField removeFromSuperviewWithoutNeedingDisplay];
     [resultsPane addSubview:emptyStateField];
 
-    previousButton = [[NSButton alloc] initWithFrame:NSMakeRect(8.0, 4.0, 70.0, 24.0)];
+    previousButton = [[DLSecondaryButton alloc] initWithFrame:NSMakeRect(8.0, 4.0, 70.0, 24.0)];
     [previousButton setAutoresizingMask:NSViewMaxXMargin | NSViewMaxYMargin];
-    [previousButton setBezelStyle:NSRoundRectBezelStyle];
-    [previousButton setFont:[NSFont systemFontOfSize:10.0]];
-    [previousButton setTitle:@"‹ Previous"];
+    [previousButton setTitle:@"Back"];
     [previousButton setTarget:self];
     [previousButton setAction:@selector(showPreviousSearchPage:)];
     [previousButton setEnabled:NO];
@@ -243,11 +274,9 @@
     [pageField setTextColor:[DLUtil nativeSecondaryTextColor]];
     [resultsPane addSubview:pageField];
 
-    nextButton = [[NSButton alloc] initWithFrame:NSMakeRect(paneWidth - 78.0, 4.0, 70.0, 24.0)];
+    nextButton = [[DLSecondaryButton alloc] initWithFrame:NSMakeRect(paneWidth - 78.0, 4.0, 70.0, 24.0)];
     [nextButton setAutoresizingMask:NSViewMinXMargin | NSViewMaxYMargin];
-    [nextButton setBezelStyle:NSRoundRectBezelStyle];
-    [nextButton setFont:[NSFont systemFontOfSize:10.0]];
-    [nextButton setTitle:@"Next ›"];
+    [nextButton setTitle:@"Next"];
     [nextButton setTarget:self];
     [nextButton setAction:@selector(showNextSearchPage:)];
     [nextButton setEnabled:NO];
@@ -524,7 +553,7 @@
     [resultsTableView reloadData];
     [resultsTableView deselectAll:self];
     if ([results count] == 0) {
-        [emptyStateField setStringValue:@"No matching messages"];
+        [emptyStateField setStringValue:@"We searched far and wide. Unfortunately, no results were found."];
         [emptyStateField setHidden:NO];
     }
     [searchField setToolTip:[results count] == 0 ? @"No matching loaded messages" : nil];
@@ -602,15 +631,9 @@
     total = inTotal;
     [countField setFont:[NSFont systemFontOfSize:10.0]];
     [countField setTextColor:[DLUtil nativeSecondaryTextColor]];
-    NSString *countText = nil;
-    if (total > (NSInteger)[messages count]) {
-        countText = [NSString stringWithFormat:@"Showing %ld of %ld results",
-                     (long)[messages count], (long)total];
-    } else {
-        countText = [NSString stringWithFormat:@"%ld result%@",
-                     (long)[messages count], [messages count] == 1 ? @"" : @"s"];
-    }
-    [countField setStringValue:countText];
+    // Official header: "128 Results"; the count line names the channel.
+    [titleField setStringValue:[NSString stringWithFormat:@"%ld Result%@", (long)total, total == 1 ? @"" : @"s"]];
+    [countField setStringValue:[channel name] ? [NSString stringWithFormat:@"in #%@", [channel name]] : @""];
     [resultsTableView reloadData];
     [resultsTableView deselectAll:self];
     [emptyStateField setStringValue:@"No matching messages"];
@@ -620,6 +643,11 @@
     [pageField setStringValue:[NSString stringWithFormat:@"%ld / %ld", (long)currentPage, (long)pageCount]];
     [previousButton setEnabled:(offset > 0)];
     [nextButton setEnabled:(offset + (NSInteger)[messages count] < total)];
+    // Page controls only when there is more than one page, like the official panel.
+    BOOL paged = pageCount > 1;
+    [previousButton setHidden:!paged];
+    [nextButton setHidden:!paged];
+    [pageField setHidden:!paged];
     [searchField setToolTip:[messages count] == 0 ? @"No matching messages" : nil];
     [self setVisible:YES];
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(loadVisibleSearchResultAvatars) object:nil];
@@ -660,7 +688,7 @@
     [resultsTableView reloadData];
     [countField setStringValue:@"Loading pinned messages…"];
     [emptyStateField setHidden:YES];
-    [previousButton setEnabled:NO]; [nextButton setEnabled:NO]; [pageField setStringValue:@""];
+    [previousButton setHidden:YES]; [nextButton setHidden:YES]; [pageField setHidden:YES];
     [self setVisible:YES];
 }
 -(void)showPinnedMessages:(NSArray *)messages {
@@ -668,7 +696,7 @@
     [resultsTableView reloadData]; [resultsTableView deselectAll:self];
     [countField setStringValue:[NSString stringWithFormat:@"%ld pinned message%@", (long)[messages count],
                                 [messages count] == 1 ? @"" : @"s"]];
-    [emptyStateField setStringValue:@"No pinned messages"];
+    [emptyStateField setStringValue:@"This channel doesn't have any pinned messages... yet."];
     [emptyStateField setHidden:([messages count] != 0)];
     [self loadVisibleSearchResultAvatars];
 }
@@ -687,12 +715,21 @@
 -(NSInteger)numberOfRowsInTableView:(NSTableView *)tableView { return [results count]; }
 -(id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)column row:(NSInteger)row { return [[results objectAtIndex:row] content]; }
 -(void)tableView:(NSTableView *)tableView willDisplayCell:(id)cell forTableColumn:(NSTableColumn *)column row:(NSInteger)row {
-    if ([cell isKindOfClass:[DLSearchResultCell class]]) [(DLSearchResultCell *)cell setRepresentedMessage:[results objectAtIndex:row]];
+    if ([cell isKindOfClass:[DLSearchResultCell class]]) {
+        BOOL pins = [[titleField stringValue] isEqualToString:@"Pinned Messages"];
+        [(DLSearchResultCell *)cell setRepresentedMessage:[results objectAtIndex:row]
+                                                highlight:(pins ? nil : lastQuery)
+                                                  hovered:(row == [(DLContextTableView *)resultsTableView hoveredRow])];
+    }
 }
 -(NSString *)tableView:(NSTableView *)tableView toolTipForCell:(NSCell *)cell rect:(NSRectPointer)rect tableColumn:(NSTableColumn *)column row:(NSInteger)row mouseLocation:(NSPoint)point {
-    return (row >= 0 && row < (NSInteger)[results count]) ? [[results objectAtIndex:row] content] : nil;
+    return nil;
 }
--(void)tableViewSelectionDidChange:(NSNotification *)notification { [self jumpToSearchResultAtRow:[resultsTableView selectedRow]]; }
+// Clicking a card jumps to the message, like the official Jump action.
+-(void)openClickedResult:(id)sender {
+    NSInteger row = [resultsTableView clickedRow];
+    if (row >= 0) [self jumpToSearchResultAtRow:row];
+}
 -(void)dealloc {
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
     [self clearMessageSearchHighlight];

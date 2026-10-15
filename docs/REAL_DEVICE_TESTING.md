@@ -60,6 +60,24 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Search, pins and embeds
+
+- Search results and pinned messages use official-style cards: avatar,
+  role-coloured name, "Today at" style time, up to three lines of text with
+  the search words highlighted, hover state and click to jump. The header
+  reads "N Results" with the channel below; Back/Next are dark buttons and
+  only appear when there is more than one page. Official empty states.
+- Fixed: Cmd-V pasted into the message composer even while the search field
+  (or any other field) had focus, because the composer handled the shortcut
+  for the whole window.
+- Embed cards: dark rounded card with the embed colour as a left bar,
+  provider/author, title and a measured description (CJK text no longer
+  clipped); the top line was clipped by NSBox's default margins. Embed images
+  from Discord's proxies request PNG, as they could arrive as WebP.
+- Verified on 10.6.8: a "codex" search (9 results, highlighted), pins in an
+  empty channel and in a channel with one pin, and an x.com embed whose image
+  was previously blank.
+
 #### Attachments
 
 - Uploads use Discord's documented multipart form: a `payload_json` part with

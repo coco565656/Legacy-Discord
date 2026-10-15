@@ -109,6 +109,9 @@
 }
 
 -(BOOL)performKeyEquivalent:(NSEvent *)event {
+    // performKeyEquivalent: reaches every view in the window. Only act while
+    // the composer has focus, or Cmd-V in the search field pasted here.
+    if ([[self window] firstResponder] != self) return [super performKeyEquivalent:event];
     NSString *characters = [[event charactersIgnoringModifiers] lowercaseString];
     NSUInteger modifierFlags = [event modifierFlags];
     if ((modifierFlags & NSCommandKeyMask) == NSCommandKeyMask &&

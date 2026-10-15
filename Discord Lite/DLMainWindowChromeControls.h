@@ -67,6 +67,10 @@ enum {
 @interface DLPrimaryButton : NSButton
 @end
 
+// Discord's grey secondary button (Back / Next and other minor actions).
+@interface DLSecondaryButton : NSButton
+@end
+
 // Microphone / headphone buttons of the account panel.
 @interface DLUserPanelIconButton : NSButton {
     NSInteger iconKind;

@@ -908,7 +908,15 @@ const NSInteger ATTACHMENT_SPACING = 15;
     if (!value || [value isKindOfClass:[NSNull class]]) {
         value = [media objectForKey:@"url"];
     }
-    return [value isKindOfClass:[NSString class]] ? value : nil;
+    if (![value isKindOfClass:[NSString class]]) return nil;
+    // Discord's media proxies may answer with WebP, which 10.6 cannot decode;
+    // ask them for PNG (other hosts are left alone).
+    NSString *host = [[NSURL URLWithString:value] host];
+    if (([host hasPrefix:@"images-ext"] || [host isEqualToString:@"media.discordapp.net"]) &&
+        [value rangeOfString:@"format="].location == NSNotFound) {
+        value = [value stringByAppendingString:([value rangeOfString:@"?"].location == NSNotFound ? @"?format=png" : @"&format=png")];
+    }
+    return value;
 }
 
 -(void)startLoadingEmbedImageURL:(NSString *)imageURL {
@@ -1051,16 +1059,23 @@ const NSInteger ATTACHMENT_SPACING = 15;
         NSString *mediaURL = [self embedMediaURLFromDictionary:media];
         BOOL hasVideo = video && [mediaURL length] > 0;
 
-        NSInteger descriptionLines = [description length] > 0 ? MIN(4, MAX(1, ((NSInteger)[description length] + 54) / 55)) : 0;
-        CGFloat providerHeight = ([providerName length] || [authorName length]) ? 16.0 * displayScale : 0.0;
-        CGFloat titleHeight = [title length] ? 19.0 * displayScale : 0.0;
-        CGFloat descriptionHeight = descriptionLines * 17.0 * displayScale;
+        CGFloat providerHeight = ([providerName length] || [authorName length]) ? 18.0 * displayScale : 0.0;
+        CGFloat titleHeight = [title length] ? 20.0 * displayScale : 0.0;
+        // Measure the description (CJK text wraps far sooner than a character
+        // count suggests); at most six lines like the official card.
+        CGFloat descriptionHeight = 0.0;
+        if ([description length]) {
+            NSDictionary *measure = [NSDictionary dictionaryWithObject:[NSFont systemFontOfSize:12.0 * displayScale] forKey:NSFontAttributeName];
+            NSRect bounds = [description boundingRectWithSize:NSMakeSize(cardWidth - 30.0, 10000.0)
+                                                      options:NSStringDrawingUsesLineFragmentOrigin attributes:measure];
+            descriptionHeight = MIN(ceil(NSHeight(bounds)) + 4.0, 6.0 * 16.0 * displayScale);
+        }
         CGFloat mediaHeight = 0.0;
         if ([mediaURL length]) {
             CGFloat mediaWidth = [[media objectForKey:@"width"] doubleValue];
             CGFloat originalHeight = [[media objectForKey:@"height"] doubleValue];
             if (mediaWidth > 0 && originalHeight > 0) {
-                mediaHeight = (cardWidth - 18.0) * originalHeight / mediaWidth;
+                mediaHeight = (cardWidth - 26.0) * originalHeight / mediaWidth;
             } else {
                 mediaHeight = hasVideo ? 205.0 * displayScale : 180.0 * displayScale;
             }
@@ -1072,16 +1087,25 @@ const NSInteger ATTACHMENT_SPACING = 15;
             continue;
         }
 
+        // Official embed: dark rounded card with a coloured bar on the left
+        // (the embed's colour, grey when it has none).
         NSBox *card = [[NSBox alloc] initWithFrame:NSMakeRect(74.0, 0.0, cardWidth, cardHeight)];
         [card setBoxType:NSBoxCustom];
-        [card setBorderType:NSLineBorder];
-        [card setBorderColor:[DLUtil nativeBorderColor]];
-        [card setFillColor:[DLUtil nativeChromeColor]];
+        [card setBorderType:NSNoBorder];
+        [card setCornerRadius:4.0];
+        [card setFillColor:[DLUtil nativeSidebarColor]];
         [card setTitlePosition:NSNoTitle];
+        [card setContentViewMargins:NSZeroSize];
+        [card setFrame:NSMakeRect(74.0, 0.0, cardWidth, cardHeight)];
         NSView *cardContent = [card contentView];
+        NSColor *accent = [DLUtil colorFromDiscordColorValue:[embed objectForKey:@"color"]];
+        NSView_BGColor *accentBar = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, 0.0, 4.0, cardHeight)] autorelease];
+        [accentBar setBackgroundColor:(accent ? accent : [DLUtil nativeBorderColor])];
+        [accentBar setAutoresizingMask:NSViewHeightSizable];
+        [cardContent addSubview:accentBar];
         CGFloat y = 8.0;
         if (mediaHeight > 0) {
-            NSRect mediaFrame = NSMakeRect(8.0, y, cardWidth - 18.0, mediaHeight);
+            NSRect mediaFrame = NSMakeRect(14.0, y, cardWidth - 26.0, mediaHeight);
             if (hasVideo) {
                 WebView *videoView = [[[WebView alloc] initWithFrame:mediaFrame] autorelease];
                 NSString *escapedURL = [[mediaURL stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"] stringByReplacingOccurrencesOfString:@"\"" withString:@"&quot;"];
@@ -1106,14 +1130,14 @@ const NSInteger ATTACHMENT_SPACING = 15;
             y += mediaHeight + 8.0;
         }
         if (descriptionHeight > 0) {
-            NSTextField *descriptionField = [self embedTextFieldWithFrame:NSMakeRect(9.0, y, cardWidth - 20.0, descriptionHeight)
+            NSTextField *descriptionField = [self embedTextFieldWithFrame:NSMakeRect(14.0, y, cardWidth - 26.0, descriptionHeight)
                 text:description font:[NSFont systemFontOfSize:12.0 * displayScale] color:[DLUtil nativePrimaryTextColor]];
             [[descriptionField cell] setLineBreakMode:NSLineBreakByWordWrapping];
             [cardContent addSubview:descriptionField];
             y += descriptionHeight;
         }
         if (titleHeight > 0) {
-            NSTextField *titleField = [self embedTextFieldWithFrame:NSMakeRect(9.0, y, cardWidth - 20.0, titleHeight)
+            NSTextField *titleField = [self embedTextFieldWithFrame:NSMakeRect(14.0, y, cardWidth - 26.0, titleHeight)
                 text:title font:[NSFont boldSystemFontOfSize:13.0 * displayScale] color:[DLUtil nativeLinkColor]];
             if ([embedURL length]) {
                 NSMutableAttributedString *linkedTitle = [[[NSMutableAttributedString alloc] initWithString:title] autorelease];
@@ -1130,7 +1154,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
             if ([providerName length] && [authorName length]) {
                 byline = [NSString stringWithFormat:@"%@ — %@", authorName, providerName];
             }
-            [cardContent addSubview:[self embedTextFieldWithFrame:NSMakeRect(9.0, y, cardWidth - 20.0, providerHeight)
+            [cardContent addSubview:[self embedTextFieldWithFrame:NSMakeRect(14.0, y, cardWidth - 26.0, providerHeight)
                 text:byline font:[NSFont boldSystemFontOfSize:11.0 * displayScale] color:[DLUtil nativeSecondaryTextColor]]];
         }
         [insetView addSubview:card];
@@ -1320,44 +1344,9 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [avatarImageView setImage:[DLUtil imageResize:[[[NSImage alloc] initWithData:[[representedObject author] avatarImageData]] autorelease] newSize:avatarImageView.frame.size cornerRadius:[ChatItemViewController AVATAR_RADIUS]]];
     [[representedObject author] loadAvatarData];
     
-    NSCalendar *cal = [NSCalendar currentCalendar];
-    
-    NSDate *date = [NSDate date];
-    NSDateComponents *comps = [cal components:(NSYearCalendarUnit | NSMonthCalendarUnit | NSDayCalendarUnit) fromDate:date];
-    NSDate *today = [cal dateFromComponents:comps];
-    NSDateComponents *components = [[NSDateComponents alloc] init];
-    [components setDay:-1];
-    NSDate *yesterday = [cal dateByAddingComponents:components toDate:today options:0];
-    // Official format: "Today at 22:54", "Yesterday at 22:54", otherwise the
-    // system's short date and time (respecting its 12/24-hour setting).
-    NSDateFormatter *timeFormatter = [[[NSDateFormatter alloc] init] autorelease];
-    [timeFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
-    [timeFormatter setDateStyle:NSDateFormatterNoStyle];
-    [timeFormatter setTimeStyle:NSDateFormatterShortStyle];
-    NSString *displayTimestamp;
-    if ([[representedObject timestamp] isGreaterThan:today]) {
-        displayTimestamp = [@"Today at " stringByAppendingString:[timeFormatter stringFromDate:[representedObject timestamp]]];
-    } else if ([[representedObject timestamp] isGreaterThan:yesterday]) {
-        displayTimestamp = [@"Yesterday at " stringByAppendingString:[timeFormatter stringFromDate:[representedObject timestamp]]];
-    } else {
-        NSDateFormatter *fullFormatter = [[[NSDateFormatter alloc] init] autorelease];
-        [fullFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];
-        // The locale's short date with a four-digit year ("2022/05/04" in
-        // Japanese, "5/4/2022" in English). 10.6's short style uses "yy", and
-        // its templates produce 年月日 forms, so widen the year only.
-        [fullFormatter setDateStyle:NSDateFormatterShortStyle];
-        NSString *format = [fullFormatter dateFormat];
-        if (format && [format rangeOfString:@"yyyy"].location == NSNotFound && [format rangeOfString:@"yy"].location != NSNotFound) {
-            [fullFormatter setDateFormat:[format stringByReplacingOccurrencesOfString:@"yy" withString:@"yyyy"]];
-        }
-        displayTimestamp = [NSString stringWithFormat:@"%@ %@",
-                            [fullFormatter stringFromDate:[representedObject timestamp]],
-                            [timeFormatter stringFromDate:[representedObject timestamp]]];
-    }
+    NSString *displayTimestamp = [DLUtil discordTimestampStringForDate:[representedObject timestamp]];
     [timestampTextField setStringValue:displayTimestamp];
     [self layoutMessageHeaderFields];
-    
-    [components release];
     
     CGFloat attachmentsHeight = 0;
     NSMutableArray *views = [[NSMutableArray alloc] init];

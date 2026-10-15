@@ -25,6 +25,9 @@
 +(NSString *)downloadsPath;
 +(NSString *)generateSnowflake;
 +(NSDate *)dateFromTimestampString:(NSString *)timestampString;
+// Official message time: "Today at 22:54", "Yesterday at 22:54", else the
+// locale's short date (four-digit year) and time.
++(NSString *)discordTimestampStringForDate:(NSDate *)date;
 +(NSString *)userAgentString;
 +(NSString *)superPropertiesString;
 +(NSDictionary *)defaultHTTPPostHeaders;
