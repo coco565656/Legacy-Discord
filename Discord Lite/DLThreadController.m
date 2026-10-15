@@ -367,6 +367,9 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     [listTableView setBackgroundColor:[DLUtil nativeContentColor]];
     [listTableView setTarget:self];
     [listTableView setAction:@selector(openClickedPost:)];
+    NSMenu *postMenu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    [postMenu setDelegate:(id)self];
+    [listTableView setMenu:postMenu];
     [listScrollView setDocumentView:listTableView];
     [listPane addSubview:listScrollView];
 
@@ -609,6 +612,69 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     [self setComposing:NO];
     [self hideThreadBrowser];
     [delegate threadController:self selectChannel:thread];
+}
+
+#pragma mark Post menu
+
+// Own posts, or any post on a server the user owns, can be deleted.
+-(BOOL)canDeleteThread:(DLServerChannel *)thread {
+    NSString *myID = [[[[DLController sharedInstance] myUser] userID] description];
+    if (!myID) return NO;
+    if ([[[thread ownerID] description] isEqualToString:myID]) return YES;
+    DLServer *server = [[DLController sharedInstance] loadedServerWithID:[thread serverID]];
+    return [[[server ownerID] description] isEqualToString:myID];
+}
+
+-(void)menuNeedsUpdate:(NSMenu *)menu {
+    [menu removeAllItems];
+    NSInteger row = [listTableView menuRow];
+    if (row < 0 || row >= (NSInteger)[items count]) return;
+    DLServerChannel *thread = [items objectAtIndex:row];
+    NSMenuItem *open = [[[NSMenuItem alloc] initWithTitle:([self isForumMode] ? @"Open Post" : @"Open Thread")
+                                                   action:@selector(openPostFromMenu:) keyEquivalent:@""] autorelease];
+    [open setTarget:self];
+    [open setRepresentedObject:thread];
+    [menu addItem:open];
+    NSMenuItem *copyLink = [[[NSMenuItem alloc] initWithTitle:@"Copy Link" action:@selector(copyPostLink:) keyEquivalent:@""] autorelease];
+    [copyLink setTarget:self];
+    [copyLink setRepresentedObject:thread];
+    [menu addItem:copyLink];
+    if ([self canDeleteThread:thread]) {
+        [menu addItem:[NSMenuItem separatorItem]];
+        NSMenuItem *delete = [[[NSMenuItem alloc] initWithTitle:([self isForumMode] ? @"Delete Post" : @"Delete Thread")
+                                                         action:@selector(confirmDeletePost:) keyEquivalent:@""] autorelease];
+        [delete setTarget:self];
+        [delete setRepresentedObject:thread];
+        [menu addItem:delete];
+    }
+}
+
+-(void)openPostFromMenu:(NSMenuItem *)sender {
+    DLChannel *thread = [[[sender representedObject] retain] autorelease];
+    [self hideThreadBrowser];
+    [delegate threadController:self selectChannel:thread];
+}
+
+-(void)copyPostLink:(NSMenuItem *)sender {
+    DLServerChannel *thread = [sender representedObject];
+    [DLUtil copyStringToPasteboard:[NSString stringWithFormat:@"https://discord.com/channels/%@/%@", [thread serverID], [thread channelID]]];
+}
+
+-(void)confirmDeletePost:(NSMenuItem *)sender {
+    DLServerChannel *thread = [sender representedObject];
+    NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+    [alert setMessageText:([self isForumMode] ? @"Delete Post" : @"Delete Thread")];
+    [alert setInformativeText:[NSString stringWithFormat:@"Are you sure you want to delete \u201C%@\u201D? This cannot be undone.", [thread name]]];
+    [alert addButtonWithTitle:@"Delete"];
+    [alert addButtonWithTitle:@"Cancel"];
+    [alert beginSheetModalForWindow:[listPane window] modalDelegate:self
+                     didEndSelector:@selector(deleteAlertDidEnd:returnCode:contextInfo:)
+                        contextInfo:[thread retain]];
+}
+
+-(void)deleteAlertDidEnd:(NSAlert *)alert returnCode:(NSInteger)returnCode contextInfo:(void *)contextInfo {
+    DLServerChannel *thread = [(DLServerChannel *)contextInfo autorelease];
+    if (returnCode == NSAlertFirstButtonReturn) [[DLController sharedInstance] deleteThread:thread];
 }
 
 -(void)threadStarterDidLoad:(NSNotification *)notification {

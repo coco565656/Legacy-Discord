@@ -502,6 +502,17 @@ static DLController* sharedObject = nil;
                                                         object:forum userInfo:userInfo];
 }
 
+-(void)deleteThread:(DLChannel *)thread {
+    if (![thread isThread]) return;
+    AsyncHTTPPostRequest *req = [[AsyncHTTPPostRequest alloc] init];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDDeleteThread];
+    [req setMethod:@"DELETE"];
+    [req setUrl:[@API_ROOT stringByAppendingFormat:@"/channels/%@", [thread channelID]]];
+    [req start];
+}
+
 -(void)loadPinsForChannel:(DLChannel *)channel {
     if (!channel) return;
     AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
@@ -1337,6 +1348,9 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
         case RequestIDCreateForumPost:
             [self handleCreateForumPostResponse:request];
             break;
+        case RequestIDDeleteThread:
+            if ([request result] != HTTPResultOK) [self handleHTTPRequestError:request];
+            break;
         case RequestIDLogout:
             
             break;
@@ -1367,6 +1381,10 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
     DLChannel *c = [self loadedChannelWithID:[m channelID]];
     DLServer *s = [self loadedServerWithID:[c serverID]];
     [c setLastMessage:m];
+    // message_count excludes the opening message, which shares the post's ID.
+    if ([c isThread] && ![[[m messageID] description] isEqualToString:[[c channelID] description]]) {
+        [(DLServerChannel *)c incrementMessageCount];
+    }
     if ([c isThread] && [[m author] isEqual:myUser]) {
         [(DLServerChannel *)c setJoinedThread:YES];
         [(DLServerChannel *)c setArchivedThread:NO];

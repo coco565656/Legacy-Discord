@@ -797,7 +797,10 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 }
 
 -(void)threadsDidUpdateForServer:(DLServer *)server {
-    [threadController threadsDidUpdateForServer:server];
+    // The sidebar lists joined threads under their channels; refresh it too
+    // (created or deleted posts), coalescing bursts of thread events.
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(refreshThreadOutlineForServer:) object:server];
+    [self performSelector:@selector(refreshThreadOutlineForServer:) withObject:server afterDelay:0.15];
 }
 
 -(void)archivedThreadsDidUpdateForServer:(DLServer *)server channel:(DLChannel *)channel {

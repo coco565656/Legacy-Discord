@@ -128,6 +128,9 @@
 -(NSInteger)messageCount {
     return messageCount;
 }
+-(void)incrementMessageCount {
+    messageCount++;
+}
 -(NSString *)ownerID {
     return ownerID;
 }

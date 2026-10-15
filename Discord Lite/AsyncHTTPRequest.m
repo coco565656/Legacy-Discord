@@ -75,19 +75,13 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
     int response = curl_easy_perform(curlRequestHandle);
     if (response == CURLE_OK) {
         curl_easy_getinfo(curlRequestHandle, CURLINFO_RESPONSE_CODE, &statusCode);
-        switch (statusCode) {
-            case 200:
-                result = HTTPResultOK;
-                break;
-            case 204:
-                result = HTTPResultOK;
-                break;
-            case 400:
-                result = HTTPResultErrParameter;
-                break;
-            default:
-                result = HTTPResultErrGeneral;
-                break;
+        // Any 2xx is a success: creating a forum post answers 201 Created.
+        if (statusCode >= 200 && statusCode < 300) {
+            result = HTTPResultOK;
+        } else if (statusCode == 400) {
+            result = HTTPResultErrParameter;
+        } else {
+            result = HTTPResultErrGeneral;
         }
     } else {
         result = HTTPResultErrConnecting;

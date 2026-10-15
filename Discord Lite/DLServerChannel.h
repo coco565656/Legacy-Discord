@@ -40,6 +40,7 @@
 -(BOOL)archivedThread;
 // Thread/forum post details (message_count, owner_id, applied_tags).
 -(NSInteger)messageCount;
+-(void)incrementMessageCount;
 -(NSString *)ownerID;
 -(NSArray *)appliedTagIDs;
 // A forum's tags: [{id, name, emoji_name, emoji_id}].

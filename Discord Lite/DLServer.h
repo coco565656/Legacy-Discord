@@ -58,6 +58,7 @@
 -(BOOL)canUserWithID:(NSString *)userID viewChannelWithOverwrites:(NSArray *)overwrites;
 -(BOOL)hasKnownMemberRoles;
 -(NSArray *)myRoleIDs;
+-(NSString *)ownerID;
 -(void)setMyRoleIDs:(NSArray *)roleIDs;
 // Set when the own-member request failed; channels are then shown unfiltered.
 -(BOOL)myRolesUnavailable;

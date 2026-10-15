@@ -69,8 +69,18 @@ the DevLocal view capture remains useful for deterministic local regression.
   REQUIRE_TAG need a tag. The new post opens right away and is shown as joined.
 - Verified on 10.6.8: the draft opens, an empty Post shows "A post needs a
   title and a message." without sending, tags toggle, Cancel restores the
-  list. Creating a real post and sending into a thread were not exercised
-  (they write to a real server).
+  list.
+- End-to-end on the user's own server (with permission): created
+  "Legacy Discord test post", which appeared in the list and under the forum
+  in the sidebar; opened it and sent a reply, which appeared in the post; then
+  deleted it with the new Delete Post item (confirmation sheet). After a
+  relaunch the post was gone everywhere.
+- Fixed during the run: requests answered with 201 Created (post creation)
+  were treated as failures, so the draft reported an error although the post
+  existed; any 2xx is now a success. The sidebar now refreshes on thread
+  create/delete events, and a post's message count goes up as replies arrive.
+- Post card menu: Open Post, Copy Link, and Delete Post for one's own posts or
+  on servers the user owns.
 
 #### Forum post list, thread list and WebP previews
 

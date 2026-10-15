@@ -54,7 +54,8 @@ typedef enum {
     RequestIDMyGuildMember = 21,
     RequestIDNotificationSettings = 22,
     RequestIDForumStarter = 23,
-    RequestIDCreateForumPost = 24
+    RequestIDCreateForumPost = 24,
+    RequestIDDeleteThread = 25
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -190,6 +191,8 @@ typedef enum {
 // POST /channels/{forum}/threads with a title, opening message and tag IDs.
 -(void)createForumPostInChannel:(DLServerChannel *)forum title:(NSString *)title
                         content:(NSString *)content tagIDs:(NSArray *)tagIDs;
+// DELETE /channels/{thread}; THREAD_DELETE then removes it from the lists.
+-(void)deleteThread:(DLChannel *)thread;
 
 
 -(DLServer *)myServerItem;

@@ -192,6 +192,9 @@
 -(NSArray *)myRoleIDs {
     return myRoleIDs;
 }
+-(NSString *)ownerID {
+    return ownerID;
+}
 -(void)setMyRoleIDs:(NSArray *)roleIDs {
     [myRoleIDs release];
     myRoleIDs = [roleIDs copy];
