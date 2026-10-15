@@ -485,6 +485,10 @@ static DLController* sharedObject = nil;
     if (!channel) return;
     if ([channel lastMessage] && [[channel lastMessage] messageID]) [self acknowledgeMessage:[channel lastMessage]];
     [channel setHasUnreadMessages:NO];
+    DLServer *server = [self loadedServerWithID:[channel serverID]];
+    if (server && [channel mentionCount] > 0) {
+        [server setMentionCount:MAX(0, [server mentionCount] - [channel mentionCount])];
+    }
     [channel setMentionCount:0];
 }
 
@@ -1371,13 +1375,186 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
             if ([channelData objectForKey:@"last_message_id"] != [NSNull null] && [c lastMessage]) {
                 if (![[[c lastMessage] messageID] isEqualToString:[channelData objectForKey:@"last_message_id"]] && ![c isEqual:selectedChannel]) {
                     [c setHasUnreadMessages:YES];
-                    if (![associatedServer isEqual:[self myServerItem]]) {
+                    // Muted channels do not light up their server.
+                    if (![associatedServer isEqual:[self myServerItem]] && ![self isChannelMuted:c]) {
                         [associatedServer setHasUnreadMessages:YES];
                     }
                 }
             }
         }
     }
+}
+
+#pragma mark Notification settings
+
+static BOOL DLMuteEntryIsActive(NSDictionary *entry) {
+    if (![entry isKindOfClass:[NSDictionary class]]) return NO;
+    if (![[entry objectForKey:@"muted"] respondsToSelector:@selector(boolValue)] ||
+        ![[entry objectForKey:@"muted"] boolValue]) return NO;
+    NSDictionary *config = [entry objectForKey:@"mute_config"];
+    NSString *endTime = [config isKindOfClass:[NSDictionary class]] ? [config objectForKey:@"end_time"] : nil;
+    if (![endTime isKindOfClass:[NSString class]] || [endTime length] < 19) return YES;
+    // A timed mute ("for 1 hour") ends at end_time, an ISO 8601 UTC string.
+    NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+    [formatter setLocale:[[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease]];
+    [formatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:@"UTC"]];
+    [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ss"];
+    NSDate *end = [formatter dateFromString:[endTime substringToIndex:19]];
+    return !end || [end timeIntervalSinceNow] > 0;
+}
+
+-(NSString *)settingsKeyForServerID:(id)serverID {
+    // Channel and guild IDs may arrive as NSNull from JSON.
+    if ([serverID isKindOfClass:[NSNumber class]]) serverID = [serverID description];
+    return ([serverID isKindOfClass:[NSString class]] && [serverID length]) ? serverID : @"@me";
+}
+
+-(NSDictionary *)channelOverrideForChannelID:(NSString *)channelID inSettings:(NSDictionary *)settings {
+    id overrides = [settings objectForKey:@"channel_overrides"];
+    if ([overrides isKindOfClass:[NSDictionary class]]) return [overrides objectForKey:channelID];
+    if (![overrides isKindOfClass:[NSArray class]]) return nil;
+    NSEnumerator *enumerator = [overrides objectEnumerator];
+    NSDictionary *override;
+    while (override = [enumerator nextObject]) {
+        if ([override isKindOfClass:[NSDictionary class]] &&
+            [[[override objectForKey:@"channel_id"] description] isEqualToString:channelID]) return override;
+    }
+    return nil;
+}
+
+-(void)storeUserGuildSettingsEntry:(NSDictionary *)entry {
+    if (![entry isKindOfClass:[NSDictionary class]]) return;
+    id guildID = [entry objectForKey:@"guild_id"];
+    NSString *key = [self settingsKeyForServerID:([guildID isKindOfClass:[NSString class]] ? guildID : nil)];
+    [guildNotificationSettings setObject:entry forKey:key];
+}
+
+-(void)wsDidReceiveUserGuildSettings:(id)settings replacingAll:(BOOL)replacingAll {
+    if (!guildNotificationSettings) guildNotificationSettings = [[NSMutableDictionary alloc] init];
+    if (replacingAll) [guildNotificationSettings removeAllObjects];
+    // READY sends {entries: [...]} (or a bare list on older payloads); an
+    // update event sends one entry.
+    id entries = settings;
+    if ([settings isKindOfClass:[NSDictionary class]] && [settings objectForKey:@"entries"]) {
+        entries = [settings objectForKey:@"entries"];
+    }
+    if ([entries isKindOfClass:[NSArray class]]) {
+        NSEnumerator *enumerator = [entries objectEnumerator];
+        NSDictionary *entry;
+        while (entry = [enumerator nextObject]) [self storeUserGuildSettingsEntry:entry];
+    } else {
+        [self storeUserGuildSettingsEntry:entries];
+    }
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLNotificationSettingsDidChangeNotification object:self];
+}
+
+-(BOOL)isServerMuted:(DLServer *)server {
+    if (!server || [server isEqual:[self myServerItem]]) return NO;
+    return DLMuteEntryIsActive([guildNotificationSettings objectForKey:[self settingsKeyForServerID:[server serverID]]]);
+}
+
+-(BOOL)isChannelMutedItself:(DLChannel *)channel {
+    if (![[channel channelID] isKindOfClass:[NSString class]]) return NO;
+    NSString *serverID = [channel isKindOfClass:[DLServerChannel class]] ? [(DLServerChannel *)channel serverID] : nil;
+    NSDictionary *settings = [guildNotificationSettings objectForKey:[self settingsKeyForServerID:serverID]];
+    return DLMuteEntryIsActive([self channelOverrideForChannelID:[channel channelID] inSettings:settings]);
+}
+
+-(BOOL)isChannelMuted:(DLChannel *)channel {
+    if (!channel) return NO;
+    if ([self isChannelMutedItself:channel]) return YES;
+    if (![channel isKindOfClass:[DLServerChannel class]]) return NO;
+    id parentID = [(DLServerChannel *)channel parentID];
+    if ([parentID isKindOfClass:[NSString class]] && [parentID length] &&
+        [self isChannelMutedItself:[self loadedChannelWithID:parentID]]) return YES;
+    return [self isServerMuted:[self loadedServerWithID:[(DLServerChannel *)channel serverID]]];
+}
+
+-(BOOL)suppressesEveryoneInServerWithID:(NSString *)serverID {
+    NSDictionary *settings = [guildNotificationSettings objectForKey:[self settingsKeyForServerID:serverID]];
+    return [[settings objectForKey:@"suppress_everyone"] respondsToSelector:@selector(boolValue)] &&
+           [[settings objectForKey:@"suppress_everyone"] boolValue];
+}
+
+// Applies the change locally right away (Discord echoes it back through
+// USER_GUILD_SETTINGS_UPDATE) and sends the same PATCH the official client does.
+-(void)patchNotificationSettings:(NSDictionary *)parameters forServerKey:(NSString *)key {
+    if (!guildNotificationSettings) guildNotificationSettings = [[NSMutableDictionary alloc] init];
+    NSMutableDictionary *entry = [NSMutableDictionary dictionaryWithDictionary:
+                                  ([guildNotificationSettings objectForKey:key] ? [guildNotificationSettings objectForKey:key] : [NSDictionary dictionary])];
+    NSDictionary *overrideChanges = [parameters objectForKey:@"channel_overrides"];
+    if (overrideChanges) {
+        NSMutableArray *overrides = [NSMutableArray array];
+        id existing = [entry objectForKey:@"channel_overrides"];
+        if ([existing isKindOfClass:[NSArray class]]) [overrides addObjectsFromArray:existing];
+        else if ([existing isKindOfClass:[NSDictionary class]]) [overrides addObjectsFromArray:[existing allValues]];
+        NSEnumerator *keyEnumerator = [overrideChanges keyEnumerator];
+        NSString *channelID;
+        while (channelID = [keyEnumerator nextObject]) {
+            NSInteger index;
+            for (index = (NSInteger)[overrides count] - 1; index >= 0; index--) {
+                if ([[[[overrides objectAtIndex:index] objectForKey:@"channel_id"] description] isEqualToString:channelID]) {
+                    [overrides removeObjectAtIndex:index];
+                }
+            }
+            NSMutableDictionary *override = [NSMutableDictionary dictionaryWithDictionary:[overrideChanges objectForKey:channelID]];
+            [override setObject:channelID forKey:@"channel_id"];
+            [overrides addObject:override];
+        }
+        [entry setObject:overrides forKey:@"channel_overrides"];
+    } else {
+        [entry addEntriesFromDictionary:parameters];
+    }
+    [guildNotificationSettings setObject:entry forKey:key];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLNotificationSettingsDidChangeNotification object:self];
+    if (![self isLoggedIn]) return;
+    AsyncHTTPPostRequest *req = [[AsyncHTTPPostRequest alloc] init];
+    [req setMethod:@"PATCH"];
+    [req setParameters:parameters];
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDNotificationSettings];
+    [req setUrl:[@API_ROOT stringByAppendingFormat:@"/users/@me/guilds/%@/settings", key]];
+    [req start];
+}
+
+-(id)muteConfigForDuration:(NSTimeInterval)duration muted:(BOOL)muted {
+    if (!muted || duration <= 0) return [NSNull null];
+    NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+    [formatter setLocale:[[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease]];
+    [formatter setTimeZone:[NSTimeZone timeZoneWithAbbreviation:@"UTC"]];
+    [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ss'.000Z'"];
+    return [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSNumber numberWithInteger:(NSInteger)duration], @"selected_time_window",
+            [formatter stringFromDate:[NSDate dateWithTimeIntervalSinceNow:duration]], @"end_time", nil];
+}
+
+-(void)setMuted:(BOOL)muted duration:(NSTimeInterval)duration forServer:(DLServer *)server {
+    if (!server || [server isEqual:[self myServerItem]] || ![server serverID]) return;
+    NSDictionary *parameters = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSNumber numberWithBool:muted], @"muted",
+                                [self muteConfigForDuration:duration muted:muted], @"mute_config", nil];
+    [self patchNotificationSettings:parameters forServerKey:[self settingsKeyForServerID:[server serverID]]];
+}
+
+-(void)setMuted:(BOOL)muted duration:(NSTimeInterval)duration forChannel:(DLChannel *)channel {
+    if (![channel channelID]) return;
+    NSString *serverID = [channel isKindOfClass:[DLServerChannel class]] ? [(DLServerChannel *)channel serverID] : nil;
+    NSDictionary *override = [NSDictionary dictionaryWithObjectsAndKeys:
+                              [NSNumber numberWithBool:muted], @"muted",
+                              [self muteConfigForDuration:duration muted:muted], @"mute_config", nil];
+    NSDictionary *parameters = [NSDictionary dictionaryWithObject:
+                                [NSDictionary dictionaryWithObject:override forKey:[channel channelID]]
+                                                           forKey:@"channel_overrides"];
+    [self patchNotificationSettings:parameters forServerKey:[self settingsKeyForServerID:serverID]];
+}
+
+-(NSInteger)totalMentionCount {
+    NSInteger total = 0;
+    NSEnumerator *enumerator = [[loadedServers allValues] objectEnumerator];
+    DLServer *server;
+    while (server = [enumerator nextObject]) total += MAX(0, [server mentionCount]);
+    return total;
 }
 
 -(NSArray *)relationships {
@@ -1443,7 +1620,8 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
 -(void)wsDidAcknowledgeMessage:(DLMessage *)m {
     DLChannel *c = [self loadedChannelWithID:[m channelID]];
     DLServer *associatedServer = [self loadedServerWithID:[c serverID]];
-    [associatedServer setMentionCount:0];
+    // Only this channel's mentions are read; the server keeps the others.
+    [associatedServer setMentionCount:MAX(0, [associatedServer mentionCount] - [c mentionCount])];
     [c setMentionCount:0];
     [c setHasUnreadMessages:NO];
     
@@ -1453,7 +1631,8 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
     while (channelID = [e nextObject]) {
         DLChannel *channel = [loadedChannels objectForKey:channelID];
         if (channel) {
-            if ([[channel serverID] isEqualToString:[c serverID]] && [channel hasUnreadMessages]) {
+            if ([[channel serverID] isEqualToString:[c serverID]] && [channel hasUnreadMessages] &&
+                ![self isChannelMuted:channel]) {
                 hasUnreads = YES;
                 break;
             }

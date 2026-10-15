@@ -32,6 +32,7 @@
     NSArray *stickerItems;
     NSArray *outgoingStickerIDs;
     BOOL mentionedEveryone;
+    NSArray *mentionedRoleIDs;
     DLMessage *referencedMessage;
     id<DLMessageDelegate> delegate;
 }
@@ -60,6 +61,7 @@
 -(void)applyReactionEmoji:(NSDictionary *)emoji added:(BOOL)added byCurrentUser:(BOOL)currentUser;
 -(DLMessage *)referencedMessage;
 -(BOOL)mentionedEveryone;
+-(NSArray *)mentionedRoleIDs;
 
 -(void)setDelegate:(id<DLMessageDelegate>)inDelegate;
 

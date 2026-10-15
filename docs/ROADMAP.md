@@ -28,7 +28,7 @@
 - [x] Custom emoji rendering and picker
 - [x] Private user notes in the expanded profile, adapted from Discord Messenger
 - [x] Confirmation before opening links in message text
-- [ ] Unread and mention state that survives relaunch
+- [x] Unread and mention state that survives relaunch (Discord read state from READY; verified on 10.6.8)
 - [ ] Member/profile inspector
 - [ ] Link embed cards with a strict native renderer
 - [ ] Image cache with bounded disk usage
@@ -40,7 +40,7 @@
 - [ ] Forum channel post list
 - [ ] Channel message search
 - [ ] Pins and improved attachment handling
-- [ ] Notification and per-channel mute controls
+- [x] Notification and per-channel mute controls (server/channel/category/DM mute with durations, Dock badge and bounce; badge and bounce not yet seen on a device)
 
 ## Milestone 3: voice
 

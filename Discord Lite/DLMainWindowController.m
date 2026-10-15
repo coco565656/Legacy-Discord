@@ -48,6 +48,9 @@ static void DLSetSplitHoldingPriorityIfSupported(NSSplitView *splitView, float p
 -(void)refreshThreadOutlineForServer:(DLServer *)server;
 -(void)selectChannel:(DLChannel *)channel;
 -(void)messageDisplayScaleDidChange:(NSNotification *)notification;
+-(void)dockBadgeInputsDidChange:(NSNotification *)notification;
+-(void)scheduleDockBadgeRefresh;
+-(void)refreshDockBadge;
 -(void)appearanceThemeDidChange:(NSNotification *)notification;
 -(void)applyCurrentTheme;
 -(void)openUserSettings:(id)sender;
@@ -248,6 +251,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appearanceThemeDidChange:) name:DLAppearanceThemeDidChangeNotification object:nil];
     // Chat display settings re-render messages the same way a scale change does.
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageDisplayScaleDidChange:) name:DLChatDisplayPreferencesDidChangeNotification object:nil];
+    // Dock badge: mention and DM counts, like the official client's unread badge.
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(dockBadgeInputsDidChange:) name:DLServerMentionCountDidChangeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(dockBadgeInputsDidChange:) name:DLUnreadBadgePreferenceDidChangeNotification object:nil];
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
     [myUserAvatarImage setImage:[DLUtil imageResize:[[[NSImage alloc] initWithContentsOfFile:[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"discord_placeholder.png"]] autorelease] newSize:myUserAvatarImage.frame.size cornerRadius:MY_USER_AVATAR_RADIUS]];
     userProfileController = [[DLUserProfileController alloc] initWithHostWindow:self.window
@@ -455,6 +461,23 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [chatScrollView refreshVisibleMessageHeaderLayouts];
     [NSObject cancelPreviousPerformRequestsWithTarget:chatScrollView selector:@selector(screenResize) object:nil];
     [chatScrollView performSelector:@selector(screenResize) withObject:nil afterDelay:0.05];
+}
+
+-(void)dockBadgeInputsDidChange:(NSNotification *)notification {
+    // Read state applies many counts at once; update the badge once afterwards.
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(refreshDockBadge) object:nil];
+    [self performSelectorOnMainThread:@selector(scheduleDockBadgeRefresh) withObject:nil waitUntilDone:NO];
+}
+
+-(void)scheduleDockBadgeRefresh {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(refreshDockBadge) object:nil];
+    [self performSelector:@selector(refreshDockBadge) withObject:nil afterDelay:0.2];
+}
+
+-(void)refreshDockBadge {
+    NSInteger count = [[DLController existingInstance] totalMentionCount];
+    BOOL show = count > 0 && [[DLPreferencesHandler sharedInstance] showUnreadBadge];
+    [[NSApp dockTile] setBadgeLabel:(show ? [NSString stringWithFormat:@"%ld", (long)count] : nil)];
 }
 
 -(void)messageDisplayScaleDidChange:(NSNotification *)notification {
@@ -849,6 +872,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 }
 
 -(void)didLogoutSuccessfully {
+    [[NSApp dockTile] setBadgeLabel:nil];
     [delegate logoutWasSuccessful];
 }
 

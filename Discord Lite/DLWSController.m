@@ -412,6 +412,9 @@ static DLWSController* sharedObject = nil;
                 }
                 [delegate wsDidReceivePrivateChannelData:[wsData objectForKey:@"private_channels"]];
                 [delegate wsDidLoadAllDataAfterReconnection:didReconnect];
+                if ([delegate respondsToSelector:@selector(wsDidReceiveUserGuildSettings:replacingAll:)]) {
+                    [delegate wsDidReceiveUserGuildSettings:[wsData objectForKey:@"user_guild_settings"] replacingAll:YES];
+                }
                 [delegate wsDidReceiveReadStateData:[wsData
                                                      objectForKey:@"read_state"]];
                 [self notifyConnectionState:DLWSConnectionStateConnected];
@@ -461,6 +464,10 @@ static DLWSController* sharedObject = nil;
                 }
                 [delegate wsDidReceiveMemberData:memberData
                                   forServerWithID:[wsData objectForKey:@"guild_id"]];
+            } else if ([type isEqualToString:@"USER_GUILD_SETTINGS_UPDATE"]) {
+                if ([delegate respondsToSelector:@selector(wsDidReceiveUserGuildSettings:replacingAll:)]) {
+                    [delegate wsDidReceiveUserGuildSettings:[res objectForKey:@kWSData] replacingAll:NO];
+                }
             } else if ([type isEqualToString:@"PRESENCE_UPDATE"]) {
                 // Friend presences arrive without a guild_id.
                 NSDictionary *wsData = [res objectForKey:@kWSData];

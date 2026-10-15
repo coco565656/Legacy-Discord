@@ -151,15 +151,18 @@
 -(void)notifyOfNewMention {
     mentionCount++;
     [delegate mentionCountDidUpdate];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLServerMentionCountDidChangeNotification object:self];
 }
 -(void)addMentionCount:(NSInteger)inMentions; {
     mentionCount += inMentions;
     [delegate mentionCountDidUpdate];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLServerMentionCountDidChangeNotification object:self];
 }
 
 -(void)setMentionCount:(NSInteger)inMentions {
     mentionCount = inMentions;
     [delegate mentionCountDidUpdate];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLServerMentionCountDidChangeNotification object:self];
 }
 
 -(void)setHasUnreadMessages:(BOOL)unread {
@@ -185,6 +188,9 @@
 
 -(BOOL)hasKnownMemberRoles {
     return myRoleIDs != nil;
+}
+-(NSArray *)myRoleIDs {
+    return myRoleIDs;
 }
 -(void)setMyRoleIDs:(NSArray *)roleIDs {
     [myRoleIDs release];

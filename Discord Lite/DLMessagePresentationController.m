@@ -17,6 +17,7 @@
 #import "DLMessageComposerController.h"
 #import "DLUserProfileController.h"
 #import "DLAudioPlayer.h"
+#import "DLPreferencesHandler.h"
 #import "DLTwemojiRenderer.h"
 
 static void *DLMessageDeleteConfirmationContext = &DLMessageDeleteConfirmationContext;
@@ -335,35 +336,46 @@ userProfileController:(DLUserProfileController *)inUserProfileController {
         }
     }
 
+    DLController *controller = [DLController sharedInstance];
     BOOL mentioned = NO;
     NSEnumerator *enumerator = [[message mentionedUsers] objectEnumerator];
     DLUser *user;
-    if (![[message author] isEqual:[[DLController sharedInstance] myUser]]) {
+    if (![[message author] isEqual:[controller myUser]]) {
         while (user = [enumerator nextObject]) {
-            if ([user isEqual:[[DLController sharedInstance] myUser]]) {
+            if ([user isEqual:[controller myUser]]) {
                 mentioned = YES;
             }
         }
-        if ([message mentionedEveryone]) {
+        // @everyone/@here count unless the server suppresses them.
+        if ([message mentionedEveryone] && ![controller suppressesEveryoneInServerWithID:[server serverID]]) {
             mentioned = YES;
         }
-        if (mentioned || [channel isKindOfClass:[DLDirectMessageChannel class]]) {
-            if ([[[DLController sharedInstance] selectedChannel] isEqual:channel]) {
-                if (![hostWindow isKeyWindow]) {
-                    [channel notifyOfNewMention];
-                    [server notifyOfNewMention];
-                    [[DLAudioPlayer sharedInstance] playAudioWithID:AudioIDNotificationNewMention];
-                }
-            } else {
+        NSEnumerator *roleEnumerator = [[message mentionedRoleIDs] objectEnumerator];
+        NSString *roleID;
+        while (!mentioned && (roleID = [roleEnumerator nextObject])) {
+            if ([[server myRoleIDs] containsObject:roleID]) mentioned = YES;
+        }
+        BOOL isDirect = [channel isKindOfClass:[DLDirectMessageChannel class]];
+        // Muted conversations keep their badge but make no sound or bounce.
+        BOOL muted = [controller isChannelMuted:channel];
+        if (mentioned || isDirect) {
+            BOOL viewing = [[controller selectedChannel] isEqual:channel] && [hostWindow isKeyWindow];
+            if (!viewing) {
                 [channel notifyOfNewMention];
                 [server notifyOfNewMention];
-                [[DLAudioPlayer sharedInstance] playAudioWithID:AudioIDNotificationNewMention];
+                if (!muted) {
+                    [[DLAudioPlayer sharedInstance] playAudioWithID:AudioIDNotificationNewMention];
+                    if (![NSApp isActive] && [[DLPreferencesHandler sharedInstance] bounceDockIcon]) {
+                        [NSApp requestUserAttention:NSInformationalRequest];
+                    }
+                }
             }
         }
     }
     if (![channel isEqual:[[DLController sharedInstance] selectedChannel]]) {
         [channel setHasUnreadMessages:YES];
-        if (![server isEqual:[[DLController sharedInstance] myServerItem]]) {
+        if (![server isEqual:[[DLController sharedInstance] myServerItem]] &&
+            ![[DLController sharedInstance] isChannelMuted:channel]) {
             [server setHasUnreadMessages:YES];
         }
     }

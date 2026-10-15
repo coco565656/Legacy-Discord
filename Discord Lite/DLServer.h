@@ -12,6 +12,9 @@
 
 #define IconCDNRoot "https://cdn.discordapp.com/icons"
 
+// Posted whenever a server's mention count changes (drives the Dock badge).
+#define DLServerMentionCountDidChangeNotification @"DLServerMentionCountDidChangeNotification"
+
 @protocol DLServerDelegate <NSObject>
 @optional
 -(void)iconDidUpdateWithData:(NSData *)data;
@@ -54,6 +57,7 @@
 // Returns YES when the user's roles are unknown so nothing is hidden wrongly.
 -(BOOL)canUserWithID:(NSString *)userID viewChannelWithOverwrites:(NSArray *)overwrites;
 -(BOOL)hasKnownMemberRoles;
+-(NSArray *)myRoleIDs;
 -(void)setMyRoleIDs:(NSArray *)roleIDs;
 // Set when the own-member request failed; channels are then shown unfiltered.
 -(BOOL)myRolesUnavailable;

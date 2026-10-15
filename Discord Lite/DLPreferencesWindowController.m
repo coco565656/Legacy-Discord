@@ -36,6 +36,8 @@ enum {
     DLSettingsToggleReactions,
     DLSettingsToggleEmbeds,
     DLSettingsToggleMentionSound,
+    DLSettingsToggleUnreadBadge,
+    DLSettingsToggleBounceDock,
     DLSettingsToggleDeveloperMode
 };
 
@@ -492,9 +494,16 @@ enum {
 -(NSView *)buildNotificationsPane {
     NSView *pane = [self newPaneWithTitle:@"Notifications"];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
+    DLPreferencesHandler *preferences = [DLPreferencesHandler sharedInstance];
+    top = [self addToggleToPane:pane top:top title:@"Enable Unread Message Badge"
+                           help:@"Shows a red badge on the Dock icon with your mention and direct message count."
+                            tag:DLSettingsToggleUnreadBadge on:[preferences showUnreadBadge]];
+    top = [self addToggleToPane:pane top:top title:@"Bounce Dock Icon"
+                           help:@"Bounces the Dock icon once when you are mentioned or receive a direct message while Legacy Discord is in the background."
+                            tag:DLSettingsToggleBounceDock on:[preferences bounceDockIcon]];
     [self addToggleToPane:pane top:top title:@"Play a sound for mentions and direct messages"
                      help:@"Plays the mention sound when you are mentioned or receive a direct message."
-                      tag:DLSettingsToggleMentionSound on:[[DLPreferencesHandler sharedInstance] playMentionSound]];
+                      tag:DLSettingsToggleMentionSound on:[preferences playMentionSound]];
     return pane;
 }
 
@@ -635,6 +644,8 @@ enum {
         case DLSettingsToggleReactions: [preferences setShowReactions:on]; break;
         case DLSettingsToggleEmbeds: [preferences setShowEmbeds:on]; break;
         case DLSettingsToggleMentionSound: [preferences setPlayMentionSound:on]; break;
+        case DLSettingsToggleUnreadBadge: [preferences setShowUnreadBadge:on]; break;
+        case DLSettingsToggleBounceDock: [preferences setBounceDockIcon:on]; break;
         case DLSettingsToggleDeveloperMode: [preferences setDeveloperMode:on]; break;
     }
     [sender setNeedsDisplay:YES];

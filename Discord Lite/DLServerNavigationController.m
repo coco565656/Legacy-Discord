@@ -65,7 +65,7 @@
         [[NSColor whiteColor] set];
         [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(NSMinX([controlView visibleRect]) - 4.0, NSMidY(cellFrame) - 10.0, 8.0, 20.0)
                                          xRadius:4.0 yRadius:4.0] fill];
-    } else if ([representedServer hasUnreadMessages]) {
+    } else if ([representedServer hasUnreadMessages] && ![[DLController existingInstance] isServerMuted:representedServer]) {
         [[NSColor whiteColor] set];
         NSBezierPath *unreadPath = [NSBezierPath bezierPathWithRoundedRect:
                                     NSMakeRect(NSMinX([controlView visibleRect]) - 4.0, NSMidY(cellFrame) - 4.0, 8.0, 8.0)
@@ -112,6 +112,8 @@
     if (self) {
         scrollView = [inScrollView retain];
         [self installTableView];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(notificationSettingsDidChange:)
+                                                     name:DLNotificationSettingsDidChangeNotification object:nil];
     }
     return self;
 }
@@ -172,6 +174,24 @@
     [markRead setEnabled:([server hasUnreadMessages] || [server mentionCount] > 0)];
     [menu addItem:markRead];
     [menu addItem:[NSMenuItem separatorItem]];
+    if ([[DLController sharedInstance] isServerMuted:server]) {
+        [menu addItem:[self menuItemWithTitle:@"Unmute Server" action:@selector(unmuteServer:) server:server]];
+    } else {
+        NSMenuItem *mute = [[[NSMenuItem alloc] initWithTitle:@"Mute Server" action:NULL keyEquivalent:@""] autorelease];
+        NSMenu *durations = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+        NSArray *titles = [NSArray arrayWithObjects:@"For 15 Minutes", @"For 1 Hour", @"For 3 Hours",
+                           @"For 8 Hours", @"For 24 Hours", @"Until I turn it back on", nil];
+        NSInteger seconds[] = { 15 * 60, 60 * 60, 3 * 60 * 60, 8 * 60 * 60, 24 * 60 * 60, 0 };
+        NSUInteger index;
+        for (index = 0; index < [titles count]; index++) {
+            NSMenuItem *item = [self menuItemWithTitle:[titles objectAtIndex:index] action:@selector(muteServer:) server:server];
+            [item setTag:seconds[index]];
+            [durations addItem:item];
+        }
+        [mute setSubmenu:durations];
+        [menu addItem:mute];
+    }
+    [menu addItem:[NSMenuItem separatorItem]];
     [menu addItem:[self menuItemWithTitle:@"Copy Server Link" action:@selector(copyServerLink:) server:server]];
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
         [menu addItem:[NSMenuItem separatorItem]];
@@ -181,6 +201,18 @@
 
 -(void)markServerAsRead:(NSMenuItem *)sender {
     [[DLController sharedInstance] markServerAsRead:[sender representedObject]];
+    [tableView setNeedsDisplay:YES];
+}
+
+-(void)muteServer:(NSMenuItem *)sender {
+    [[DLController sharedInstance] setMuted:YES duration:(NSTimeInterval)[sender tag] forServer:[sender representedObject]];
+}
+
+-(void)unmuteServer:(NSMenuItem *)sender {
+    [[DLController sharedInstance] setMuted:NO duration:0 forServer:[sender representedObject]];
+}
+
+-(void)notificationSettingsDidChange:(NSNotification *)notification {
     [tableView setNeedsDisplay:YES];
 }
 
@@ -286,6 +318,7 @@
 }
 
 -(void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     delegate = nil;
     NSEnumerator *enumerator = [serverItems objectEnumerator];
     DLServer *server;

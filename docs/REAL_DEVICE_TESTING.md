@@ -47,6 +47,31 @@ the DevLocal view capture remains useful for deterministic local regression.
 
 ### Mac OS X 10.6.8 / Xcode 4.2 — 2026-10-15
 
+#### Notifications and mute
+
+- READY `user_guild_settings` (and `USER_GUILD_SETTINGS_UPDATE`) are kept per
+  server. Muted channels/categories are dimmed; any mute (channel, category or
+  server) hides the unread pill and bold name, while mention badges remain.
+  Mentions honour role mentions and `suppress_everyone`; muted conversations
+  make no sound or bounce.
+- Channel, category, DM and server menus gained Mute (15 minutes, 1/3/8/24
+  hours, until turned back on) and Unmute, sent as
+  `PATCH /users/@me/guilds/{id}/settings` like the official client.
+- Settings > Notifications: Enable Unread Message Badge (Dock badge with the
+  mention + DM count) and Bounce Dock Icon (informational request while the app
+  is in the background), next to the existing mention sound.
+- Verified on 10.6.8 (with the user's permission to write the setting): muted
+  a channel for 15 minutes from the context menu, the channel dimmed, the mute
+  was still present after relaunch (so Discord stored it), then Unmute Channel
+  restored it. Server menu shows the Mute Server submenu (not exercised). The
+  Notifications pane shows the three toggles.
+- Fixed during the pass: a channel without a category has an `NSNull` parent
+  ID; calling `length` on it raised in drawing and left the window half
+  rendered.
+- Not yet seen on a device: the Dock badge and bounce (need an incoming mention
+  or DM). A duplicated separator in the server menu was removed after the
+  device build.
+
 #### Remaining checks and fixes
 
 - Verified on 10.6.8: window resize and zoom with the dark title bar; dark

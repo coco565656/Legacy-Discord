@@ -24,6 +24,9 @@
 #define kShowReactions "ShowReactions"
 #define kShowEmbeds "ShowEmbeds"
 #define kPlayMentionSound "PlayMentionSound"
+#define kShowUnreadBadge "ShowUnreadBadge"
+#define kBounceDockIcon "BounceDockIcon"
+#define DLUnreadBadgePreferenceDidChangeNotification @"DLUnreadBadgePreferenceDidChangeNotification"
 #define kDeveloperMode "DeveloperMode"
 // Posted when a setting that changes how messages are rendered is changed.
 // Observers re-render messages and lists; the object is the handler.
@@ -48,6 +51,8 @@
 -(BOOL)showReactions;
 -(BOOL)showEmbeds;
 -(BOOL)playMentionSound;
+-(BOOL)showUnreadBadge;
+-(BOOL)bounceDockIcon;
 -(BOOL)developerMode;
 
 -(void)setShouldUseSOCKSProxy:(BOOL)shouldUse;
@@ -64,6 +69,8 @@
 -(void)setShowReactions:(BOOL)show;
 -(void)setShowEmbeds:(BOOL)show;
 -(void)setPlayMentionSound:(BOOL)play;
+-(void)setShowUnreadBadge:(BOOL)show;
+-(void)setBounceDockIcon:(BOOL)bounce;
 -(void)setDeveloperMode:(BOOL)enabled;
 
 @end

@@ -20,6 +20,8 @@
 // Posted on the main thread after newly received members are stored in their
 // DLServer. The object is the DLServer.
 #define DLServerMembersDidUpdateNotification @"DLServerMembersDidUpdateNotification"
+// Posted on the main thread when server/channel mute settings change.
+#define DLNotificationSettingsDidChangeNotification @"DLNotificationSettingsDidChangeNotification"
 
 #define kDefaultsToken "token"
 
@@ -45,7 +47,8 @@ typedef enum {
     RequestIDChannelPins = 18,
     RequestIDUserNoteLoad = 19,
     RequestIDUserNoteSave = 20,
-    RequestIDMyGuildMember = 21
+    RequestIDMyGuildMember = 21,
+    RequestIDNotificationSettings = 22
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -89,6 +92,8 @@ typedef enum {
     NSMutableSet *pendingMemberRequests;
     NSArray *relationships;
     NSMutableDictionary *friendPresences;
+    // user_guild_settings entries keyed by guild ID ("@me" for DMs).
+    NSMutableDictionary *guildNotificationSettings;
     id <DLLoginDelegate> loginDelegate;
     NSString *captchaKey;
     DLServer *selectedServer;
@@ -131,6 +136,17 @@ typedef enum {
 // Acknowledge the newest known message and clear unread/mention state.
 -(void)markChannelAsRead:(DLChannel *)channel;
 -(void)markServerAsRead:(DLServer *)server;
+// Discord's per-server notification settings. A channel is muted when it, its
+// category or its server is muted (unless a timed mute has expired).
+-(BOOL)isServerMuted:(DLServer *)server;
+-(BOOL)isChannelMuted:(DLChannel *)channel;
+-(BOOL)isChannelMutedItself:(DLChannel *)channel;
+-(BOOL)suppressesEveryoneInServerWithID:(NSString *)serverID;
+// duration is in seconds; 0 mutes until turned back on.
+-(void)setMuted:(BOOL)muted duration:(NSTimeInterval)duration forServer:(DLServer *)server;
+-(void)setMuted:(BOOL)muted duration:(NSTimeInterval)duration forChannel:(DLChannel *)channel;
+// Mentions across servers plus DMs, for the Dock badge.
+-(NSInteger)totalMentionCount;
 // READY relationships: dictionaries with id, type (1 friend, 2 blocked,
 // 3 incoming request, 4 outgoing request) and user.
 -(NSArray *)relationships;

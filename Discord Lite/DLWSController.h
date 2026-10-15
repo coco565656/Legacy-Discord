@@ -56,6 +56,8 @@ typedef enum {
 // Friends, blocked users and pending requests, with friends' presences.
 -(void)wsDidReceiveRelationships:(NSArray *)relationships presences:(NSArray *)presences;
 -(void)wsUserWithID:(NSString *)userID didUpdatePresenceStatus:(NSString *)status;
+// Per-server notification settings (mutes); a READY list or one updated entry.
+-(void)wsDidReceiveUserGuildSettings:(id)settings replacingAll:(BOOL)replacingAll;
 @required
 -(void)wsDidReceiveUserSettingsData:(NSDictionary *)data;
 -(void)wsDidLoadAllDataAfterReconnection:(BOOL)didReconnect;

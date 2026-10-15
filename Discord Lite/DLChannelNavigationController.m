@@ -247,14 +247,24 @@
     }
 
     NSString *name = [representedChannel name] ? [representedChannel name] : @"Untitled";
+    // Muted channels (or channels in a muted server) show no unread state;
+    // a channel or category muted itself is also dimmed, like Discord.
+    DLController *controller = [DLController existingInstance];
+    BOOL muted = [controller isChannelMuted:representedChannel];
+    BOOL dimmed = [controller isChannelMutedItself:representedChannel] ||
+        (!isCategory && [representedChannel isKindOfClass:[DLServerChannel class]] &&
+         [[(DLServerChannel *)representedChannel parentID] isKindOfClass:[NSString class]] &&
+         [controller isChannelMutedItself:[controller loadedChannelWithID:[(DLServerChannel *)representedChannel parentID]]]);
+    BOOL unread = [representedChannel hasUnreadMessages] && !muted;
     NSFont *font = isCategory ? [NSFont boldSystemFontOfSize:[NSFont smallSystemFontSize]]
-                              : ([representedChannel hasUnreadMessages]
+                              : (unread
                                  ? [NSFont boldSystemFontOfSize:[NSFont systemFontSize]]
                                  : [NSFont systemFontOfSize:[NSFont systemFontSize]]);
-    BOOL emphasized = selected || hovered || [representedChannel hasUnreadMessages];
+    BOOL emphasized = selected || hovered || unread;
     NSColor *textColor = isCategory ? [DLUtil nativeSecondaryTextColor]
                                     : (emphasized ? [DLUtil nativePrimaryTextColor]
                                                   : [DLUtil nativeSecondaryTextColor]);
+    if (dimmed && !selected) textColor = [textColor colorWithAlphaComponent:0.45];
     NSMutableParagraphStyle *paragraphStyle = [[[NSMutableParagraphStyle alloc] init] autorelease];
     [paragraphStyle setLineBreakMode:NSLineBreakByTruncatingTail];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -281,7 +291,7 @@
         [chevron setLineWidth:1.5];
         [chevron setLineCapStyle:NSRoundLineCapStyle];
         [chevron setLineJoinStyle:NSRoundLineJoinStyle];
-        [[DLUtil nativeSecondaryTextColor] setStroke];
+        [(dimmed ? [[DLUtil nativeSecondaryTextColor] colorWithAlphaComponent:0.45] : [DLUtil nativeSecondaryTextColor]) setStroke];
         [chevron stroke];
         contentRect.origin.x += 14.0;
         contentRect.size.width -= 14.0;
@@ -298,7 +308,7 @@
         return;
     }
 
-    if ([representedChannel hasUnreadMessages] && !selected) {
+    if (unread && !selected) {
         [[DLUtil nativePrimaryTextColor] set];
         // Discord's unread pill hangs off the left edge of the channel list.
         NSRect unreadRect = NSMakeRect(NSMinX([controlView visibleRect]) - 4.0, NSMidY(contentRect) - 4.0, 8.0, 8.0);
@@ -306,6 +316,7 @@
     }
 
     NSColor *iconColor = emphasized ? [DLUtil nativePrimaryTextColor] : [DLUtil nativeSecondaryTextColor];
+    if (dimmed && !selected) iconColor = [iconColor colorWithAlphaComponent:0.45];
     BOOL isDirectMessage = ([representedChannel type] == ChannelTypeDM ||
                             [representedChannel type] == ChannelTypeGroup);
     NSRect iconRect = isDirectMessage
@@ -375,6 +386,8 @@
     if (self) {
         scrollView = [inScrollView retain];
         [self installOutlineView];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(notificationSettingsDidChange:)
+                                                     name:DLNotificationSettingsDidChangeNotification object:nil];
     }
     return self;
 }
@@ -548,11 +561,51 @@
     } else {
         [menu addItem:[self channelMenuItem:@"Copy Link" action:@selector(copyChannelLink:) channel:channel]];
     }
+    [menu addItem:[NSMenuItem separatorItem]];
+    [self addMuteItemForChannel:channel toMenu:menu];
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItem:[self channelMenuItem:(isCategory ? @"Copy Category ID" : @"Copy Channel ID")
                                      action:@selector(copyChannelID:) channel:channel]];
     }
+}
+
+// "Mute Channel" opens the official duration submenu; a muted channel offers
+// "Unmute Channel" instead.
+-(void)addMuteItemForChannel:(DLChannel *)channel toMenu:(NSMenu *)menu {
+    BOOL isCategory = [channel type] == ChannelTypeHeader;
+    BOOL isDirect = [channel isKindOfClass:[DLDirectMessageChannel class]] ||
+                    [channel type] == ChannelTypeDM || [channel type] == ChannelTypeGroup;
+    NSString *noun = isCategory ? @"Category" : (isDirect ? @"Conversation" : @"Channel");
+    if ([[DLController sharedInstance] isChannelMutedItself:channel]) {
+        NSMenuItem *unmute = [self channelMenuItem:[@"Unmute " stringByAppendingString:noun]
+                                            action:@selector(unmuteChannel:) channel:channel];
+        [menu addItem:unmute];
+        return;
+    }
+    NSMenuItem *mute = [[[NSMenuItem alloc] initWithTitle:[@"Mute " stringByAppendingString:noun]
+                                                   action:NULL keyEquivalent:@""] autorelease];
+    NSMenu *durations = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    NSArray *titles = [NSArray arrayWithObjects:@"For 15 Minutes", @"For 1 Hour", @"For 3 Hours",
+                       @"For 8 Hours", @"For 24 Hours", @"Until I turn it back on", nil];
+    NSInteger seconds[] = { 15 * 60, 60 * 60, 3 * 60 * 60, 8 * 60 * 60, 24 * 60 * 60, 0 };
+    NSUInteger index;
+    for (index = 0; index < [titles count]; index++) {
+        NSMenuItem *item = [self channelMenuItem:[titles objectAtIndex:index]
+                                          action:@selector(muteChannel:) channel:channel];
+        [item setTag:seconds[index]];
+        [durations addItem:item];
+    }
+    [mute setSubmenu:durations];
+    [menu addItem:mute];
+}
+
+-(void)muteChannel:(NSMenuItem *)sender {
+    [[DLController sharedInstance] setMuted:YES duration:(NSTimeInterval)[sender tag] forChannel:[sender representedObject]];
+}
+
+-(void)unmuteChannel:(NSMenuItem *)sender {
+    [[DLController sharedInstance] setMuted:NO duration:0 forChannel:[sender representedObject]];
 }
 
 -(void)markChannelAsRead:(NSMenuItem *)sender {
@@ -641,7 +694,12 @@
     [delegate channelNavigationController:self imageDidUpdateWithData:data forChannel:channel];
 }
 
+-(void)notificationSettingsDidChange:(NSNotification *)notification {
+    [outlineView setNeedsDisplay:YES];
+}
+
 -(void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     delegate = nil;
     [self setModelDelegatesForItems:channelItems delegate:nil];
     [channelItems release];

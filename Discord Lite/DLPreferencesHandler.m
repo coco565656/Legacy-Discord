@@ -83,6 +83,12 @@ static DLPreferencesHandler* sharedObject = nil;
 -(BOOL)playMentionSound {
     return [self boolForKey:@kPlayMentionSound defaultValue:YES];
 }
+-(BOOL)showUnreadBadge {
+    return [self boolForKey:@kShowUnreadBadge defaultValue:YES];
+}
+-(BOOL)bounceDockIcon {
+    return [self boolForKey:@kBounceDockIcon defaultValue:YES];
+}
 -(BOOL)developerMode {
     return [self boolForKey:@kDeveloperMode defaultValue:NO];
 }
@@ -106,6 +112,12 @@ static DLPreferencesHandler* sharedObject = nil;
 }
 -(void)setPlayMentionSound:(BOOL)play {
     [self setBool:play forKey:@kPlayMentionSound notify:nil];
+}
+-(void)setShowUnreadBadge:(BOOL)show {
+    [self setBool:show forKey:@kShowUnreadBadge notify:DLUnreadBadgePreferenceDidChangeNotification];
+}
+-(void)setBounceDockIcon:(BOOL)bounce {
+    [self setBool:bounce forKey:@kBounceDockIcon notify:nil];
 }
 -(void)setDeveloperMode:(BOOL)enabled {
     [self setBool:enabled forKey:@kDeveloperMode notify:nil];

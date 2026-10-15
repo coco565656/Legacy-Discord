@@ -103,6 +103,10 @@
     if ([d objectForKey:@"mention_everyone"]) {
         mentionedEveryone = [[d objectForKey:@"mention_everyone"] boolValue];
     }
+    if ([[d objectForKey:@"mention_roles"] isKindOfClass:[NSArray class]]) {
+        [mentionedRoleIDs release];
+        mentionedRoleIDs = [[d objectForKey:@"mention_roles"] copy];
+    }
     if ([d objectForKey:@"referenced_message"] && ![[d objectForKey:@"referenced_message"] isKindOfClass:[NSNull class]]) {
         [referencedMessage release];
         referencedMessage = [[DLMessage alloc] initWithDict:[d objectForKey:@"referenced_message"]];
@@ -241,6 +245,9 @@
 -(BOOL)mentionedEveryone {
     return mentionedEveryone;
 }
+-(NSArray *)mentionedRoleIDs {
+    return mentionedRoleIDs;
+}
 
 -(void)setDelegate:(id<DLMessageDelegate>)inDelegate {
     delegate = inDelegate;
@@ -298,6 +305,7 @@
 -(void)dealloc {
     [author release];
     [mentionedUsers release];
+    [mentionedRoleIDs release];
     [reactions release];
     [embeds release];
     [stickerItems release];
