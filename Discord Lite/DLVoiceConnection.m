@@ -312,6 +312,7 @@ static void DLVoiceMLSFailure(const char *source, const char *reason, void *user
         }
         t->api->keyRatchetDestroy(ratchet);
     }
+    NSLog(@"Voice: DAVE key ratchets applied for %lu other user(s)", (unsigned long)[users count]);
     [self setDaveActive:YES thread:t];
 }
 
@@ -375,6 +376,7 @@ static void DLVoiceMLSFailure(const char *source, const char *reason, void *user
     size_t payloadLength = 0;
     if (!ldv_binary_parse([message bytes], [message length], &sequence, &op, &payload, &payloadLength)) return;
     t->sequenceAck = sequence;
+    NSLog(@"Voice: DAVE binary op %u (%lu bytes)", op, (unsigned long)payloadLength);
     if (!t->session) return;
     if (op == DLVoiceOpDaveExternalSender) {
         t->api->sessionSetExternalSender(t->session, payload, payloadLength);
@@ -387,6 +389,7 @@ static void DLVoiceMLSFailure(const char *source, const char *reason, void *user
         size_t commitWelcomeLength = 0;
         t->api->sessionProcessProposals(t->session, payload, payloadLength, ids, count, &commitWelcome, &commitWelcomeLength);
         free(ids);
+        NSLog(@"Voice: DAVE proposals -> commit %lu bytes", (unsigned long)commitWelcomeLength);
         if (commitWelcome && commitWelcomeLength) {
             [self sendBinaryOp:DLVoiceOpDaveCommitWelcome payload:commitWelcome length:commitWelcomeLength thread:t];
         }
@@ -397,6 +400,8 @@ static void DLVoiceMLSFailure(const char *source, const char *reason, void *user
         size_t commitLength = 0;
         if (!ldv_transition_payload(payload, payloadLength, &transitionId, &commit, &commitLength)) return;
         DAVECommitResultHandle result = t->api->sessionProcessCommit(t->session, commit, commitLength);
+        NSLog(@"Voice: DAVE commit for transition %u: %@", transitionId,
+              !result ? @"error" : (t->api->commitIsFailed(result) ? @"failed" : (t->api->commitIsIgnored(result) ? @"ignored" : @"ok")));
         if (!result || t->api->commitIsFailed(result)) {
             if (result) t->api->commitDestroy(result);
             [self daveInvalidate:transitionId thread:t];
@@ -423,6 +428,7 @@ static void DLVoiceMLSFailure(const char *source, const char *reason, void *user
         size_t recognisedCount = 0;
         [self recognisedUsers:t list:&recognised count:&recognisedCount holder:holder];
         DAVEWelcomeResultHandle result = t->api->sessionProcessWelcome(t->session, welcome, welcomeLength, recognised, recognisedCount);
+        NSLog(@"Voice: DAVE welcome for transition %u: %@", transitionId, result ? @"ok" : @"failed");
         free(recognised);
         if (!result) {
             [self daveInvalidate:transitionId thread:t];
@@ -466,6 +472,7 @@ static void DLVoiceMLSFailure(const char *source, const char *reason, void *user
     if ([seq respondsToSelector:@selector(intValue)]) t->sequenceAck = [seq intValue];
     NSDictionary *d = [[packet objectForKey:@"d"] isKindOfClass:[NSDictionary class]] ? [packet objectForKey:@"d"] : nil;
 
+    if (op != DLVoiceOpHeartbeatAck) NSLog(@"Voice: gateway op %d", op);
     if (op == DLVoiceOpHello) {
         t->heartbeatInterval = [[d objectForKey:@"heartbeat_interval"] doubleValue] / 1000.0;
         if (t->heartbeatInterval <= 0) t->heartbeatInterval = 13.75;
@@ -563,6 +570,7 @@ static void DLVoiceMLSFailure(const char *source, const char *reason, void *user
         uint16_t port = 0;
         if (ldv_discovery_parse(packet, length, address, &port)) {
             t->discoveryDone = YES;
+            NSLog(@"Voice: UDP discovery ok (port %u)", port);
             NSDictionary *data = [NSDictionary dictionaryWithObjectsAndKeys:
                                   [NSString stringWithUTF8String:address], @"address",
                                   [NSNumber numberWithUnsignedShort:port], @"port",

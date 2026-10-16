@@ -73,6 +73,7 @@ static DLVoiceManager *sharedVoiceManager = nil;
     lastError = nil;
     endToEndEncrypted = NO;
     [self setState:DLVoiceStateRequesting];
+    NSLog(@"Voice: joining channel %@ (guild %@)", [inChannel channelID], guildID ? guildID : @"none");
     [[DLWSController sharedInstance] sendVoiceStateUpdateForGuildID:guildID channelID:[[inChannel channelID] description]
                                                            selfMute:selfMute selfDeaf:selfDeaf];
 }
@@ -135,6 +136,9 @@ static DLVoiceManager *sharedVoiceManager = nil;
     if ([channelValue isKindOfClass:[NSString class]]) [voiceStates setObject:data forKey:user];
     else [voiceStates removeObjectForKey:user];
 
+    if ([user isEqualToString:[self myUserID]]) {
+        NSLog(@"Voice: own voice state channel=%@ session=%@", channelValue, [data objectForKey:@"session_id"] ? @"yes" : @"no");
+    }
     if ([user isEqualToString:[self myUserID]] && state != DLVoiceStateIdle) {
         if (![channelValue isKindOfClass:[NSString class]]) {
             // Moved out or disconnected by the server or another client.
@@ -157,9 +161,11 @@ static DLVoiceManager *sharedVoiceManager = nil;
 }
 
 -(void)voiceServerUpdate:(NSNotification *)notification {
+    NSLog(@"Voice: VOICE_SERVER_UPDATE received in state %d", state);
     if (state != DLVoiceStateRequesting && state != DLVoiceStateConnecting) return;
     NSDictionary *data = [notification userInfo];
     id endpoint = [data objectForKey:@"endpoint"];
+    NSLog(@"Voice: server update endpoint=%@", endpoint);
     if (![endpoint isKindOfClass:[NSString class]]) return; // server being allocated; another update follows
     [serverInfo release];
     serverInfo = [data copy];
@@ -198,6 +204,7 @@ static DLVoiceManager *sharedVoiceManager = nil;
 -(void)voiceConnection:(DLVoiceConnection *)inConnection didChangeState:(DLVoiceConnectionState)connectionState
                 reason:(NSString *)reason {
     if (inConnection != connection) return;
+    NSLog(@"Voice: connection state %d", connectionState);
     if (connectionState == DLVoiceConnectionStateConnected) {
         [self setState:DLVoiceStateConnected];
     } else if (connectionState == DLVoiceConnectionStateClosed) {

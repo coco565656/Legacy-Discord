@@ -15,6 +15,8 @@
 
 
 static DLWSController* sharedObject = nil;
+// READY's geo_ordered_rtc_regions, sent with voice state updates like the official client.
+static NSArray *preferredVoiceRegions = nil;
 
 -(void)deliverConnectionState:(NSNumber *)stateNumber {
     [delegate wsConnectionStateDidChange:(DLWSConnectionState)[stateNumber intValue]];
@@ -329,9 +331,16 @@ static DLWSController* sharedObject = nil;
                           [NSNumber numberWithBool:selfMute], @"self_mute",
                           [NSNumber numberWithBool:selfDeaf], @"self_deaf",
                           [NSNumber numberWithBool:NO], @"self_video", nil];
+    if ([preferredVoiceRegions count]) {
+        NSMutableDictionary *withRegions = [NSMutableDictionary dictionaryWithDictionary:data];
+        [withRegions setObject:[preferredVoiceRegions objectAtIndex:0] forKey:@"preferred_region"];
+        [withRegions setObject:preferredVoiceRegions forKey:@"preferred_regions"];
+        data = withRegions;
+    }
     NSDictionary *payload = [NSDictionary dictionaryWithObjectsAndKeys:
                              [NSNumber numberWithInt:OPCodeVoiceStateUpdate], @kWSOperation, data, @kWSData, nil];
-    [self sendWSTextData:[[CJSONSerializer serializer] serializeDictionary:payload error:nil]];
+    NSData *json = [[CJSONSerializer serializer] serializeDictionary:payload error:nil];
+    [self sendWSTextData:json];
 }
 
 -(void)queryServer:(DLServer *)s forMembersContainingUsername:(NSString *)username {
@@ -401,7 +410,13 @@ static DLWSController* sharedObject = nil;
 #pragma mark Delegated Functions
 
 -(void)wsTextDataReceived:(NSData *)textData {
-    NSDictionary *res = [[CJSONDeserializer deserializer] deserializeAsDictionary:textData error:nil];
+    NSError *parseError = nil;
+    NSDictionary *res = [[CJSONDeserializer deserializer] deserializeAsDictionary:textData error:&parseError];
+    if (!res) {
+        NSString *raw = [[[NSString alloc] initWithData:textData encoding:NSUTF8StringEncoding] autorelease];
+        NSLog(@"Gateway message not parsed (%@): %@", [parseError localizedDescription],
+              raw ? [raw substringToIndex:MIN((NSUInteger)160, [raw length])] : @"(not UTF-8)");
+    }
     //NSLog(@"Res: %@", res);
     OPCode c = [[res objectForKey:@kWSOperation] intValue];
     switch (c) {
@@ -416,6 +431,12 @@ static DLWSController* sharedObject = nil;
             } else if ([type isEqualToString:@"READY"]) {
                 NSDictionary *wsData = [res objectForKey:@kWSData];
                 sessionID = [[wsData objectForKey:@"session_id"] retain];
+                id regions = [wsData objectForKey:@"geo_ordered_rtc_regions"];
+                if ([regions isKindOfClass:[NSArray class]]) {
+                    [preferredVoiceRegions release];
+                    preferredVoiceRegions = [regions copy];
+                }
+
                 [delegate wsDidReceiveServerData:[self guildsWithOwnMembersFromReady:wsData]];
                 [delegate wsDidReceiveUserSettingsData:[wsData objectForKey:@"user_settings"]];
                 [delegate wsDidReceiveUserData:[wsData objectForKey:@"user"]];
@@ -560,9 +581,12 @@ static DLWSController* sharedObject = nil;
                 [data setObject:[NSString stringWithString:token] forKey:@"token"];
                 
                 NSMutableDictionary *platformProps = [[NSMutableDictionary alloc] init];
-                [platformProps setObject:@"Apple macOS" forKey:@"$os"];
-                [platformProps setObject:@"Apple macOS" forKey:@"$browser"];
-                [platformProps setObject:@"Apple Mac" forKey:@"$device"];
+                // Gateway v10 property names (the "$"-prefixed ones are gone).
+                [platformProps setObject:@"Mac OS X" forKey:@"os"];
+                [platformProps setObject:@"Legacy Discord" forKey:@"browser"];
+                [platformProps setObject:@"" forKey:@"device"];
+                [platformProps setObject:[[NSProcessInfo processInfo] operatingSystemVersionString] forKey:@"os_version"];
+                [platformProps setObject:[[NSLocale currentLocale] localeIdentifier] forKey:@"system_locale"];
                 [data setObject:platformProps forKey:@"properties"];
                 
                 NSMutableDictionary *presence = [[NSMutableDictionary alloc] init];

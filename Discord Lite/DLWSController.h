@@ -19,6 +19,7 @@
 
 #define WS_GATEWAY_URL "wss://gateway.discord.gg/?encoding=json&v=10"
 
+
 #define kWSOperation "op"
 #define kWSData "d"
 #define kWSSequence "s"

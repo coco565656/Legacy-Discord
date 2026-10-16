@@ -54,6 +54,26 @@ test binary, so the app will `dlopen` the library by absolute path from
 binary free of any link-time dependency on it. libdave logs verbosely
 (including key packages) by default; the app must install a log sink.
 
+## Phases 2-4 result (2026-10-16, MBP2012, alone in a channel)
+
+Joined VC_0 in the user's own server twice and left again:
+VOICE_STATE_UPDATE (own session) and VOICE_SERVER_UPDATE arrive, the voice
+WebSocket identifies (Hello, Ready), UDP IP discovery answers, Select
+Protocol with `aead_aes256_gcm_rtpsize` is accepted, Session Description
+reports `dave_protocol_version` 1, the MLS key package (op 26) is sent and
+the external sender package (op 25) is received. With nobody else in the
+channel the gateway sends no proposals, so the MLS group handshake
+(27/28/29/30, key ratchets, media decrypt) still needs a second
+participant. Leaving produced the expected own voice state with no channel.
+
+Joining the channel named "test" never got an answer from the gateway (no
+voice events, and the official client did not show the user), while VC_0
+worked with the same build. Identify changes (v10 property names, a
+client build number, gateway v9, a Chrome identity) made no difference, so
+they were reverted except for the corrected v10 property names and
+`preferred_regions` from READY, which the official clients send. The reason
+"test" ignores joins is not known yet (likely a channel setting).
+
 ## Phases
 
 1. Toolchain: build OpenSSL 3, mlspp, libdave, libopus on MBP2012 with a
