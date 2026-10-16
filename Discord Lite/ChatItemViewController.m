@@ -7,6 +7,7 @@
 //
 
 #import "ChatItemViewController.h"
+#import "DLLocalization.h"
 #import "DLDarkMenu.h"
 #import "DLDialog.h"
 #import "DLPreferencesHandler.h"
@@ -173,6 +174,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [editedInfoLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
     [editedInfoLabel setHidden:YES];
     [editDismissInfoLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
+    [editDismissInfoLabel setStringValue:DLLocalizedString(@"Escape to cancel, return to save")];
     [referencedMessageTextField setTextColor:[DLUtil nativePrimaryTextColor]];
     reactionTextField = [[NSTextField alloc] initWithFrame:NSMakeRect(72, 3, view.frame.size.width - 88, 17)];
     [reactionTextField setAutoresizingMask:NSViewWidthSizable | NSViewMaxYMargin];
@@ -182,7 +184,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [reactionTextField setDrawsBackground:NO];
     [reactionTextField setFont:[NSFont systemFontOfSize:12 * displayScale]];
     [reactionTextField setTextColor:[DLUtil nativeSecondaryTextColor]];
-    [reactionTextField setToolTip:@"Reactions and counts"];
+    [reactionTextField setToolTip:DLLocalizedString(@"Reactions and counts")];
     [reactionTextField setHidden:YES];
     [insetView addSubview:reactionTextField];
     reactionButtons = [[NSMutableArray alloc] init];
@@ -206,7 +208,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [avatarProfileButton setBordered:NO];
     [avatarProfileButton setRefusesFirstResponder:YES];
     [avatarProfileButton setTitle:@""];
-    [avatarProfileButton setToolTip:@"View profile"];
+    [avatarProfileButton setToolTip:DLLocalizedString(@"View profile")];
     [avatarProfileButton setTarget:self];
     [avatarProfileButton setAction:@selector(showAuthorProfile:)];
     [avatarProfileButton setButtonType:NSMomentaryChangeButton];
@@ -227,7 +229,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [messageActionBar setHidden:YES];
     [self rebuildMessageActionBar];
 
-    reactionMenu = [[NSMenu alloc] initWithTitle:@"Add Reaction"];
+    reactionMenu = [[NSMenu alloc] initWithTitle:DLLocalizedString(@"Add Reaction")];
     
     /*NSMenuItem *copySelectionItem = [[NSMenuItem alloc] initWithTitle:@"Copy" action:@selector(copySelectedMessageContent) keyEquivalent:@""];
     [copySelectionItem setTarget:self];
@@ -236,10 +238,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
     
     [contextMenu addItem:[NSMenuItem separatorItem]];*/
     
-    editItem = [[NSMenuItem alloc] initWithTitle:@"Edit Message" action:@selector(beginEditingContent) keyEquivalent:@""];
+    editItem = [[NSMenuItem alloc] initWithTitle:DLLocalizedString(@"Edit Message") action:@selector(beginEditingContent) keyEquivalent:@""];
     [editItem setTarget:self];
     
-    deleteItem = [[NSMenuItem alloc] initWithTitle:@"Delete Message" action:@selector(beginDeletingMessage) keyEquivalent:@""];
+    deleteItem = [[NSMenuItem alloc] initWithTitle:DLLocalizedString(@"Delete Message") action:@selector(beginDeletingMessage) keyEquivalent:@""];
     [deleteItem setTarget:self];
     
 }
@@ -550,7 +552,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         reaction = [self reactionForIdentifier:identifier];
         BOOL reactedByMe = [[reaction objectForKey:@"me"] boolValue];
         NSString *label = [labels objectForKey:identifier] ? [labels objectForKey:identifier] : identifier;
-        NSString *title = [NSString stringWithFormat:@"%@ %@", reactedByMe ? @"Remove" : @"Add", label];
+        NSString *title = [NSString stringWithFormat:DLLocalizedString(reactedByMe ? DLLocalizedString(@"Remove %@") : DLLocalizedString(@"Add %@")), label];
         NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title action:@selector(toggleReaction:) keyEquivalent:@""];
         [item setTarget:self];
         [item setRepresentedObject:identifier];
@@ -566,7 +568,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
                 [item setImage:image];
             }
         } else {
-            [item setTitle:[NSString stringWithFormat:@"%@ %@", reactedByMe ? @"Remove" : @"Add",
+            [item setTitle:[NSString stringWithFormat:DLLocalizedString(reactedByMe ? DLLocalizedString(@"Remove %@") : DLLocalizedString(@"Add %@")),
                             [DLTwemojiRenderer displayNameForEmoji:identifier]]];
             [item setImage:[DLTwemojiRenderer imageForEmoji:identifier size:16.0]];
         }
@@ -672,7 +674,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         }
         BOOL reactedByMe = [[reaction objectForKey:@"me"] boolValue];
         [button setState:reactedByMe ? NSOnState : NSOffState];
-        [button setToolTip:reactedByMe ? @"Remove reaction" : @"Add reaction"];
+        [button setToolTip:reactedByMe ? DLLocalizedString(@"Remove reaction") : DLLocalizedString(@"Add reaction")];
         [[button cell] setRepresentedObject:identifier];
         [button setTarget:self];
         [button setAction:@selector(quickReaction:)];
@@ -876,7 +878,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [pickerButton setBordered:NO];
     [pickerButton setRefusesFirstResponder:YES];
     [pickerButton setTitle:@"+"];
-    [pickerButton setToolTip:@"Add reaction"];
+    [pickerButton setToolTip:DLLocalizedString(@"Add reaction")];
     [pickerButton setTarget:self];
     [pickerButton setAction:@selector(showReactionPicker:)];
     [actionBar addSubview:pickerButton];
@@ -885,7 +887,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [replyButton setBordered:NO];
     [replyButton setRefusesFirstResponder:YES];
     [replyButton setTitle:@"\u21A9"];
-    [replyButton setToolTip:@"Reply"];
+    [replyButton setToolTip:DLLocalizedString(@"Reply")];
     [replyButton setTarget:self];
     [replyButton setAction:@selector(addReply)];
     [actionBar addSubview:replyButton];
@@ -1021,7 +1023,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
                 font:[NSFont systemFontOfSize:64.0 * displayScale]
                 color:[DLUtil nativePrimaryTextColor]];
             [label setAlignment:NSCenterTextAlignment];
-            [label setToolTip:[NSString stringWithFormat:@"%@ (Lottie sticker)", name]];
+            [label setToolTip:[NSString stringWithFormat:DLLocalizedString(@"%@ (Lottie sticker)"), name]];
             [container addSubview:label];
         }
         [insetView addSubview:container];
@@ -1307,7 +1309,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSFont systemFontOfSize:MAX(8.0, round(9.0 * displayScale))], NSFontAttributeName,
                                 [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName, nil];
-    NSString *marker = [displayContent length] > 0 ? @" (edited)" : @"(edited)";
+    NSString *marker = [displayContent length] > 0 ? DLLocalizedString(@" (edited)") : @"(edited)";
     [displayContent appendAttributedString:[[[NSAttributedString alloc] initWithString:marker attributes:attributes] autorelease]];
     return displayContent;
 }
@@ -1671,7 +1673,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
     [contextMenu setAutoenablesItems:NO];
     DLChannel *channel = [self messageChannel];
     BOOL inServer = [channel isKindOfClass:[DLServerChannel class]];
-    NSMenuItem *reactionRootItem = [[[NSMenuItem alloc] initWithTitle:@"Add Reaction" action:NULL keyEquivalent:@""] autorelease];
+    NSMenuItem *reactionRootItem = [[[NSMenuItem alloc] initWithTitle:DLLocalizedString(@"Add Reaction") action:NULL keyEquivalent:@""] autorelease];
     [reactionRootItem setSubmenu:reactionMenu];
     [contextMenu addItem:reactionRootItem];
     [contextMenu addItem:[NSMenuItem separatorItem]];
@@ -1680,22 +1682,22 @@ const NSInteger ATTACHMENT_SPACING = 15;
         [DLDarkMenu setIconName:@"pencil" forItem:editItem];
         [contextMenu addItem:editItem];
     }
-    [contextMenu addItem:[self contextItemWithTitle:@"Reply" action:@selector(addReply) icon:@"reply"]];
+    [contextMenu addItem:[self contextItemWithTitle:DLLocalizedString(@"Reply") action:@selector(addReply) icon:@"reply"]];
     if (inServer && ![channel isThread] &&
         ([channel type] == ChannelTypeStandard || [channel type] == ChannelTypeAnnouncements) &&
         [self hasChannelPermission:DLPermissionCreatePublicThreads]) {
-        [contextMenu addItem:[self contextItemWithTitle:@"Create Thread" action:@selector(createThreadFromMessage:) icon:@"thread"]];
+        [contextMenu addItem:[self contextItemWithTitle:DLLocalizedString(@"Create Thread") action:@selector(createThreadFromMessage:) icon:@"thread"]];
     }
     if ([[representedObject content] length]) {
-        [contextMenu addItem:[self contextItemWithTitle:@"Copy Text" action:@selector(copyMessageText:) icon:@"copy"]];
+        [contextMenu addItem:[self contextItemWithTitle:DLLocalizedString(@"Copy Text") action:@selector(copyMessageText:) icon:@"copy"]];
     }
     BOOL canPin = !inServer || [self hasChannelPermission:DLPermissionManageMessages] ||
                   [self hasChannelPermission:DLPermissionPinMessages];
     if (canPin) {
-        [contextMenu addItem:[self contextItemWithTitle:([representedObject isPinned] ? @"Unpin Message" : @"Pin Message")
+        [contextMenu addItem:[self contextItemWithTitle:([representedObject isPinned] ? DLLocalizedString(@"Unpin Message") : DLLocalizedString(@"Pin Message"))
                                                  action:@selector(togglePinned:) icon:@"pin"]];
     }
-    [contextMenu addItem:[self contextItemWithTitle:@"Copy Message Link" action:@selector(copyMessageLink:) icon:@"link"]];
+    [contextMenu addItem:[self contextItemWithTitle:DLLocalizedString(@"Copy Message Link") action:@selector(copyMessageLink:) icon:@"link"]];
     if (isMyContent || (inServer && [self hasChannelPermission:DLPermissionManageMessages])) {
         [contextMenu addItem:[NSMenuItem separatorItem]];
         [DLDarkMenu setStyle:DLDarkMenuItemStyleDanger forItem:deleteItem];
@@ -1704,25 +1706,25 @@ const NSInteger ATTACHMENT_SPACING = 15;
     }
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
         [contextMenu addItem:[NSMenuItem separatorItem]];
-        [contextMenu addItem:[self contextItemWithTitle:@"Copy Message ID" action:@selector(copyMessageID:) icon:@"id"]];
+        [contextMenu addItem:[self contextItemWithTitle:DLLocalizedString(@"Copy Message ID") action:@selector(copyMessageID:) icon:@"id"]];
     }
 }
 
 -(NSString *)channelLabelForMessage {
     DLChannel *channel = [self messageChannel];
     if ([channel isKindOfClass:[DLServerChannel class]] && [channel name]) return [@"#" stringByAppendingString:[channel name]];
-    return @"this conversation";
+    return DLLocalizedString(@"this conversation");
 }
 
 -(void)togglePinned:(id)sender {
     DLMessage *message = [[representedObject retain] autorelease];
     BOOL pin = ![message isPinned];
-    DLDialog *dialog = [DLDialog dialogWithTitle:(pin ? @"Pin It. Pin It Good." : @"Unpin Message")
-        message:(pin ? [NSString stringWithFormat:@"Hey, just double checking that you want to pin this message to %@ for posterity and greatness?", [self channelLabelForMessage]]
-                     : @"You sure you want to remove this pinned message?")];
-    [dialog addButtonWithTitle:(pin ? @"Oh yeah. Pin it" : @"Remove it please!")
+    DLDialog *dialog = [DLDialog dialogWithTitle:(pin ? DLLocalizedString(@"Pin It. Pin It Good.") : DLLocalizedString(@"Unpin Message"))
+        message:(pin ? [NSString stringWithFormat:DLLocalizedString(@"Hey, just double checking that you want to pin this message to %@ for posterity and greatness?"), [self channelLabelForMessage]]
+                     : DLLocalizedString(@"You sure you want to remove this pinned message?"))];
+    [dialog addButtonWithTitle:(pin ? DLLocalizedString(@"Oh yeah. Pin it") : DLLocalizedString(@"Remove it please!"))
                          style:(pin ? DLDialogButtonStylePrimary : DLDialogButtonStyleDanger)];
-    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Cancel") style:DLDialogButtonStyleLink];
     NSString *path = [NSString stringWithFormat:@"/channels/%@/pins/%@",
                       [[[self messageChannel] channelID] description], [[message messageID] description]];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
@@ -1738,7 +1740,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
                     [shown setBusy:NO];
                     id error = [json isKindOfClass:[NSDictionary class]] ? [json objectForKey:@"message"] : nil;
                     [shown setErrorMessage:([error isKindOfClass:[NSString class]] ? error
-                                            : [NSString stringWithFormat:@"Something went wrong (HTTP %ld).", (long)status])];
+                                            : [NSString stringWithFormat:DLLocalizedString(@"Something went wrong (HTTP %ld)."), (long)status])];
                 }
                 [shown release];
             }];
@@ -1751,24 +1753,24 @@ const NSInteger ATTACHMENT_SPACING = 15;
     DLMessage *message = representedObject;
     NSString *suggested = [[[message content] componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]] objectAtIndex:0];
     if ([suggested length] > 40) suggested = [suggested substringToIndex:40];
-    if (![suggested length]) suggested = @"New Thread";
+    if (![suggested length]) suggested = DLLocalizedString(@"New Thread");
     CGFloat inner = 440.0 - 32.0;
     NSView *content = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, 64.0)] autorelease];
-    [content addSubview:[DLDialog sectionLabelWithString:@"Thread Name" frame:NSMakeRect(0.0, 48.0, inner, 16.0)]];
-    NSTextField *field = [DLDialog textFieldWithFrame:NSMakeRect(0.0, 0.0, inner, 40.0) placeholder:@"New Thread"];
+    [content addSubview:[DLDialog sectionLabelWithString:DLLocalizedString(@"Thread Name") frame:NSMakeRect(0.0, 48.0, inner, 16.0)]];
+    NSTextField *field = [DLDialog textFieldWithFrame:NSMakeRect(0.0, 0.0, inner, 40.0) placeholder:DLLocalizedString(@"New Thread")];
     [field setStringValue:suggested];
     [content addSubview:field];
-    DLDialog *dialog = [DLDialog dialogWithTitle:@"Create Thread" message:[NSString stringWithFormat:@"in %@", [self channelLabelForMessage]]];
+    DLDialog *dialog = [DLDialog dialogWithTitle:DLLocalizedString(@"Create Thread") message:[NSString stringWithFormat:DLLocalizedString(@"in %@"), [self channelLabelForMessage]]];
     [dialog setContentView:content];
-    [dialog addButtonWithTitle:@"Create Thread" style:DLDialogButtonStylePrimary];
-    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Create Thread") style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Cancel") style:DLDialogButtonStyleLink];
     NSString *path = [NSString stringWithFormat:@"/channels/%@/messages/%@/threads",
                       [[[self messageChannel] channelID] description], [[message messageID] description]];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
         if (buttonIndex != 0) return YES;
         NSString *name = [[field stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
         if (![name length]) {
-            [shown setErrorMessage:@"Enter a thread name."];
+            [shown setErrorMessage:DLLocalizedString(@"Enter a thread name.")];
             return NO;
         }
         [shown setBusy:YES];
@@ -1783,7 +1785,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
                     [shown setBusy:NO];
                     id error = [json isKindOfClass:[NSDictionary class]] ? [json objectForKey:@"message"] : nil;
                     [shown setErrorMessage:([error isKindOfClass:[NSString class]] ? error
-                                            : [NSString stringWithFormat:@"Something went wrong (HTTP %ld).", (long)status])];
+                                            : [NSString stringWithFormat:DLLocalizedString(@"Something went wrong (HTTP %ld)."), (long)status])];
                 }
                 [shown release];
             }];
@@ -1970,10 +1972,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
         return YES;
     }
     NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-    [alert setMessageText:@"Open external link?"];
+    [alert setMessageText:DLLocalizedString(@"Open external link?")];
     [alert setInformativeText:[url absoluteString]];
-    [alert addButtonWithTitle:@"Open Link"];
-    [alert addButtonWithTitle:@"Cancel"];
+    [alert addButtonWithTitle:DLLocalizedString(@"Open Link")];
+    [alert addButtonWithTitle:DLLocalizedString(@"Cancel")];
     if ([alert runModal] == NSAlertFirstButtonReturn) {
         [[NSWorkspace sharedWorkspace] openURL:url];
     }

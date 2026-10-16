@@ -4,6 +4,7 @@
 //
 
 #import "DLMemberListController.h"
+#import "DLLocalization.h"
 #import "ChatScrollView.h"
 #import "DLController.h"
 #import "DLDarkMenu.h"
@@ -196,7 +197,7 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     [titleField setSelectable:NO];
     [titleField setFont:[NSFont boldSystemFontOfSize:10.0]];
     [titleField setTextColor:[DLUtil nativeSecondaryTextColor]];
-    [titleField setStringValue:@"MEMBERS"];
+    [titleField setStringValue:DLLocalizedString(@"MEMBERS")];
     // Group headers ("ONLINE — 12") replace the single pane title.
     [titleField setHidden:YES];
     [pane addSubview:titleField];
@@ -291,11 +292,11 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
         [result addObjectsFromArray:[group sortedArrayUsingSelector:@selector(compareDisplayName:)]];
     }
     if ([online count]) {
-        [result addObject:[NSString stringWithFormat:@"ONLINE — %lu", (unsigned long)[online count]]];
+        [result addObject:[NSString stringWithFormat:DLLocalizedString(@"ONLINE — %lu"), (unsigned long)[online count]]];
         [result addObjectsFromArray:[online sortedArrayUsingSelector:@selector(compareDisplayName:)]];
     }
     if ([offline count]) {
-        [result addObject:[NSString stringWithFormat:@"OFFLINE — %lu", (unsigned long)[offline count]]];
+        [result addObject:[NSString stringWithFormat:DLLocalizedString(@"OFFLINE — %lu"), (unsigned long)[offline count]]];
         [result addObjectsFromArray:[offline sortedArrayUsingSelector:@selector(compareDisplayName:)]];
     }
     return result;
@@ -494,21 +495,21 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
     if (!member) return;
     DLController *controller = [DLController sharedInstance];
     BOOL isMe = [[[[member user] userID] description] isEqualToString:[[[controller myUser] userID] description]];
-    [menu addItem:[self memberMenuItem:@"Profile" action:@selector(showMemberProfile:) member:member]];
+    [menu addItem:[self memberMenuItem:DLLocalizedString(@"Profile") action:@selector(showMemberProfile:) member:member]];
     if ([delegate respondsToSelector:@selector(memberListController:requestsMentionOfUser:)]) {
-        [menu addItem:[self memberMenuItem:@"Mention" action:@selector(mentionMember:) member:member]];
+        [menu addItem:[self memberMenuItem:DLLocalizedString(@"Mention") action:@selector(mentionMember:) member:member]];
     }
-    if (!isMe) [menu addItem:[self memberMenuItem:@"Message" action:@selector(messageMember:) member:member]];
+    if (!isMe) [menu addItem:[self memberMenuItem:DLLocalizedString(@"Message") action:@selector(messageMember:) member:member]];
     if (isMe) {
         DLServer *server = [controller selectedServer];
         [menu addItem:[NSMenuItem separatorItem]];
-        NSMenuItem *nickname = [self memberMenuItem:@"Edit Per-server Profile" action:@selector(editOwnServerProfile:) member:member];
+        NSMenuItem *nickname = [self memberMenuItem:DLLocalizedString(@"Edit Per-server Profile") action:@selector(editOwnServerProfile:) member:member];
         [nickname setEnabled:(server != nil)];
         [menu addItem:nickname];
     }
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
         [menu addItem:[NSMenuItem separatorItem]];
-        NSMenuItem *copyID = [self memberMenuItem:@"Copy User ID" action:@selector(copyMemberID:) member:member];
+        NSMenuItem *copyID = [self memberMenuItem:DLLocalizedString(@"Copy User ID") action:@selector(copyMemberID:) member:member];
         [DLDarkMenu setIconName:@"id" forItem:copyID];
         [menu addItem:copyID];
     }

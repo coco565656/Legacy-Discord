@@ -4,6 +4,7 @@
 //
 
 #import "DLEmojiPickerController.h"
+#import "DLLocalization.h"
 #import "DLCompatibilityPopover.h"
 #import "DLController.h"
 #import "DLServer.h"
@@ -266,7 +267,7 @@ static const NSInteger DLEmojiColumns = 7;
         [searchField setEditable:YES];
         [searchField setSelectable:YES];
         [searchCell release];
-        [[searchField cell] setPlaceholderString:@"Search emoji"];
+        [[searchField cell] setPlaceholderString:DLLocalizedString(@"Search emoji")];
         [searchField setBackgroundColor:[DLUtil nativeInputColor]];
         [searchField setTextColor:[DLUtil nativePrimaryTextColor]];
         [searchField setFocusRingType:NSFocusRingTypeNone];
@@ -333,7 +334,7 @@ static const NSInteger DLEmojiColumns = 7;
         [emptyLabel setEditable:NO];
         [emptyLabel setAlignment:NSCenterTextAlignment];
         [emptyLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
-        [emptyLabel setStringValue:@"No matching emoji"];
+        [emptyLabel setStringValue:DLLocalizedString(@"No matching emoji")];
         [grid addSubview:emptyLabel];
         [emptyLabel release];
     }
@@ -347,8 +348,8 @@ static const NSInteger DLEmojiColumns = 7;
 -(NSArray *)sectionsForItems:(NSArray *)visible {
     NSArray *starts = [NSArray arrayWithObjects:@"\U0001F600", @"\U0001F435", @"\U0001F347", @"\U0001F30D",
                        @"\U0001F383", @"\U0001F453", @"\U0001F3E7", @"\U0001F3C1", nil];
-    NSArray *titles = [NSArray arrayWithObjects:@"PEOPLE", @"NATURE", @"FOOD", @"TRAVEL",
-                       @"ACTIVITIES", @"OBJECTS", @"SYMBOLS", @"FLAGS", nil];
+    NSArray *titles = [NSArray arrayWithObjects:DLLocalizedString(@"PEOPLE"), DLLocalizedString(@"NATURE"), DLLocalizedString(@"FOOD"), DLLocalizedString(@"TRAVEL"),
+                       DLLocalizedString(@"ACTIVITIES"), DLLocalizedString(@"OBJECTS"), DLLocalizedString(@"SYMBOLS"), DLLocalizedString(@"FLAGS"), nil];
     NSMutableArray *sections = [NSMutableArray array];
     NSString *serverName = [[[DLController existingInstance] selectedServer] name];
     for (NSUInteger index = 0; index < [visible count]; index++) {
@@ -356,7 +357,7 @@ static const NSInteger DLEmojiColumns = 7;
         if ([item objectForKey:@"id"]) {
             if ([sections count] == 0) {
                 [sections addObject:[NSDictionary dictionaryWithObjectsAndKeys:
-                    ([serverName length] ? [serverName uppercaseString] : @"SERVER EMOJI"), @"title",
+                    ([serverName length] ? [serverName uppercaseString] : DLLocalizedString(@"SERVER EMOJI")), @"title",
                     [NSNumber numberWithUnsignedInteger:index], @"start", item, @"icon", nil]];
             }
             continue;

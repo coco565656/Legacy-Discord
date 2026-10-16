@@ -7,6 +7,7 @@
 //
 
 #import "DLTwoFactorWindowController.h"
+#import "DLLocalization.h"
 
 @interface DLTwoFactorWindowController ()
 
@@ -16,6 +17,7 @@
 
 - (void)windowDidLoad {
     [super windowDidLoad];
+    [DLLocalization localizeWindow:self.window];
     entryFormatter = [[TwoFactorEntryFormatter alloc] init];
     entryFields = [[NSArray alloc] initWithObjects:tfaField1, tfaField2, tfaField3, tfaField4, tfaField5, tfaField6, nil];
     NSEnumerator *e = [entryFields objectEnumerator];

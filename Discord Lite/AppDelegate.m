@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "DLLocalization.h"
 
 @interface AppDelegate ()
 
@@ -72,8 +73,9 @@
 #endif
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    [DLLocalization localizeMenu:[NSApp mainMenu]];
     NSMenuItem *applicationMenuItem = [[NSApp mainMenu] itemAtIndex:0];
-    NSMenuItem *preferencesItem = [[applicationMenuItem submenu] itemWithTitle:@"Preferences…"];
+    NSMenuItem *preferencesItem = [[applicationMenuItem submenu] itemWithTitle:DLLocalizedString(@"Preferences…")];
     [preferencesItem setTarget:self];
     [preferencesItem setAction:@selector(showPreferencesWindow:)];
 #if LEGACY_DISCORD_UI_DIAGNOSTICS

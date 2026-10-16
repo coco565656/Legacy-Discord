@@ -4,6 +4,7 @@
 //
 
 #import "DLUserPanelController.h"
+#import "DLLocalization.h"
 #import "DLMainWindowChromeControls.h"
 #import "DLUtil.h"
 #import "NSView+BGColor.h"
@@ -31,7 +32,7 @@ static const CGFloat DLUserPanelStatusDotSize = 14.0;
         nameField = [inNameField retain];
         usernameField = [inUsernameField retain];
         settingsButton = [[self findSettingsButton] retain];
-        [settingsButton setToolTip:@"User Settings"];
+        [settingsButton setToolTip:DLLocalizedString(@"User Settings")];
         connectionState = DLWSConnectionStateDisconnected;
         [self installControls];
         [self applyCurrentTheme];
@@ -61,7 +62,7 @@ static const CGFloat DLUserPanelStatusDotSize = 14.0;
     // Voice is not implemented yet; the controls keep Discord's panel layout
     // and are enabled once a voice session exists.
     [button setEnabled:NO];
-    [button setToolTip:@"Voice chat is not available yet"];
+    [button setToolTip:DLLocalizedString(@"Voice chat is not available yet")];
     return button;
 }
 
@@ -112,7 +113,7 @@ static const CGFloat DLUserPanelStatusDotSize = 14.0;
     NSColor *statusColor = (connectionState == DLWSConnectionStateConnected)
         ? [DLUtil nativeOnlineStatusColor] : [DLUtil nativeOfflineStatusColor];
     [statusDotView setDotColor:statusColor ringColor:panelColor];
-    [statusDotView setToolTip:(connectionState == DLWSConnectionStateConnected ? @"Online" : @"Connecting")];
+    [statusDotView setToolTip:(connectionState == DLWSConnectionStateConnected ? DLLocalizedString(@"Online") : DLLocalizedString(@"Connecting"))];
     [microphoneButton setNeedsDisplay:YES];
     [headphoneButton setNeedsDisplay:YES];
     [panelView setNeedsDisplay:YES];

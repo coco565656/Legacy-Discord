@@ -4,6 +4,7 @@
 //
 
 #import "DLDirectMessageController.h"
+#import "DLLocalization.h"
 #import "DLChannelNavigationController.h"
 #import "DLDirectMessageChannel.h"
 #import "ChatScrollView.h"
@@ -109,7 +110,7 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
     [friendsTitleField setSelectable:NO];
     [friendsTitleField setFont:[NSFont boldSystemFontOfSize:18.0]];
     [friendsTitleField setTextColor:[DLUtil nativePrimaryTextColor]];
-    [friendsTitleField setStringValue:@"Friends"];
+    [friendsTitleField setStringValue:DLLocalizedString(@"Friends")];
     [friendsHomeView addSubview:friendsTitleField];
 
     friendsSubtitleField = [[NSTextField alloc] initWithFrame:
@@ -122,13 +123,13 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
     [friendsSubtitleField setSelectable:NO];
     [friendsSubtitleField setFont:[NSFont systemFontOfSize:11.0]];
     [friendsSubtitleField setTextColor:[DLUtil nativeSecondaryTextColor]];
-    [friendsSubtitleField setStringValue:@"Recent conversations"];
+    [friendsSubtitleField setStringValue:DLLocalizedString(@"Recent conversations")];
     [friendsHomeView addSubview:friendsSubtitleField];
     // The official Friends page has tabs instead of a title.
     [friendsTitleField setHidden:YES];
     [friendsSubtitleField setHidden:YES];
     friendsTabButtons = [[NSMutableArray alloc] init];
-    NSArray *tabTitles = [NSArray arrayWithObjects:@"Online", @"All", @"Pending", @"Blocked", nil];
+    NSArray *tabTitles = [NSArray arrayWithObjects:DLLocalizedString(@"Online"), DLLocalizedString(@"All"), DLLocalizedString(@"Pending"), DLLocalizedString(@"Blocked"), nil];
     CGFloat tabX = 20.0;
     for (NSUInteger index = 0; index < [tabTitles count]; index++) {
         NSString *tabTitle = [tabTitles objectAtIndex:index];
@@ -170,7 +171,7 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
 
 -(void)displayDirectMessageChannels:(NSArray *)channels {
     [navigationTitleLabel performSelectorOnMainThread:@selector(setStringValue:)
-                                           withObject:@"Direct Messages"
+                                           withObject:DLLocalizedString(@"Direct Messages")
                                         waitUntilDone:NO];
     [channelNavigationController performSelectorOnMainThread:@selector(displayChannelItems:)
                                                   withObject:channels
@@ -191,7 +192,7 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
     [self rebuildFriendsList];
     // No conversation is open on the Friends page.
     [channelNavigationController selectChannelWithoutNotifying:nil];
-    [DLTwemojiRenderer setText:@"Friends" forLabel:chatHeaderLabel];
+    [DLTwemojiRenderer setText:DLLocalizedString(@"Friends") forLabel:chatHeaderLabel];
     [chatHeaderImage setImage:nil];
     [chatScrollView setHidden:YES];
     [composerView setHidden:YES];
@@ -232,7 +233,7 @@ static NSString *DLStatusDescription(NSString *status) {
     if ([status isEqualToString:@"online"]) return @"Online";
     if ([status isEqualToString:@"idle"]) return @"Idle";
     if ([status isEqualToString:@"dnd"]) return @"Do Not Disturb";
-    return @"Offline";
+    return DLLocalizedString(@"Offline");
 }
 
 -(NSTextField *)friendsLabelWithFrame:(NSRect)frame font:(NSFont *)font color:(NSColor *)color {
@@ -275,7 +276,7 @@ static NSString *DLStatusDescription(NSString *status) {
         if (include) [friendRowItems addObject:relationship];
     }
 
-    NSArray *tabNames = [NSArray arrayWithObjects:@"ONLINE", @"ALL FRIENDS", @"PENDING", @"BLOCKED", nil];
+    NSArray *tabNames = [NSArray arrayWithObjects:DLLocalizedString(@"ONLINE"), DLLocalizedString(@"ALL FRIENDS"), DLLocalizedString(@"PENDING"), DLLocalizedString(@"BLOCKED"), nil];
     NSRect visibleBounds = [[friendsHomeScrollView contentView] bounds];
     CGFloat rowHeight = 62.0;
     CGFloat headerHeight = 36.0;
@@ -323,9 +324,9 @@ static NSString *DLStatusDescription(NSString *status) {
                                                        color:[DLUtil nativePrimaryTextColor]];
         [DLTwemojiRenderer setText:([user globalName] ? [user globalName] : @"") forLabel:nameField];
         [document addSubview:nameField];
-        NSString *subtitle = type == 3 ? @"Incoming Friend Request"
-                           : (type == 4 ? @"Outgoing Friend Request"
-                           : (type == 2 ? @"Blocked" : DLStatusDescription(status)));
+        NSString *subtitle = type == 3 ? DLLocalizedString(@"Incoming Friend Request")
+                           : (type == 4 ? DLLocalizedString(@"Outgoing Friend Request")
+                           : (type == 2 ? DLLocalizedString(@"Blocked") : DLStatusDescription(status)));
         NSTextField *statusField = [self friendsLabelWithFrame:NSMakeRect(60.0, y + 14.0, MAX(100.0, NSWidth(visibleBounds) - 120.0), 16.0)
                                                           font:[NSFont systemFontOfSize:11.0]
                                                          color:[DLUtil nativeSecondaryTextColor]];
@@ -343,8 +344,8 @@ static NSString *DLStatusDescription(NSString *status) {
                                                          font:[NSFont systemFontOfSize:12.0]
                                                         color:[DLUtil nativeSecondaryTextColor]];
         [emptyField setAlignment:NSCenterTextAlignment];
-        NSArray *emptyTexts = [NSArray arrayWithObjects:@"No one's around to play with Wumpus.", @"Wumpus is waiting on friends.",
-                               @"There are no pending friend requests.", @"You can't unblock the Wumpus.", nil];
+        NSArray *emptyTexts = [NSArray arrayWithObjects:DLLocalizedString(@"No one's around to play with Wumpus."), DLLocalizedString(@"Wumpus is waiting on friends."),
+                               DLLocalizedString(@"There are no pending friend requests."), DLLocalizedString(@"You can't unblock the Wumpus."), nil];
         [emptyField setStringValue:[emptyTexts objectAtIndex:friendsTab]];
         [document addSubview:emptyField];
     }
@@ -392,7 +393,7 @@ static NSString *DLStatusDescription(NSString *status) {
         [rowButton setTag:row];
         [rowButton setTarget:self];
         [rowButton setAction:@selector(openFriendDirectMessage:)];
-        [rowButton setToolTip:[NSString stringWithFormat:@"Open %@", [channel name]]];
+        [rowButton setToolTip:[NSString stringWithFormat:DLLocalizedString(@"Open %@"), [channel name]]];
         [document addSubview:rowButton];
 
         NSImageView *avatar = [[[NSImageView alloc] initWithFrame:NSMakeRect(12.0, y + 9.0, 38.0, 38.0)] autorelease];
@@ -412,7 +413,7 @@ static NSString *DLStatusDescription(NSString *status) {
         [nameField setFont:[NSFont boldSystemFontOfSize:13.0]];
         [[nameField cell] setLineBreakMode:NSLineBreakByTruncatingTail];
         [nameField setTextColor:[DLUtil nativePrimaryTextColor]];
-        [DLTwemojiRenderer setText:[channel name] ? [channel name] : @"Direct Message" forLabel:nameField];
+        [DLTwemojiRenderer setText:[channel name] ? [channel name] : DLLocalizedString(@"Direct Message") forLabel:nameField];
         [document addSubview:nameField];
 
         NSBox *separator = [[[NSBox alloc] initWithFrame:
@@ -431,7 +432,7 @@ static NSString *DLStatusDescription(NSString *status) {
         [emptyField setEditable:NO];
         [emptyField setAlignment:NSCenterTextAlignment];
         [emptyField setTextColor:[DLUtil nativeSecondaryTextColor]];
-        [emptyField setStringValue:@"No recent direct messages"];
+        [emptyField setStringValue:DLLocalizedString(@"No recent direct messages")];
         [document addSubview:emptyField];
     }
     [friendsHomeScrollView setDocumentView:document];

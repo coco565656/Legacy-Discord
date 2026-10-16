@@ -4,6 +4,7 @@
 //
 
 #import "DLServerMenuController.h"
+#import "DLLocalization.h"
 #import "DLDarkMenu.h"
 #import "DLServerNavigationController.h"
 #import "DLController.h"
@@ -250,7 +251,7 @@
         return;
     }
     DLServer *server = [serverItems objectAtIndex:row];
-    NSString *name = [server isEqual:[[DLController sharedInstance] myServerItem]] ? @"Direct Messages" : [server name];
+    NSString *name = [server isEqual:[[DLController sharedInstance] myServerItem]] ? DLLocalizedString(@"Direct Messages") : [server name];
     NSRect rowRect = [tableView rectOfRow:row];
     NSRect iconRect = NSMakeRect(NSMidX(rowRect) - 22.0, NSMidY(rowRect) - 22.0, 44.0, 44.0);
     [DLTooltip showText:name rightOfRect:iconRect inView:tableView];

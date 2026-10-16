@@ -7,6 +7,7 @@
 //
 
 #import "DLLoginWindowController.h"
+#import "DLLocalization.h"
 #import "DLUtil.h"
 #import "NSView+BGColor.h"
 #import "DLMainWindowChromeControls.h"
@@ -19,7 +20,8 @@
 
 - (void)windowDidLoad {
     [super windowDidLoad];
-    [self.window setTitle:@"Legacy Discord — Login"];
+    [DLLocalization localizeWindow:self.window];
+    [self.window setTitle:DLLocalizedString(@"Legacy Discord — Login")];
     NSRect frame = [self.window frame];
     frame.size = NSMakeSize(440.0, 452.0);
     [self.window setFrame:frame display:NO];
@@ -43,22 +45,22 @@
     [background addSubview:card];
 
     [card addSubview:[self loginLabelWithFrame:NSMakeRect(24.0, 316.0, 328.0, 30.0)
-                                          text:@"Welcome back!"
+                                          text:DLLocalizedString(@"Welcome back!")
                                           font:[NSFont boldSystemFontOfSize:22.0]
                                          color:[DLUtil nativePrimaryTextColor]
                                      alignment:NSCenterTextAlignment]];
     [card addSubview:[self loginLabelWithFrame:NSMakeRect(24.0, 292.0, 328.0, 20.0)
-                                          text:@"We're so excited to see you again!"
+                                          text:DLLocalizedString(@"We're so excited to see you again!")
                                           font:[NSFont systemFontOfSize:13.0]
                                          color:[DLUtil nativeSecondaryTextColor]
                                      alignment:NSCenterTextAlignment]];
     [card addSubview:[self loginLabelWithFrame:NSMakeRect(24.0, 254.0, 328.0, 16.0)
-                                          text:@"EMAIL OR PHONE NUMBER"
+                                          text:DLLocalizedString(@"EMAIL OR PHONE NUMBER")
                                           font:[NSFont boldSystemFontOfSize:10.0]
                                          color:[DLUtil nativeSecondaryTextColor]
                                      alignment:NSLeftTextAlignment]];
     [card addSubview:[self loginLabelWithFrame:NSMakeRect(24.0, 186.0, 328.0, 16.0)
-                                          text:@"PASSWORD"
+                                          text:DLLocalizedString(@"PASSWORD")
                                           font:[NSFont boldSystemFontOfSize:10.0]
                                          color:[DLUtil nativeSecondaryTextColor]
                                      alignment:NSLeftTextAlignment]];
@@ -84,7 +86,7 @@
     DLPrimaryButton *logInButton = [[[DLPrimaryButton alloc] initWithFrame:NSMakeRect(24.0, 88.0, 328.0, 40.0)] autorelease];
     [logInButton setBordered:NO];
     [logInButton setButtonType:NSMomentaryChangeButton];
-    [logInButton setTitle:@"Log In"];
+    [logInButton setTitle:DLLocalizedString(@"Log In")];
     [logInButton setTarget:self];
     [logInButton setAction:@selector(login:)];
     [logInButton setKeyEquivalent:@"\r"];
@@ -96,7 +98,7 @@
     [tokenLink setBordered:NO];
     [tokenLink setButtonType:NSMomentaryChangeButton];
     [tokenLink setAlignment:NSLeftTextAlignment];
-    [tokenLink setAttributedTitle:[[[NSAttributedString alloc] initWithString:@"Log in with a token instead"
+    [tokenLink setAttributedTitle:[[[NSAttributedString alloc] initWithString:DLLocalizedString(@"Log in with a token instead")
         attributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSFont systemFontOfSize:12.0], NSFontAttributeName,
                     [DLUtil nativeLinkColor], NSForegroundColorAttributeName, nil]] autorelease]];
     [tokenLink setTarget:self];
@@ -110,7 +112,7 @@
     [card addSubview:progressIndicator positioned:NSWindowAbove relativeTo:logInButton]; [progressIndicator release];
 
     NSTextField *compatibility = [self loginLabelWithFrame:NSMakeRect(24.0, 16.0, 328.0, 16.0)
-                                                       text:@"Legacy Discord · Mac OS X 10.6 – 10.8"
+                                                       text:DLLocalizedString(@"Legacy Discord · Mac OS X 10.6 – 10.8")
                                                        font:[NSFont systemFontOfSize:9.0]
                                                       color:[DLUtil nativeSecondaryTextColor]
                                                   alignment:NSCenterTextAlignment];

@@ -7,6 +7,7 @@
 //
 
 #import "DLTextParser.h"
+#import "DLLocalization.h"
 #import "DLUtil.h"
 #import "HTTPCache.h"
 #import "DLPreferencesHandler.h"
@@ -96,8 +97,13 @@ static NSString *DLRelativeTimeString(NSDate *date) {
     else if ((value /= 30.0) < 12.0) { unit = @"month"; }
     else { value /= 12.0; unit = @"year"; }
     long amount = MAX(1L, (long)floor(value));
-    NSString *phrase = [NSString stringWithFormat:@"%ld %@%@", amount, unit, (amount == 1 ? @"" : @"s")];
-    return future ? [NSString stringWithFormat:@"in %@", phrase] : [NSString stringWithFormat:@"%@ ago", phrase];
+    if ([DLLocalization isJapanese]) {
+        NSDictionary *units = [NSDictionary dictionaryWithObjectsAndKeys:@"秒", @"second", @"分", @"minute",
+                               @"時間", @"hour", @"日", @"day", @"か月", @"month", @"年", @"year", nil];
+        return [NSString stringWithFormat:(future ? @"%ld%@後" : @"%ld%@前"), amount, [units objectForKey:unit]];
+    }
+    NSString *phrase = [NSString stringWithFormat:DLLocalizedString(@"%ld %@%@"), amount, unit, (amount == 1 ? @"" : @"s")];
+    return future ? [NSString stringWithFormat:DLLocalizedString(@"in %@"), phrase] : [NSString stringWithFormat:DLLocalizedString(@"%@ ago"), phrase];
 }
 
 // <t:unix_seconds:style>, styles t T d D f F R (default f).
@@ -314,7 +320,7 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSFont systemFontOfSize:fontSize], NSFontAttributeName,
                                 [DLUtil nativeSecondaryTextColor], NSForegroundColorAttributeName, nil];
-    return [[[NSAttributedString alloc] initWithString:@"\u21AA Forwarded" attributes:attributes] autorelease];
+    return [[[NSAttributedString alloc] initWithString:DLLocalizedString(@"\u21AA Forwarded") attributes:attributes] autorelease];
 }
 
 +(NSAttributedString *)attributedContentStringForMessage:(DLMessage *)m {
@@ -388,7 +394,7 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
                     [NSString stringWithFormat:@"%@:", DLSpoilerLinkScheme], NSLinkAttributeName,
                     spoilerColor, NSForegroundColorAttributeName,
                     spoilerColor, NSBackgroundColorAttributeName,
-                    @"Spoiler — click to reveal", NSToolTipAttributeName, nil]);
+                    DLLocalizedString(@"Spoiler — click to reveal"), NSToolTipAttributeName, nil]);
             }
             DLApplyQuoteStyling(as);
         }

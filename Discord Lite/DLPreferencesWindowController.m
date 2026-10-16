@@ -7,6 +7,7 @@
 //
 
 #import "DLPreferencesWindowController.h"
+#import "DLLocalization.h"
 #import "HTTPCache.h"
 #import "DLController.h"
 #import "DLUtil.h"
@@ -30,6 +31,7 @@ enum {
     DLSettingsSectionChat,
     DLSettingsSectionNotifications,
     DLSettingsSectionKeybinds,
+    DLSettingsSectionLanguage,
     DLSettingsSectionAdvanced,
     DLSettingsSectionCount
 };
@@ -160,6 +162,7 @@ enum {
 -(NSView *)buildAdvancedPane;
 -(NSView *)buildContentSocialPane;
 -(NSView *)buildKeybindsPane;
+-(NSView *)buildLanguagePane;
 -(void)syncAccountControls;
 -(void)selectSection:(NSInteger)section;
 -(void)refreshCacheUsage;
@@ -171,7 +174,7 @@ enum {
 - (void)windowDidLoad {
     [super windowDidLoad];
 
-    [self.window setTitle:@"Legacy Discord Settings"];
+    [self.window setTitle:DLLocalizedString(@"Legacy Discord Settings")];
     NSRect windowFrame = [self.window frame];
     windowFrame.origin.y -= 123.0;
     windowFrame.size = NSMakeSize(DLSettingsWindowWidth, DLSettingsWindowHeight);
@@ -199,12 +202,13 @@ enum {
     // Sidebar entries follow the web client's grouping. Voice & Video is
     // listed but disabled until voice support exists.
     NSArray *entries = [NSArray arrayWithObjects:
-        @"#USER SETTINGS", @"My Account", @"Content & Social",
-        @"#APP SETTINGS", @"Appearance", @"Accessibility", @"-Voice & Video", @"Chat", @"Notifications",
-        @"Keybinds", @"Advanced", nil];
+        DLLocalizedString(@"#USER SETTINGS"), DLLocalizedString(@"My Account"), DLLocalizedString(@"Content & Social"),
+        DLLocalizedString(@"#APP SETTINGS"), DLLocalizedString(@"Appearance"), DLLocalizedString(@"Accessibility"), DLLocalizedString(@"-Voice & Video"), DLLocalizedString(@"Chat"), DLLocalizedString(@"Notifications"),
+        DLLocalizedString(@"Keybinds"), DLLocalizedString(@"Language"), DLLocalizedString(@"Advanced"), nil];
     NSInteger sectionTags[] = { -1, DLSettingsSectionMyAccount, DLSettingsSectionContentSocial, -1,
                                 DLSettingsSectionAppearance, DLSettingsSectionAccessibility, -1, DLSettingsSectionChat,
-                                DLSettingsSectionNotifications, DLSettingsSectionKeybinds, DLSettingsSectionAdvanced };
+                                DLSettingsSectionNotifications, DLSettingsSectionKeybinds, DLSettingsSectionLanguage,
+                                DLSettingsSectionAdvanced };
     settingsSidebarButtons = [[NSMutableArray alloc] init];
     CGFloat y = height - 40.0;
     for (NSUInteger index = 0; index < [entries count]; index++) {
@@ -232,7 +236,7 @@ enum {
         [button setAction:@selector(showSettingsSection:)];
         if (disabled) {
             [button setEnabled:NO];
-            [button setToolTip:@"Voice chat is not available yet"];
+            [button setToolTip:DLLocalizedString(@"Voice chat is not available yet")];
         } else {
             [settingsSidebarButtons addObject:button];
         }
@@ -244,7 +248,7 @@ enum {
     [logoutButton setAutoresizingMask:NSViewMaxXMargin | NSViewMaxYMargin];
     [logoutButton setBordered:NO];
     [logoutButton setButtonType:NSMomentaryChangeButton];
-    [logoutButton setTitle:@"Log Out"];
+    [logoutButton setTitle:DLLocalizedString(@"Log Out")];
     [logoutButton setTarget:self];
     [logoutButton setAction:@selector(confirmLogOut:)];
     [sidebar addSubview:logoutButton];
@@ -266,6 +270,7 @@ enum {
     panes[DLSettingsSectionMyAccount] = [self buildAccountPane];
     panes[DLSettingsSectionContentSocial] = [self buildContentSocialPane];
     panes[DLSettingsSectionKeybinds] = [self buildKeybindsPane];
+    panes[DLSettingsSectionLanguage] = [self buildLanguagePane];
     panes[DLSettingsSectionAppearance] = [self buildAppearancePane];
     panes[DLSettingsSectionAccessibility] = [self buildAccessibilityPane];
     panes[DLSettingsSectionChat] = [self buildChatPane];
@@ -407,30 +412,30 @@ enum {
 }
 
 -(NSView *)buildContentSocialPane {
-    NSView *pane = [self newPaneWithTitle:@"Content & Social"];
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"Content & Social")];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
-    [self sectionHeaderInPane:pane top:top text:@"DIRECT MESSAGES"];
+    [self sectionHeaderInPane:pane top:top text:DLLocalizedString(@"DIRECT MESSAGES")];
     top -= 24.0;
-    top = [self addToggleToPane:pane top:top title:@"Allow DMs from other members in your servers"
-                           help:@"This setting is applied when you join a new server. It does not apply retroactively to your existing servers."
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Allow DMs from other members in your servers")
+                           help:DLLocalizedString(@"This setting is applied when you join a new server. It does not apply retroactively to your existing servers.")
                             tag:DLSettingsToggleServerDMs on:YES];
-    [self sectionHeaderInPane:pane top:top text:@"WHO CAN SEND YOU A FRIEND REQUEST"];
+    [self sectionHeaderInPane:pane top:top text:DLLocalizedString(@"WHO CAN SEND YOU A FRIEND REQUEST")];
     top -= 22.0;
-    friendEveryoneToggle = [[self addCompactToggleToPane:pane top:top title:@"Everyone" tag:DLSettingsToggleFriendsEveryone on:YES] retain];
+    friendEveryoneToggle = [[self addCompactToggleToPane:pane top:top title:DLLocalizedString(@"Everyone") tag:DLSettingsToggleFriendsEveryone on:YES] retain];
     top -= 36.0;
-    friendsOfFriendsToggle = [[self addCompactToggleToPane:pane top:top title:@"Friends of Friends" tag:DLSettingsToggleFriendsOfFriends on:YES] retain];
+    friendsOfFriendsToggle = [[self addCompactToggleToPane:pane top:top title:DLLocalizedString(@"Friends of Friends") tag:DLSettingsToggleFriendsOfFriends on:YES] retain];
     top -= 36.0;
-    friendServerMembersToggle = [[self addCompactToggleToPane:pane top:top title:@"Server Members" tag:DLSettingsToggleFriendsServerMembers on:YES] retain];
+    friendServerMembersToggle = [[self addCompactToggleToPane:pane top:top title:DLLocalizedString(@"Server Members") tag:DLSettingsToggleFriendsServerMembers on:YES] retain];
     top -= 44.0;
     [self addDividerToPane:pane y:top + 6.0];
     top -= 8.0;
-    [self sectionHeaderInPane:pane top:top text:@"EXPLICIT IMAGE FILTER"];
+    [self sectionHeaderInPane:pane top:top text:DLLocalizedString(@"EXPLICIT IMAGE FILTER")];
     top -= 22.0;
     explicitFilterRows = [[self addOptionRowsToPane:pane top:top
-        titles:[NSArray arrayWithObjects:@"Keep me safe", @"My friends are nice", @"I live on the edge", nil]
-        details:[NSArray arrayWithObjects:@"Scan images sent in all direct messages.",
-                 @"Scan images sent in direct messages unless they are from a friend.",
-                 @"Do not scan direct messages.", nil]
+        titles:[NSArray arrayWithObjects:DLLocalizedString(@"Keep me safe"), DLLocalizedString(@"My friends are nice"), DLLocalizedString(@"I live on the edge"), nil]
+        details:[NSArray arrayWithObjects:DLLocalizedString(@"Scan images sent in all direct messages."),
+                 DLLocalizedString(@"Scan images sent in direct messages unless they are from a friend."),
+                 DLLocalizedString(@"Do not scan direct messages."), nil]
         values:[NSArray arrayWithObjects:[NSNumber numberWithInt:2], [NSNumber numberWithInt:1], [NSNumber numberWithInt:0], nil]
         selected:1 action:@selector(explicitFilterChanged:)] retain];
     accountSettingsControls = [[NSMutableArray alloc] init];
@@ -499,21 +504,62 @@ enum {
     [[DLPreferencesHandler sharedInstance] setSpoilerDisplay:[sender tag]];
 }
 
--(NSView *)buildKeybindsPane {
-    NSView *pane = [self newPaneWithTitle:@"Keybinds"];
+-(NSView *)buildLanguagePane {
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"Language")];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
-    [self sectionHeaderInPane:pane top:top text:@"MESSAGES"];
+    [self sectionHeaderInPane:pane top:top text:DLLocalizedString(@"LANGUAGE")];
+    top -= 22.0;
+    NSString *setting = [DLLocalization preferredLanguageSetting];
+    NSInteger selected = [setting isEqualToString:@"en"] ? 1 : ([setting isEqualToString:@"ja"] ? 2 : 0);
+    // Language names stay in their own language, as in the official client.
+    languageRows = [[self addOptionRowsToPane:pane top:top
+        titles:[NSArray arrayWithObjects:DLLocalizedString(@"Follow system"), @"English", @"日本語", nil]
+        details:[NSArray arrayWithObjects:DLLocalizedString(@"Uses the first language in System Preferences > Language & Text."),
+                 @"English", @"Japanese", nil]
+        values:[NSArray arrayWithObjects:[NSNumber numberWithInt:0], [NSNumber numberWithInt:1], [NSNumber numberWithInt:2], nil]
+        selected:selected action:@selector(languageChanged:)] retain];
+    return pane;
+}
+
+-(void)languageChanged:(DLOptionRow *)sender {
+    NSArray *settings = [NSArray arrayWithObjects:@"system", @"en", @"ja", nil];
+    NSString *setting = [settings objectAtIndex:(NSUInteger)[sender tag]];
+    if ([setting isEqualToString:[DLLocalization preferredLanguageSetting]]) return;
+    [self selectOptionRow:sender inRows:languageRows];
+    [DLLocalization setPreferredLanguageSetting:setting];
+    DLDialog *dialog = [DLDialog dialogWithTitle:DLLocalizedString(@"Restart to change the language")
+                                         message:DLLocalizedString(@"Legacy Discord will restart to apply the new language.")];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Restart Now") style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Later") style:DLDialogButtonStyleLink];
+    [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
+        if (buttonIndex == 0) {
+            // A shell waits for this process to exit, then opens the app again.
+            NSString *script = [NSString stringWithFormat:@"while kill -0 %d 2>/dev/null; do sleep 0.2; done; /usr/bin/open \"$0\"",
+                                [[NSProcessInfo processInfo] processIdentifier]];
+            [NSTask launchedTaskWithLaunchPath:@"/bin/sh"
+                                     arguments:[NSArray arrayWithObjects:@"-c", script, [[NSBundle mainBundle] bundlePath], nil]];
+            [NSApp performSelector:@selector(terminate:) withObject:nil afterDelay:0.1];
+        }
+        return YES;
+    }];
+    [dialog showInWindow:self.window];
+}
+
+-(NSView *)buildKeybindsPane {
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"Keybinds")];
+    CGFloat top = NSHeight([pane bounds]) - 82.0;
+    [self sectionHeaderInPane:pane top:top text:DLLocalizedString(@"MESSAGES")];
     top -= 24.0;
     NSArray *bindings = [NSArray arrayWithObjects:
-        [NSArray arrayWithObjects:@"Send message", @"Return", nil],
-        [NSArray arrayWithObjects:@"New line in message", @"Shift + Return", nil],
-        [NSArray arrayWithObjects:@"Edit your last message", @"Up Arrow (empty message)", nil],
-        [NSArray arrayWithObjects:@"Cancel reply or editing", @"Escape", nil],
-        [NSArray arrayWithObjects:@"Delete without confirmation", @"Shift + Delete Message", nil],
-        [NSArray arrayWithObjects:@"Search messages", @"\u2318 F", nil],
-        [NSArray arrayWithObjects:@"Open settings", @"\u2318 ,", nil],
-        [NSArray arrayWithObjects:@"Close window", @"\u2318 W", nil],
-        [NSArray arrayWithObjects:@"Quit Legacy Discord", @"\u2318 Q", nil], nil];
+        [NSArray arrayWithObjects:DLLocalizedString(@"Send message"), DLLocalizedString(@"Return"), nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"New line in message"), DLLocalizedString(@"Shift + Return"), nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Edit your last message"), DLLocalizedString(@"Up Arrow (empty message)"), nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Cancel reply or editing"), DLLocalizedString(@"Escape"), nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Delete without confirmation"), DLLocalizedString(@"Shift + Delete Message"), nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Search messages"), @"\u2318 F", nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Open settings"), @"\u2318 ,", nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Close window"), @"\u2318 W", nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Quit Legacy Discord"), @"\u2318 Q", nil], nil];
     NSEnumerator *enumerator = [bindings objectEnumerator];
     NSArray *binding;
     while (binding = [enumerator nextObject]) {
@@ -537,7 +583,7 @@ enum {
 }
 
 -(NSView *)buildAccountPane {
-    NSView *pane = [self newPaneWithTitle:@"My Account"];
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"My Account")];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
     DLUser *user = [[DLController sharedInstance] myUser];
 
@@ -566,7 +612,7 @@ enum {
     NSView_BGColor *fields = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(16.0, 16.0, DLSettingsContentWidth - 32.0, 96.0)] autorelease];
     [fields setBackgroundColor:[DLUtil nativeSidebarColor]];
     [card addSubview:fields];
-    NSArray *fieldTitles = [NSArray arrayWithObjects:@"DISPLAY NAME", @"USERNAME", nil];
+    NSArray *fieldTitles = [NSArray arrayWithObjects:DLLocalizedString(@"DISPLAY NAME"), DLLocalizedString(@"USERNAME"), nil];
     NSArray *fieldValues = [NSArray arrayWithObjects:(displayName ? displayName : @""), ([user username] ? [user username] : @""), nil];
     for (NSUInteger index = 0; index < 2; index++) {
         CGFloat rowTop = 96.0 - 12.0 - index * 42.0;
@@ -583,7 +629,7 @@ enum {
     }
 
     NSTextField *note = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft, top - 280.0, DLSettingsContentWidth, 32.0)
-                                        text:@"Account details are shown read-only. Edit them in the official client; changes appear here after reconnecting."
+                                        text:DLLocalizedString(@"Account details are shown read-only. Edit them in the official client; changes appear here after reconnecting.")
                                         font:[NSFont systemFontOfSize:11.0]
                                        color:[DLUtil nativeSecondaryTextColor]];
     [[note cell] setWraps:YES];
@@ -593,11 +639,11 @@ enum {
 }
 
 -(NSView *)buildAppearancePane {
-    NSView *pane = [self newPaneWithTitle:@"Appearance"];
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"Appearance")];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
 
-    [self sectionHeaderInPane:pane top:top text:@"THEME"];
-    NSArray *themeTitles = [NSArray arrayWithObjects:@"Dark", @"Midnight", @"Aurora", nil];
+    [self sectionHeaderInPane:pane top:top text:DLLocalizedString(@"THEME")];
+    NSArray *themeTitles = [NSArray arrayWithObjects:DLLocalizedString(@"Dark"), DLLocalizedString(@"Midnight"), DLLocalizedString(@"Aurora"), nil];
     NSArray *themeKeys = [NSArray arrayWithObjects:@"default", @"midnight", @"aurora", nil];
     for (NSInteger index = 0; index < 3; index++) {
         DLThemeSwatchButton *swatch = [[[DLThemeSwatchButton alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft + index * 76.0, top - 82.0, 60.0, 60.0)] autorelease];
@@ -624,12 +670,12 @@ enum {
     [self addDividerToPane:pane y:top - 118.0];
 
     CGFloat rowTop = top - 136.0;
-    [self sectionHeaderInPane:pane top:rowTop text:@"CHAT FONT SCALING"];
+    [self sectionHeaderInPane:pane top:rowTop text:DLLocalizedString(@"CHAT FONT SCALING")];
     chatFontPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft - 2.0, rowTop - 50.0, 220.0, 30.0) pullsDown:NO];
     [chatFontPopup setCell:[[[DLDarkPopUpButtonCell alloc] initTextCell:@"" pullsDown:NO] autorelease]];
     NSInteger fontSizes[] = { 12, 13, 14, 15, 16, 18, 20 };
     for (NSUInteger index = 0; index < sizeof(fontSizes) / sizeof(fontSizes[0]); index++) {
-        NSString *title = fontSizes[index] == 13 ? @"13px (default)" : [NSString stringWithFormat:@"%ldpx", (long)fontSizes[index]];
+        NSString *title = fontSizes[index] == 13 ? DLLocalizedString(@"13px (default)") : [NSString stringWithFormat:@"%ldpx", (long)fontSizes[index]];
         [chatFontPopup addItemWithTitle:title];
         [[chatFontPopup lastItem] setTag:fontSizes[index]];
     }
@@ -639,10 +685,10 @@ enum {
     [pane addSubview:chatFontPopup];
 
     rowTop -= 80.0;
-    [self sectionHeaderInPane:pane top:rowTop text:@"ZOOM LEVEL"];
+    [self sectionHeaderInPane:pane top:rowTop text:DLLocalizedString(@"ZOOM LEVEL")];
     displayScalePopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft - 2.0, rowTop - 50.0, 220.0, 30.0) pullsDown:NO];
     [displayScalePopup setCell:[[[DLDarkPopUpButtonCell alloc] initTextCell:@"" pullsDown:NO] autorelease]];
-    NSArray *titles = [NSArray arrayWithObjects:@"80%", @"90% (default)", @"100%", @"110%", @"125%", nil];
+    NSArray *titles = [NSArray arrayWithObjects:@"80%", DLLocalizedString(@"90% (default)"), @"100%", @"110%", @"125%", nil];
     NSInteger tags[] = { 80, 90, 100, 110, 125 };
     for (NSInteger index = 0; index < (NSInteger)[titles count]; index++) {
         [displayScalePopup addItemWithTitle:[titles objectAtIndex:index]];
@@ -653,7 +699,7 @@ enum {
     [displayScalePopup setAutoresizingMask:NSViewMinYMargin];
     [pane addSubview:displayScalePopup];
     NSTextField *zoomHelp = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft + 230.0, rowTop - 50.0, 240.0, 28.0)
-                                            text:@"Scales message text, avatars and spacing."
+                                            text:DLLocalizedString(@"Scales message text, avatars and spacing.")
                                             font:[NSFont systemFontOfSize:11.0]
                                            color:[DLUtil nativeSecondaryTextColor]];
     [[zoomHelp cell] setWraps:YES];
@@ -663,35 +709,35 @@ enum {
 }
 
 -(NSView *)buildAccessibilityPane {
-    NSView *pane = [self newPaneWithTitle:@"Accessibility"];
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"Accessibility")];
     DLPreferencesHandler *preferences = [DLPreferencesHandler sharedInstance];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
-    top = [self addToggleToPane:pane top:top title:@"Show role colors in names"
-                           help:@"Color member names in chat and the member list with their highest colored role."
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Show role colors in names")
+                           help:DLLocalizedString(@"Color member names in chat and the member list with their highest colored role.")
                             tag:DLSettingsToggleRoleColors on:[preferences showRoleColors]];
-    [self addToggleToPane:pane top:top title:@"Automatically play animated emoji"
-                     help:@"When off, animated custom emoji show their first frame. Reduces CPU use on older Macs."
+    [self addToggleToPane:pane top:top title:DLLocalizedString(@"Automatically play animated emoji")
+                     help:DLLocalizedString(@"When off, animated custom emoji show their first frame. Reduces CPU use on older Macs.")
                       tag:DLSettingsToggleAnimatedEmoji on:[preferences autoplayAnimatedEmoji]];
     return pane;
 }
 
 -(NSView *)buildChatPane {
-    NSView *pane = [self newPaneWithTitle:@"Chat"];
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"Chat")];
     DLPreferencesHandler *preferences = [DLPreferencesHandler sharedInstance];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
-    top = [self addToggleToPane:pane top:top title:@"Show emoji reactions on messages"
-                           help:@"Display the reaction bar under messages that have reactions."
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Show emoji reactions on messages")
+                           help:DLLocalizedString(@"Display the reaction bar under messages that have reactions.")
                             tag:DLSettingsToggleReactions on:[preferences showReactions]];
-    top = [self addToggleToPane:pane top:top title:@"Show embeds and preview website links"
-                           help:@"Show link previews and rich embeds sent by bots."
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Show embeds and preview website links")
+                           help:DLLocalizedString(@"Show link previews and rich embeds sent by bots.")
                             tag:DLSettingsToggleEmbeds on:[preferences showEmbeds]];
-    top = [self addToggleToPane:pane top:top title:@"Automatically convert emoticons in your messages to emoji"
-                           help:@"For example, when you type :-) Legacy Discord will convert it to the smiling face emoji."
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Automatically convert emoticons in your messages to emoji")
+                           help:DLLocalizedString(@"For example, when you type :-) Legacy Discord will convert it to the smiling face emoji.")
                             tag:DLSettingsToggleConvertEmoticons on:[preferences convertEmoticons]];
-    [self sectionHeaderInPane:pane top:top text:@"SHOW SPOILER CONTENT"];
+    [self sectionHeaderInPane:pane top:top text:DLLocalizedString(@"SHOW SPOILER CONTENT")];
     top -= 22.0;
     spoilerRows = [[self addOptionRowsToPane:pane top:top
-        titles:[NSArray arrayWithObjects:@"On click", @"On servers I moderate", @"Always", nil]
+        titles:[NSArray arrayWithObjects:DLLocalizedString(@"On click"), DLLocalizedString(@"On servers I moderate"), DLLocalizedString(@"Always"), nil]
         details:nil
         values:[NSArray arrayWithObjects:[NSNumber numberWithInt:DLSpoilerDisplayOnClick],
                 [NSNumber numberWithInt:DLSpoilerDisplayModerated], [NSNumber numberWithInt:DLSpoilerDisplayAlways], nil]
@@ -700,36 +746,36 @@ enum {
 }
 
 -(NSView *)buildNotificationsPane {
-    NSView *pane = [self newPaneWithTitle:@"Notifications"];
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"Notifications")];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
     DLPreferencesHandler *preferences = [DLPreferencesHandler sharedInstance];
     // Notification Center exists from OS X 10.8.
     BOOL notificationCenter = NSClassFromString(@"NSUserNotificationCenter") != nil;
-    top = [self addToggleToPane:pane top:top title:@"Enable Desktop Notifications"
-                           help:(notificationCenter ? @"Show a Notification Center banner for mentions and direct messages while Legacy Discord is in the background."
-                                                    : @"Desktop notifications need OS X 10.8 or later.")
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Enable Desktop Notifications")
+                           help:(notificationCenter ? DLLocalizedString(@"Show a Notification Center banner for mentions and direct messages while Legacy Discord is in the background.")
+                                                    : DLLocalizedString(@"Desktop notifications need OS X 10.8 or later."))
                             tag:DLSettingsToggleDesktopNotifications on:(notificationCenter && [preferences desktopNotifications])];
-    top = [self addToggleToPane:pane top:top title:@"Enable Unread Message Badge"
-                           help:@"Shows a red badge on the Dock icon with your mention and direct message count."
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Enable Unread Message Badge")
+                           help:DLLocalizedString(@"Shows a red badge on the Dock icon with your mention and direct message count.")
                             tag:DLSettingsToggleUnreadBadge on:[preferences showUnreadBadge]];
-    top = [self addToggleToPane:pane top:top title:@"Bounce Dock Icon"
-                           help:@"Bounces the Dock icon once when you are mentioned or receive a direct message while Legacy Discord is in the background."
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Bounce Dock Icon")
+                           help:DLLocalizedString(@"Bounces the Dock icon once when you are mentioned or receive a direct message while Legacy Discord is in the background.")
                             tag:DLSettingsToggleBounceDock on:[preferences bounceDockIcon]];
-    [self addToggleToPane:pane top:top title:@"Play a sound for mentions and direct messages"
-                     help:@"Plays the mention sound when you are mentioned or receive a direct message."
+    [self addToggleToPane:pane top:top title:DLLocalizedString(@"Play a sound for mentions and direct messages")
+                     help:DLLocalizedString(@"Plays the mention sound when you are mentioned or receive a direct message.")
                       tag:DLSettingsToggleMentionSound on:[preferences playMentionSound]];
     return pane;
 }
 
 -(NSView *)buildAdvancedPane {
-    NSView *pane = [self newPaneWithTitle:@"Advanced"];
+    NSView *pane = [self newPaneWithTitle:DLLocalizedString(@"Advanced")];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
-    top = [self addToggleToPane:pane top:top title:@"Developer Mode"
-                           help:@"Adds Copy Message ID and Copy User ID to the message context menu."
+    top = [self addToggleToPane:pane top:top title:DLLocalizedString(@"Developer Mode")
+                           help:DLLocalizedString(@"Adds Copy Message ID and Copy User ID to the message context menu.")
                             tag:DLSettingsToggleDeveloperMode on:[[DLPreferencesHandler sharedInstance] developerMode]];
     // Image cache: avatars, emoji and previews kept on disk (up to 200 MB).
     NSTextField *cacheTitle = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft, top - 20.0, DLSettingsContentWidth - 140.0, 18.0)
-                                              text:@"Image Cache"
+                                              text:DLLocalizedString(@"Image Cache")
                                               font:[NSFont boldSystemFontOfSize:13.0]
                                              color:[DLUtil nativePrimaryTextColor]];
     [cacheTitle setAutoresizingMask:NSViewMinYMargin];
@@ -743,7 +789,7 @@ enum {
     [pane addSubview:cacheUsageField];
     NSButton *clearCache = [[[DLPrimaryButton alloc] initWithFrame:
                              NSMakeRect(DLSettingsContentLeft + DLSettingsContentWidth - 120.0, top - 28.0, 120.0, 28.0)] autorelease];
-    [clearCache setTitle:@"Clear Cache"];
+    [clearCache setTitle:DLLocalizedString(@"Clear Cache")];
     [clearCache setTarget:self];
     [clearCache setAction:@selector(clearImageCache:)];
     [clearCache setAutoresizingMask:NSViewMinYMargin];
@@ -755,7 +801,7 @@ enum {
 -(void)refreshCacheUsage {
     double megabytes = [[HTTPCache sharedInstance] diskUsage] / (1024.0 * 1024.0);
     [cacheUsageField setStringValue:[NSString stringWithFormat:
-        @"Avatars, emoji and image previews are kept on disk so channels open faster. Using %.1f MB of 200 MB.", megabytes]];
+        DLLocalizedString(@"Avatars, emoji and image previews are kept on disk so channels open faster. Using %.1f MB of 200 MB."), megabytes]];
 }
 
 -(IBAction)clearImageCache:(id)sender {
@@ -917,18 +963,18 @@ enum {
 
 #if LEGACY_DISCORD_LOCAL_DEV
 -(void)selectSettingsSectionNamed:(NSString *)name {
-    NSArray *names = [NSArray arrayWithObjects:@"account", @"content", @"appearance", @"accessibility", @"chat", @"notifications", @"keybinds", @"advanced", nil];
+    NSArray *names = [NSArray arrayWithObjects:@"account", @"content", @"appearance", @"accessibility", @"chat", @"notifications", @"keybinds", @"language", @"advanced", nil];
     NSUInteger index = [names indexOfObject:name];
     if (index != NSNotFound) [self selectSection:(NSInteger)index];
 }
 #endif
 
 -(void)confirmLogOut:(id)sender {
-    NSAlert *alert = [NSAlert alertWithMessageText:@"Log Out"
-                                     defaultButton:@"Log Out"
-                                   alternateButton:@"Cancel"
+    NSAlert *alert = [NSAlert alertWithMessageText:DLLocalizedString(@"Log Out")
+                                     defaultButton:DLLocalizedString(@"Log Out")
+                                   alternateButton:DLLocalizedString(@"Cancel")
                                        otherButton:nil
-                         informativeTextWithFormat:@"Are you sure you want to log out?"];
+                         informativeTextWithFormat:DLLocalizedString(@"Are you sure you want to log out?")];
     [alert beginSheetModalForWindow:self.window modalDelegate:self
                      didEndSelector:@selector(logOutAlertDidEnd:returnCode:contextInfo:) contextInfo:NULL];
 }
@@ -952,6 +998,7 @@ enum {
     [friendServerMembersToggle release];
     [explicitFilterRows release];
     [spoilerRows release];
+    [languageRows release];
     [accountSettingsControls release];
     [super dealloc];
 }

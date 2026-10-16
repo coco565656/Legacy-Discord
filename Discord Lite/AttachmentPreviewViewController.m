@@ -7,6 +7,7 @@
 //
 
 #import "AttachmentPreviewViewController.h"
+#import "DLLocalization.h"
 #import "DLTextParser.h"
 #import "DLController.h"
 #import <WebKit/WebKit.h>
@@ -24,13 +25,13 @@
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSFont boldSystemFontOfSize:12.0], NSFontAttributeName,
                                 [NSColor whiteColor], NSForegroundColorAttributeName, nil];
-    NSSize size = [@"SPOILER" sizeWithAttributes:attributes];
+    NSSize size = [DLLocalizedString(@"SPOILER") sizeWithAttributes:attributes];
     NSRect pill = NSMakeRect(floor(NSMidX([self bounds]) - size.width / 2.0 - 12.0),
                              floor(NSMidY([self bounds]) - size.height / 2.0 - 5.0),
                              size.width + 24.0, size.height + 10.0);
     [[NSColor colorWithCalibratedWhite:0.0 alpha:0.75] set];
     [[NSBezierPath bezierPathWithRoundedRect:pill xRadius:NSHeight(pill) / 2.0 yRadius:NSHeight(pill) / 2.0] fill];
-    [@"SPOILER" drawAtPoint:NSMakePoint(NSMinX(pill) + 12.0, NSMinY(pill) + 5.0) withAttributes:attributes];
+    [DLLocalizedString(@"SPOILER") drawAtPoint:NSMakePoint(NSMinX(pill) + 12.0, NSMinY(pill) + 5.0) withAttributes:attributes];
 }
 @end
 

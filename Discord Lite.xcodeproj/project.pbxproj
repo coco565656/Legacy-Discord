@@ -110,6 +110,8 @@
 		E30000000000000000000011 /* DLVoiceLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000013 /* DLVoiceLibrary.m */; };
 		E30000000000000000000021 /* DLVoiceConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000023 /* DLVoiceConnection.m */; };
 		E30000000000000000000031 /* DLVoiceManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000033 /* DLVoiceManager.m */; };
+		E30000000000000000000131 /* DLLocalization.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000133 /* DLLocalization.m */; };
+		E30000000000000000000141 /* Localizable-ja.plist in Resources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000142 /* Localizable-ja.plist */; };
 		E30000000000000000000101 /* DLDarkMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000103 /* DLDarkMenu.m */; };
 		E30000000000000000000111 /* DLDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000113 /* DLDialog.m */; };
 		E30000000000000000000121 /* DLServerMenuController.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000123 /* DLServerMenuController.m */; };
@@ -355,6 +357,9 @@
 		E30000000000000000000023 /* DLVoiceConnection.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLVoiceConnection.m; sourceTree = "<group>"; };
 		E30000000000000000000032 /* DLVoiceManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLVoiceManager.h; sourceTree = "<group>"; };
 		E30000000000000000000033 /* DLVoiceManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLVoiceManager.m; sourceTree = "<group>"; };
+		E30000000000000000000132 /* DLLocalization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLLocalization.h; sourceTree = "<group>"; };
+		E30000000000000000000133 /* DLLocalization.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLLocalization.m; sourceTree = "<group>"; };
+		E30000000000000000000142 /* Localizable-ja.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Localizable-ja.plist"; sourceTree = "<group>"; };
 		E30000000000000000000102 /* DLDarkMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLDarkMenu.h; sourceTree = "<group>"; };
 		E30000000000000000000103 /* DLDarkMenu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLDarkMenu.m; sourceTree = "<group>"; };
 		E30000000000000000000112 /* DLDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLDialog.h; sourceTree = "<group>"; };
@@ -560,6 +565,9 @@
 				E30000000000000000000023 /* DLVoiceConnection.m */,
 				E30000000000000000000032 /* DLVoiceManager.h */,
 				E30000000000000000000033 /* DLVoiceManager.m */,
+				E30000000000000000000132 /* DLLocalization.h */,
+				E30000000000000000000133 /* DLLocalization.m */,
+				E30000000000000000000142 /* Localizable-ja.plist */,
 				E30000000000000000000102 /* DLDarkMenu.h */,
 				E30000000000000000000103 /* DLDarkMenu.m */,
 				E30000000000000000000112 /* DLDialog.h */,
@@ -902,6 +910,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1B2C3D4E5F60718293A4B5C /* cacert.pem in Resources */,
+				E30000000000000000000141 /* Localizable-ja.plist in Resources */,
 				F10000000000000000000004 /* Twemoji72 in Resources */,
 				87A38DEF27339557002385EE /* at.png in Resources */,
 				87C6E6972730510500090639 /* uI4.png in Resources */,
@@ -1002,6 +1011,7 @@
 				E30000000000000000000011 /* DLVoiceLibrary.m in Sources */,
 				E30000000000000000000021 /* DLVoiceConnection.m in Sources */,
 				E30000000000000000000031 /* DLVoiceManager.m in Sources */,
+				E30000000000000000000131 /* DLLocalization.m in Sources */,
 				E30000000000000000000101 /* DLDarkMenu.m in Sources */,
 				E30000000000000000000111 /* DLDialog.m in Sources */,
 				E30000000000000000000121 /* DLServerMenuController.m in Sources */,

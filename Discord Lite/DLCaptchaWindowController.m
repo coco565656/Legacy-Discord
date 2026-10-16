@@ -7,6 +7,7 @@
 //
 
 #import "DLCaptchaWindowController.h"
+#import "DLLocalization.h"
 
 @interface DLCaptchaWindowController ()
 
@@ -16,6 +17,7 @@
 
 - (void)windowDidLoad {
     [super windowDidLoad];
+    [DLLocalization localizeWindow:self.window];
     [captchaWebView setResourceLoadDelegate:self];
     captchaSuccess = NO;
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.

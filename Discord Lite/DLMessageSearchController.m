@@ -4,6 +4,7 @@
 //
 
 #import "DLMessageSearchController.h"
+#import "DLLocalization.h"
 #import "DLTwemojiRenderer.h"
 #import "DLMainWindowChromeControls.h"
 #import "DLController.h"
@@ -87,7 +88,7 @@
     [header drawInRect:NSMakeRect(textX, headerY, textWidth, 18.0)];
 
     NSString *contentText = [message content] ? [message content] : @"";
-    if (![contentText length] && [[message attachments] count]) contentText = @"Sent an attachment";
+    if (![contentText length] && [[message attachments] count]) contentText = DLLocalizedString(@"Sent an attachment");
     NSMutableAttributedString *body = [[[NSMutableAttributedString alloc] initWithString:contentText
         attributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSFont systemFontOfSize:13.0], NSFontAttributeName,
                     [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName, wrapping, NSParagraphStyleAttributeName, nil]] autorelease];
@@ -181,7 +182,7 @@
     [titleField setSelectable:NO];
     [titleField setFont:[NSFont boldSystemFontOfSize:13.0]];
     [titleField setTextColor:[DLUtil nativePrimaryTextColor]];
-    [titleField setStringValue:@"Search Results"];
+    [titleField setStringValue:DLLocalizedString(@"Search Results")];
     [resultsPane addSubview:titleField];
 
     NSButton *closeButton = [[[NSButton alloc] initWithFrame:NSMakeRect(paneWidth - 33.0, NSHeight([resultsPane bounds]) - 34.0, 24.0, 24.0)] autorelease];
@@ -189,7 +190,7 @@
     [closeButton setBordered:NO];
     [closeButton setFont:[NSFont systemFontOfSize:17.0]];
     [closeButton setTitle:@"×"];
-    [closeButton setToolTip:@"Close search results"];
+    [closeButton setToolTip:DLLocalizedString(@"Close search results")];
     [closeButton setTarget:self];
     [closeButton setAction:@selector(closeMessageSearchResults:)];
     [resultsPane addSubview:closeButton];
@@ -257,7 +258,7 @@
 
     previousButton = [[DLSecondaryButton alloc] initWithFrame:NSMakeRect(8.0, 4.0, 70.0, 24.0)];
     [previousButton setAutoresizingMask:NSViewMaxXMargin | NSViewMaxYMargin];
-    [previousButton setTitle:@"Back"];
+    [previousButton setTitle:DLLocalizedString(@"Back")];
     [previousButton setTarget:self];
     [previousButton setAction:@selector(showPreviousSearchPage:)];
     [previousButton setEnabled:NO];
@@ -276,7 +277,7 @@
 
     nextButton = [[DLSecondaryButton alloc] initWithFrame:NSMakeRect(paneWidth - 78.0, 4.0, 70.0, 24.0)];
     [nextButton setAutoresizingMask:NSViewMinXMargin | NSViewMaxYMargin];
-    [nextButton setTitle:@"Next"];
+    [nextButton setTitle:DLLocalizedString(@"Next")];
     [nextButton setTarget:self];
     [nextButton setAction:@selector(showNextSearchPage:)];
     [nextButton setEnabled:NO];
@@ -326,7 +327,7 @@
     [emptyStateField setHidden:YES];
     [pendingAuthorName release];
     pendingAuthorName = nil;
-    [titleField setStringValue:@"Search Results"];
+    [titleField setStringValue:DLLocalizedString(@"Search Results")];
     [self clearMessageSearchHighlight];
     [self setVisible:NO];
     [delegate messageSearchControllerDidClose:self];
@@ -338,7 +339,7 @@
 }
 
 -(IBAction)searchLoadedMessages:(id)sender {
-    [titleField setStringValue:@"Search Results"];
+    [titleField setStringValue:DLLocalizedString(@"Search Results")];
     NSString *query = [[searchField stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if ([query length] == 0) {
         [lastQuery release];
@@ -426,7 +427,7 @@
                 pendingAuthorName = [authorName copy];
                 pendingAuthorOffset = requestedOffset;
                 [emptyStateField setHidden:YES];
-                [countField setStringValue:[NSString stringWithFormat:@"Finding %@…", authorName]];
+                [countField setStringValue:[NSString stringWithFormat:DLLocalizedString(@"Finding %@…"), authorName]];
                 [previousButton setEnabled:NO];
                 [nextButton setEnabled:NO];
                 [self setVisible:YES];
@@ -446,7 +447,7 @@
     [emptyStateField setHidden:YES];
     [countField setFont:[NSFont systemFontOfSize:10.0]];
     [countField setTextColor:[DLUtil nativeSecondaryTextColor]];
-    [countField setStringValue:@"Searching message history…"];
+    [countField setStringValue:DLLocalizedString(@"Searching message history…")];
     [previousButton setEnabled:NO];
     [nextButton setEnabled:NO];
     [pageField setStringValue:@""];
@@ -485,9 +486,9 @@
     [resultsTableView reloadData];
     [countField setFont:[NSFont systemFontOfSize:10.0]];
     [countField setTextColor:[DLUtil nativeSecondaryTextColor]];
-    [countField setStringValue:@"No results"];
+    [countField setStringValue:DLLocalizedString(@"No results")];
     [emptyStateField setStringValue:[name length] > 0 ?
-     [NSString stringWithFormat:@"No user named %@", name] : @"Enter a user after from:"];
+     [NSString stringWithFormat:DLLocalizedString(@"No user named %@"), name] : DLLocalizedString(@"Enter a user after from:")];
     [emptyStateField setHidden:NO];
     [previousButton setEnabled:NO];
     [nextButton setEnabled:NO];
@@ -547,16 +548,16 @@
     }
     [results release];
     results = [[NSArray alloc] initWithArray:matchingResults];
-    [countField setStringValue:[NSString stringWithFormat:@"%ld result%@ in loaded messages",
+    [countField setStringValue:[NSString stringWithFormat:DLLocalizedString(@"%ld result%@ in loaded messages"),
                                              (long)[results count],
-                                             [results count] == 1 ? @"" : @"s"]];
+                                             DLPluralSuffix([results count])]];
     [resultsTableView reloadData];
     [resultsTableView deselectAll:self];
     if ([results count] == 0) {
-        [emptyStateField setStringValue:@"We searched far and wide. Unfortunately, no results were found."];
+        [emptyStateField setStringValue:DLLocalizedString(@"We searched far and wide. Unfortunately, no results were found.")];
         [emptyStateField setHidden:NO];
     }
-    [searchField setToolTip:[results count] == 0 ? @"No matching loaded messages" : nil];
+    [searchField setToolTip:[results count] == 0 ? DLLocalizedString(@"No matching loaded messages") : nil];
     [self setVisible:YES];
 }
 
@@ -580,11 +581,11 @@
 
     DLChannel *targetChannel = [[DLController sharedInstance] loadedChannelWithID:[selectedMessage channelID]];
     if (!targetChannel) {
-        [searchField setToolTip:@"The result channel is unavailable"];
+        [searchField setToolTip:DLLocalizedString(@"The result channel is unavailable")];
         NSBeep();
         return;
     }
-    [searchField setToolTip:@"Loading selected message…"];
+    [searchField setToolTip:DLLocalizedString(@"Loading selected message…")];
     [[DLController sharedInstance] loadMessagesAroundMessage:selectedMessage
                                                    inChannel:targetChannel];
 }
@@ -632,11 +633,11 @@
     [countField setFont:[NSFont systemFontOfSize:10.0]];
     [countField setTextColor:[DLUtil nativeSecondaryTextColor]];
     // Official header: "128 Results"; the count line names the channel.
-    [titleField setStringValue:[NSString stringWithFormat:@"%ld Result%@", (long)total, total == 1 ? @"" : @"s"]];
-    [countField setStringValue:[channel name] ? [NSString stringWithFormat:@"in #%@", [channel name]] : @""];
+    [titleField setStringValue:[NSString stringWithFormat:DLLocalizedString(@"%ld Result%@"), (long)total, DLPluralSuffix(total)]];
+    [countField setStringValue:[channel name] ? [NSString stringWithFormat:DLLocalizedString(@"in #%@"), [channel name]] : @""];
     [resultsTableView reloadData];
     [resultsTableView deselectAll:self];
-    [emptyStateField setStringValue:@"No matching messages"];
+    [emptyStateField setStringValue:DLLocalizedString(@"No matching messages")];
     [emptyStateField setHidden:([messages count] != 0)];
     NSInteger pageCount = MAX(1, (total + 24) / 25);
     NSInteger currentPage = MIN(pageCount, offset / 25 + 1);
@@ -648,7 +649,7 @@
     [previousButton setHidden:!paged];
     [nextButton setHidden:!paged];
     [pageField setHidden:!paged];
-    [searchField setToolTip:[messages count] == 0 ? @"No matching messages" : nil];
+    [searchField setToolTip:[messages count] == 0 ? DLLocalizedString(@"No matching messages") : nil];
     [self setVisible:YES];
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(loadVisibleSearchResultAvatars) object:nil];
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(reloadSearchResultsTable) object:nil];
@@ -683,10 +684,10 @@
     [searchField setToolTip:nil];
 }
 -(void)showPinnedMessagesLoading {
-    [titleField setStringValue:@"Pinned Messages"];
+    [titleField setStringValue:DLLocalizedString(@"Pinned Messages")];
     [results release]; results = [[NSArray alloc] init];
     [resultsTableView reloadData];
-    [countField setStringValue:@"Loading pinned messages…"];
+    [countField setStringValue:DLLocalizedString(@"Loading pinned messages…")];
     [emptyStateField setHidden:YES];
     [previousButton setHidden:YES]; [nextButton setHidden:YES]; [pageField setHidden:YES];
     [self setVisible:YES];
@@ -694,13 +695,13 @@
 -(void)showPinnedMessages:(NSArray *)messages {
     [results release]; results = [[NSArray alloc] initWithArray:messages];
     [resultsTableView reloadData]; [resultsTableView deselectAll:self];
-    [countField setStringValue:[NSString stringWithFormat:@"%ld pinned message%@", (long)[messages count],
-                                [messages count] == 1 ? @"" : @"s"]];
-    [emptyStateField setStringValue:@"This channel doesn't have any pinned messages... yet."];
+    [countField setStringValue:[NSString stringWithFormat:DLLocalizedString(@"%ld pinned message%@"), (long)[messages count],
+                                DLPluralSuffix([messages count])]];
+    [emptyStateField setStringValue:DLLocalizedString(@"This channel doesn't have any pinned messages... yet.")];
     [emptyStateField setHidden:([messages count] != 0)];
     [self loadVisibleSearchResultAvatars];
 }
--(void)showPinnedMessagesError { [countField setStringValue:@"Unable to load pinned messages"]; }
+-(void)showPinnedMessagesError { [countField setStringValue:DLLocalizedString(@"Unable to load pinned messages")]; }
 -(void)applyCurrentTheme {
     [(NSView_BGColor *)resultsPane setBackgroundColor:[DLUtil nativeSidebarColor]];
     [(NSView_BGColor *)resultsPane setBottomBorderColor:[DLUtil nativeBorderColor]];

@@ -7,6 +7,7 @@
 //
 
 #import "ChatScrollView.h"
+#import "DLLocalization.h"
 #import "DLUtil.h"
 #import "HTTPCache.h"
 #if LEGACY_DISCORD_UI_DIAGNOSTICS
@@ -97,7 +98,7 @@ extern NSString * const DLMessageActionBarDidHideNotification;
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSFont boldSystemFontOfSize:9.0], NSFontAttributeName,
                                 red, NSForegroundColorAttributeName, nil];
-    [@"NEW" drawAtPoint:NSMakePoint(MAX(2.0, NSWidth(bounds) - 34.0),
+    [DLLocalizedString(@"NEW") drawAtPoint:NSMakePoint(MAX(2.0, NSWidth(bounds) - 34.0),
                                     floor(NSMidY(bounds) - 6.0))
           withAttributes:attributes];
 }

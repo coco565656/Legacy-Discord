@@ -4,6 +4,7 @@
 //
 
 #import "DLMainHeaderController.h"
+#import "DLLocalization.h"
 #import "DLMainWindowChromeControls.h"
 #import "DLMessageSearchController.h"
 #import "DLPinsController.h"
@@ -137,7 +138,7 @@
     [reloadButton setBordered:NO];
     [reloadButton setImage:[NSImage imageNamed:NSImageNameRefreshTemplate]];
     [reloadButton setImagePosition:NSImageOnly];
-    [reloadButton setToolTip:@"Reload the selected channel"];
+    [reloadButton setToolTip:DLLocalizedString(@"Reload the selected channel")];
     [reloadButton setTarget:self];
     [reloadButton setAction:@selector(reloadSelectedChannel:)];
     [chatHeaderView addSubview:reloadButton];
@@ -160,7 +161,7 @@
     [messageSearchField setBackgroundColor:[DLUtil nativeInputColor]];
     [messageSearchField setTextColor:[DLUtil nativePrimaryTextColor]];
     [messageSearchField setFocusRingType:NSFocusRingTypeNone];
-    [[messageSearchField cell] setPlaceholderString:@"Search messages"];
+    [[messageSearchField cell] setPlaceholderString:DLLocalizedString(@"Search messages")];
     [[messageSearchField cell] setSendsWholeSearchString:YES];
     [[messageSearchField cell] setSendsSearchStringImmediately:NO];
     [chatHeaderView addSubview:messageSearchField];
@@ -172,7 +173,7 @@
     [membersButton setRefusesFirstResponder:YES];
     [membersButton setButtonType:NSPushOnPushOffButton];
     [membersButton setTitle:@""];
-    [membersButton setToolTip:@"Show member list"];
+    [membersButton setToolTip:DLLocalizedString(@"Show member list")];
     [membersButton setTarget:self];
     [membersButton setAction:@selector(toggleMemberList:)];
     [membersButton setEnabled:NO];
@@ -185,7 +186,7 @@
     [pinsButton setRefusesFirstResponder:YES];
     [pinsButton setButtonType:NSPushOnPushOffButton];
     [pinsButton setTitle:@""];
-    [pinsButton setToolTip:@"Show pinned messages"];
+    [pinsButton setToolTip:DLLocalizedString(@"Show pinned messages")];
     [pinsButton setEnabled:NO];
     [chatHeaderView addSubview:pinsButton];
 
@@ -195,7 +196,7 @@
     [threadsButton setBordered:NO];
     [threadsButton setRefusesFirstResponder:YES];
     [threadsButton setTitle:@""];
-    [threadsButton setToolTip:@"Threads"];
+    [threadsButton setToolTip:DLLocalizedString(@"Threads")];
     [threadsButton setTarget:self];
     [threadsButton setAction:@selector(showThreadList:)];
     [threadsButton setHidden:YES];
@@ -320,16 +321,16 @@
 }
 
 -(void)updateConnectionStatusField {
-    NSString *statusDescription = @"Disconnected";
+    NSString *statusDescription = DLLocalizedString(@"Disconnected");
     NSColor *statusColor = [NSColor colorWithCalibratedRed:0.65 green:0.12 blue:0.12 alpha:1.0];
     if (connectionState == DLWSConnectionStateConnecting) {
-        statusDescription = @"Connecting…";
+        statusDescription = DLLocalizedString(@"Connecting…");
         statusColor = [NSColor colorWithCalibratedRed:0.72 green:0.46 blue:0.08 alpha:1.0];
     } else if (connectionState == DLWSConnectionStateConnected) {
-        statusDescription = @"Connected";
+        statusDescription = DLLocalizedString(@"Connected");
         statusColor = [NSColor colorWithCalibratedRed:0.18 green:0.55 blue:0.20 alpha:1.0];
     } else if (connectionState == DLWSConnectionStateReconnecting) {
-        statusDescription = @"Reconnecting…";
+        statusDescription = DLLocalizedString(@"Reconnecting…");
         statusColor = [NSColor colorWithCalibratedRed:0.72 green:0.46 blue:0.08 alpha:1.0];
     }
     [(DLConnectionIndicatorView *)connectionStatusField setIndicatorColor:statusColor];

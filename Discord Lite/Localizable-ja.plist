@@ -1,0 +1,906 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>   •   Archived</key>
+	<string>   •   アーカイブ済み</string>
+	<key>  (%ld)</key>
+	<string>  (%ld)</string>
+	<key> (edited)</key>
+	<string> (編集済み)</string>
+	<key>#APP SETTINGS</key>
+	<string>#アプリの設定</string>
+	<key>#USER SETTINGS</key>
+	<string>#ユーザー設定</string>
+	<key>%@ (Lottie sticker)</key>
+	<string>%@ (Lottieスタンプ)</string>
+	<key>%ld Result%@</key>
+	<string>%ld 件の結果%@</string>
+	<key>%ld mutual server%@</key>
+	<string>共通のサーバー %ld 件%@</string>
+	<key>%ld new message%@ since %@</key>
+	<string>%3$@ 以降の新着メッセージ %1$ld 件%2$@</string>
+	<key>%ld pinned message%@</key>
+	<string>ピン留め %ld 件%@</string>
+	<key>%ld result%@ in loaded messages</key>
+	<string>読み込み済みメッセージ内に %ld 件%@</string>
+	<key>%ldd ago</key>
+	<string>%ld日前</string>
+	<key>%ldh ago</key>
+	<string>%ld時間前</string>
+	<key>%ldm ago</key>
+	<string>%ld分前</string>
+	<key>(edited)</key>
+	<string>(編集済み)</string>
+	<key>-Voice &amp; Video</key>
+	<string>-音声・ビデオ</string>
+	<key>13px (default)</key>
+	<string>13px (デフォルト)</string>
+	<key>90% (default)</key>
+	<string>90% (デフォルト)</string>
+	<key>A post needs a title and a message.</key>
+	<string>投稿にはタイトルとメッセージが必要です。</string>
+	<key>ABOUT ME</key>
+	<string>自己紹介</string>
+	<key>ACTIVE NOW
+%@
+
+CONNECTIONS
+%@</key>
+	<string>アクティビティ
+%@
+
+接続
+%@</string>
+	<key>ACTIVITIES</key>
+	<string>アクティビティ</string>
+	<key>ALL FRIENDS</key>
+	<string>全てのフレンド</string>
+	<key>About Legacy Discord</key>
+	<string>Legacy Discord について</string>
+	<key>Accessibility</key>
+	<string>ユーザー補助</string>
+	<key>Account details are shown read-only. Edit them in the official client; changes appear here after reconnecting.</key>
+	<string>アカウント情報は表示のみです。変更は公式クライアントで行ってください。再接続後にここへ反映されます。</string>
+	<key>Active thread</key>
+	<string>アクティブなスレッド</string>
+	<key>Add %@</key>
+	<string>%@ を付ける</string>
+	<key>Add Reaction</key>
+	<string>リアクションを付ける</string>
+	<key>Add reaction</key>
+	<string>リアクションを付ける</string>
+	<key>Adds Copy Message ID and Copy User ID to the message context menu.</key>
+	<string>右クリックメニューに「IDをコピー」の項目を追加します。</string>
+	<key>Advanced</key>
+	<string>詳細設定</string>
+	<key>All</key>
+	<string>全て</string>
+	<key>All Messages</key>
+	<string>すべてのメッセージ</string>
+	<key>Allow DMs from other members in your servers</key>
+	<string>サーバーにいる他のメンバーからのダイレクトメッセージを許可する</string>
+	<key>Always</key>
+	<string>常に表示</string>
+	<key>An error occurred.</key>
+	<string>エラーが発生しました。</string>
+	<key>Appearance</key>
+	<string>テーマ</string>
+	<key>Archived thread</key>
+	<string>アーカイブ済みのスレッド</string>
+	<key>Are you sure you want to delete %@%@? This cannot be undone.</key>
+	<string>本当に%@%@を削除しますか？この操作は取り消せません。</string>
+	<key>Are you sure you want to delete this message?</key>
+	<string>本当にこのメッセージを削除しますか？</string>
+	<key>Are you sure you want to delete “%@”? This cannot be undone.</key>
+	<string>本当に「%@」を削除しますか？この操作は取り消せません。</string>
+	<key>Are you sure you want to leave %@? You won't be able to rejoin this server unless you are re-invited.</key>
+	<string>本当に%@から脱退しますか？再度招待されない限り、このサーバーに参加し直すことはできません。</string>
+	<key>Are you sure you want to log out?</key>
+	<string>本当にログアウトしますか？</string>
+	<key>Attachment</key>
+	<string>添付ファイル</string>
+	<key>Aurora</key>
+	<string>オーロラ</string>
+	<key>Automatically convert emoticons in your messages to emoji</key>
+	<string>メッセージ内の顔文字を自動的に絵文字に変換する</string>
+	<key>Automatically play animated emoji</key>
+	<string>アニメーション絵文字を自動再生する</string>
+	<key>Avatars, emoji and image previews are kept on disk so channels open faster. Using %.1f MB of 200 MB.</key>
+	<string>チャンネルを速く開けるよう、アバター・絵文字・画像プレビューをディスクに保存します。200 MB中 %.1f MB 使用中。</string>
+	<key>BLOCKED</key>
+	<string>ブロック中</string>
+	<key>Back</key>
+	<string>戻る</string>
+	<key>Blocked</key>
+	<string>ブロック中</string>
+	<key>Bounce Dock Icon</key>
+	<string>Dockアイコンを弾ませる</string>
+	<key>Bounces the Dock icon once when you are mentioned or receive a direct message while Legacy Discord is in the background.</key>
+	<string>Legacy Discordがバックグラウンドにある時にメンションやダイレクトメッセージを受け取ると、Dockアイコンを1回弾ませます。</string>
+	<key>Bring All to Front</key>
+	<string>すべてを手前に移動</string>
+	<key>CHAT FONT SCALING</key>
+	<string>チャットのフォントサイズ</string>
+	<key>CONNECTIONS
+%@</key>
+	<string>接続
+%@</string>
+	<key>Cancel</key>
+	<string>キャンセル</string>
+	<key>Cancel reply or editing</key>
+	<string>返信・編集をキャンセル</string>
+	<key>Capitalize</key>
+	<string>先頭を大文字にする</string>
+	<key>Captcha</key>
+	<string>キャプチャ</string>
+	<key>Category Name</key>
+	<string>カテゴリー名</string>
+	<key>Channel Name</key>
+	<string>チャンネル名</string>
+	<key>Channel Topic</key>
+	<string>チャンネルトピック</string>
+	<key>Channel Type</key>
+	<string>チャンネルの種類</string>
+	<key>Chat</key>
+	<string>チャット</string>
+	<key>Check Document Now</key>
+	<string>今すぐ書類をチェック</string>
+	<key>Check Grammar With Spelling</key>
+	<string>スペルと同時に文法をチェック</string>
+	<key>Check Spelling While Typing</key>
+	<string>入力中にスペルをチェック</string>
+	<key>Clear Cache</key>
+	<string>キャッシュを削除</string>
+	<key>Close</key>
+	<string>閉じる</string>
+	<key>Close search results</key>
+	<string>検索結果を閉じる</string>
+	<key>Close window</key>
+	<string>ウィンドウを閉じる</string>
+	<key>Collapse All Categories</key>
+	<string>すべてのカテゴリーを折りたたむ</string>
+	<key>Collapse Category</key>
+	<string>カテゴリーを折りたたむ</string>
+	<key>Color member names in chat and the member list with their highest colored role.</key>
+	<string>チャットとメンバーリストの名前を、色付きの最上位ロールの色で表示します。</string>
+	<key>Connected</key>
+	<string>接続済み</string>
+	<key>Connecting</key>
+	<string>接続中</string>
+	<key>Connecting…</key>
+	<string>接続中…</string>
+	<key>Content &amp; Social</key>
+	<string>コンテンツ＆ソーシャル</string>
+	<key>Continue</key>
+	<string>続ける</string>
+	<key>Copied</key>
+	<string>コピーしました</string>
+	<key>Copy</key>
+	<string>コピー</string>
+	<key>Copy Category ID</key>
+	<string>カテゴリーIDをコピー</string>
+	<key>Copy Channel ID</key>
+	<string>チャンネルIDをコピー</string>
+	<key>Copy Link</key>
+	<string>リンクをコピー</string>
+	<key>Copy Message ID</key>
+	<string>メッセージIDをコピー</string>
+	<key>Copy Message Link</key>
+	<string>メッセージリンクをコピー</string>
+	<key>Copy Server ID</key>
+	<string>サーバーIDをコピー</string>
+	<key>Copy Server Link</key>
+	<string>サーバーリンクをコピー</string>
+	<key>Copy Text</key>
+	<string>テキストをコピー</string>
+	<key>Copy User ID</key>
+	<string>ユーザーIDをコピー</string>
+	<key>Correct Spelling Automatically</key>
+	<string>スペルを自動的に修正</string>
+	<key>Could not connect to the Discord server. Please check your Internet connection and try again.</key>
+	<string>Discordのサーバーに接続できませんでした。インターネット接続を確認して、もう一度お試しください。</string>
+	<key>Could not load note.</key>
+	<string>メモを読み込めませんでした。</string>
+	<key>Could not reach Discord. Check your connection and try again.</key>
+	<string>Discordに接続できませんでした。接続を確認して、もう一度お試しください。</string>
+	<key>Create Category</key>
+	<string>カテゴリーを作成</string>
+	<key>Create Channel</key>
+	<string>チャンネルを作成</string>
+	<key>Create Thread</key>
+	<string>スレッドを作成</string>
+	<key>Create a space for organized discussions</key>
+	<string>整理された話し合いの場を作りましょう</string>
+	<key>Creating an invite…</key>
+	<string>招待を作成中…</string>
+	<key>Cut</key>
+	<string>カット</string>
+	<key>DIRECT MESSAGES</key>
+	<string>ダイレクトメッセージ</string>
+	<key>DISPLAY NAME</key>
+	<string>表示名</string>
+	<key>Dark</key>
+	<string>ダーク</string>
+	<key>Data Detectors</key>
+	<string>データ検出</string>
+	<key>Delete</key>
+	<string>削除</string>
+	<key>Delete Category</key>
+	<string>カテゴリーを削除</string>
+	<key>Delete Channel</key>
+	<string>チャンネルを削除</string>
+	<key>Delete Message</key>
+	<string>メッセージを削除</string>
+	<key>Delete Post</key>
+	<string>投稿を削除</string>
+	<key>Delete Thread</key>
+	<string>スレッドを削除</string>
+	<key>Delete without confirmation</key>
+	<string>確認なしで削除</string>
+	<key>Desktop notifications need OS X 10.8 or later.</key>
+	<string>デスクトップ通知にはOS X 10.8以降が必要です。</string>
+	<key>Developer Mode</key>
+	<string>開発者モード</string>
+	<key>Direct Message</key>
+	<string>ダイレクトメッセージ</string>
+	<key>Direct Messages</key>
+	<string>ダイレクトメッセージ</string>
+	<key>Discard Changes</key>
+	<string>変更を破棄</string>
+	<key>Discard unsaved note?</key>
+	<string>保存していないメモを破棄しますか？</string>
+	<key>Disconnect</key>
+	<string>切断</string>
+	<key>Disconnected</key>
+	<string>切断されました</string>
+	<key>Display the reaction bar under messages that have reactions.</key>
+	<string>リアクションのあるメッセージの下にリアクションを表示します。</string>
+	<key>Do not scan direct messages.</key>
+	<string>ダイレクトメッセージをスキャンしない。</string>
+	<key>Done</key>
+	<string>完了</string>
+	<key>EMAIL OR PHONE NUMBER</key>
+	<string>メールアドレスまたは電話番号</string>
+	<key>EXPLICIT IMAGE FILTER</key>
+	<string>不適切な画像のフィルター</string>
+	<key>Edit</key>
+	<string>編集</string>
+	<key>Edit Category</key>
+	<string>カテゴリーを編集</string>
+	<key>Edit Channel</key>
+	<string>チャンネルを編集</string>
+	<key>Edit Message</key>
+	<string>メッセージを編集</string>
+	<key>Edit Per-server Profile</key>
+	<string>サーバープロフィールを編集</string>
+	<key>Edit your last message</key>
+	<string>最後のメッセージを編集</string>
+	<key>Email Address:</key>
+	<string>メールアドレス:</string>
+	<key>Enable Desktop Notifications</key>
+	<string>デスクトップ通知を有効にする</string>
+	<key>Enable Unread Message Badge</key>
+	<string>未読メッセージバッジを有効にする</string>
+	<key>Enter Discord token:</key>
+	<string>Discordトークンを入力:</string>
+	<key>Enter a message (Option-Return for a new line)</key>
+	<string>メッセージを入力 (Option+Returnで改行)</string>
+	<key>Enter a name.</key>
+	<string>名前を入力してください。</string>
+	<key>Enter a thread name.</key>
+	<string>スレッド名を入力してください。</string>
+	<key>Enter a user after from:</key>
+	<string>from: の後にユーザーを入力してください</string>
+	<key>Error</key>
+	<string>エラー</string>
+	<key>Escape</key>
+	<string>Escape</string>
+	<key>Escape to cancel, return to save</key>
+	<string>Escapeでキャンセル、Returnで保存</string>
+	<key>Everyone</key>
+	<string>全員</string>
+	<key>FLAGS</key>
+	<string>旗</string>
+	<key>FOOD</key>
+	<string>食べ物</string>
+	<key>File</key>
+	<string>ファイル</string>
+	<key>Find</key>
+	<string>検索</string>
+	<key>Find Next</key>
+	<string>次を検索</string>
+	<key>Find Previous</key>
+	<string>前を検索</string>
+	<key>Find and Replace…</key>
+	<string>検索と置換…</string>
+	<key>Finding %@…</key>
+	<string>%@ を検索中…</string>
+	<key>Find…</key>
+	<string>検索…</string>
+	<key>Follow system</key>
+	<string>システムに合わせる</string>
+	<key>For 1 Hour</key>
+	<string>1時間</string>
+	<key>For 15 Minutes</key>
+	<string>15分間</string>
+	<key>For 24 Hours</key>
+	<string>24時間</string>
+	<key>For 3 Hours</key>
+	<string>3時間</string>
+	<key>For 8 Hours</key>
+	<string>8時間</string>
+	<key>For example, when you type :-) Legacy Discord will convert it to the smiling face emoji.</key>
+	<string>例えば :-) と入力すると、Legacy Discordが笑顔の絵文字に変換します。</string>
+	<key>Forum</key>
+	<string>フォーラム</string>
+	<key>Friends</key>
+	<string>フレンド</string>
+	<key>Friends of Friends</key>
+	<string>フレンドのフレンド</string>
+	<key>Hang out together with voice, video, and screen share</key>
+	<string>音声、ビデオ、画面共有で一緒に過ごしましょう</string>
+	<key>Help</key>
+	<string>ヘルプ</string>
+	<key>Hey, just double checking that you want to pin this message to %@ for posterity and greatness?</key>
+	<string>このメッセージを%@にピン留めしてよろしいですか？</string>
+	<key>Hide Legacy Discord</key>
+	<string>Legacy Discord を隠す</string>
+	<key>Hide Muted Channels</key>
+	<string>ミュートしたチャンネルを非表示</string>
+	<key>Hide Others</key>
+	<string>ほかを隠す</string>
+	<key>Highlights provide occasional updates when your friends are chatting in busy servers.</key>
+	<string>ハイライトは、にぎやかなサーバーでフレンドが会話している時に、ときどきお知らせします。</string>
+	<key>I live on the edge</key>
+	<string>スリルを楽しむ</string>
+	<key>Image Cache</key>
+	<string>画像キャッシュ</string>
+	<key>Incoming Friend Request</key>
+	<string>受信したフレンドリクエスト</string>
+	<key>Insert emoji</key>
+	<string>絵文字を挿入</string>
+	<key>Invite People</key>
+	<string>友達を招待</string>
+	<key>Invite friends to %@</key>
+	<string>%@に友達を招待</string>
+	<key>Invite to Server</key>
+	<string>サーバーに招待</string>
+	<key>Join Voice</key>
+	<string>ボイスに参加</string>
+	<key>Joined %@</key>
+	<string>%@ に参加</string>
+	<key>Jump To Present</key>
+	<string>最新のメッセージへ移動</string>
+	<key>Jump to Selection</key>
+	<string>選択部分へ移動</string>
+	<key>Keep Editing</key>
+	<string>編集を続ける</string>
+	<key>Keep me safe</key>
+	<string>安全を保つ</string>
+	<key>Keybinds</key>
+	<string>キー割り当て</string>
+	<key>LANGUAGE</key>
+	<string>言語</string>
+	<key>Language</key>
+	<string>言語</string>
+	<key>Later</key>
+	<string>後で</string>
+	<key>Leave '%@'</key>
+	<string>「%@」から脱退</string>
+	<key>Leave Server</key>
+	<string>サーバーから脱退</string>
+	<key>Legacy Discord Help</key>
+	<string>Legacy Discord ヘルプ</string>
+	<key>Legacy Discord Settings</key>
+	<string>Legacy Discord の設定</string>
+	<key>Legacy Discord will restart to apply the new language.</key>
+	<string>新しい言語を適用するため、Legacy Discordを再起動します。</string>
+	<key>Legacy Discord · Mac OS X 10.6 – 10.8</key>
+	<string>Legacy Discord · Mac OS X 10.6 – 10.8</string>
+	<key>Legacy Discord — Login</key>
+	<string>Legacy Discord — ログイン</string>
+	<key>Let everyone know how to use this channel!</key>
+	<string>このチャンネルの使い方をみんなに伝えましょう！</string>
+	<key>Loading activity and connections…</key>
+	<string>アクティビティと接続を読み込み中…</string>
+	<key>Loading membership details…</key>
+	<string>メンバー情報を読み込み中…</string>
+	<key>Loading note…</key>
+	<string>メモを読み込み中…</string>
+	<key>Loading pinned messages…</key>
+	<string>ピン留めされたメッセージを読み込み中…</string>
+	<key>Loading profile details…</key>
+	<string>プロフィール詳細を読み込み中…</string>
+	<key>Loading profile…</key>
+	<string>プロフィールを読み込み中…</string>
+	<key>Loading selected message…</key>
+	<string>選択したメッセージを読み込み中…</string>
+	<key>Log In</key>
+	<string>ログイン</string>
+	<key>Log Out</key>
+	<string>ログアウト</string>
+	<key>Log in with a token instead</key>
+	<string>代わりにトークンでログイン</string>
+	<key>MEMBER SINCE</key>
+	<string>メンバー歴</string>
+	<key>MEMBERS</key>
+	<string>メンバー</string>
+	<key>MESSAGES</key>
+	<string>メッセージ</string>
+	<key>Make Lower Case</key>
+	<string>小文字にする</string>
+	<key>Make Upper Case</key>
+	<string>大文字にする</string>
+	<key>Mark As Read</key>
+	<string>既読にする</string>
+	<key>Mark as Spoiler</key>
+	<string>ネタバレとしてマーク</string>
+	<key>Mention</key>
+	<string>メンション</string>
+	<key>Message</key>
+	<string>メッセージ</string>
+	<key>Message #%@</key>
+	<string>#%@ へメッセージを送信</string>
+	<key>Message @%@</key>
+	<string>@%@ へメッセージを送信</string>
+	<key>Midnight</key>
+	<string>ミッドナイト</string>
+	<key>Minimize</key>
+	<string>しまう</string>
+	<key>Mobile Push Notifications</key>
+	<string>モバイルプッシュ通知</string>
+	<key>Mute %@</key>
+	<string>%@をミュート</string>
+	<key>Mute Category</key>
+	<string>カテゴリーをミュート</string>
+	<key>Mute Channel</key>
+	<string>チャンネルをミュート</string>
+	<key>Mute Conversation</key>
+	<string>会話をミュート</string>
+	<key>Mute New Events</key>
+	<string>新しいイベントをミュート</string>
+	<key>Mute Server</key>
+	<string>サーバーをミュート</string>
+	<key>Muting a server prevents unread indicators and notifications from appearing unless you are mentioned.</key>
+	<string>サーバーをミュートすると、メンションされた場合を除き、未読表示や通知が出なくなります。</string>
+	<key>My Account</key>
+	<string>マイアカウント</string>
+	<key>My friends are nice</key>
+	<string>フレンドを信頼する</string>
+	<key>NATURE</key>
+	<string>自然</string>
+	<key>NEW</key>
+	<string>新着</string>
+	<key>New Category</key>
+	<string>新しいカテゴリー</string>
+	<key>New Post</key>
+	<string>新規投稿</string>
+	<key>New Thread</key>
+	<string>新しいスレッド</string>
+	<key>New line in message</key>
+	<string>メッセージ内で改行</string>
+	<key>Next</key>
+	<string>次へ</string>
+	<key>No channel to invite to.</key>
+	<string>招待できるチャンネルがありません。</string>
+	<key>No matching emoji</key>
+	<string>一致する絵文字はありません</string>
+	<key>No matching loaded messages</key>
+	<string>読み込み済みのメッセージに一致するものはありません</string>
+	<key>No matching messages</key>
+	<string>一致するメッセージはありません</string>
+	<key>No matching stickers</key>
+	<string>一致するスタンプはありません</string>
+	<key>No one's around to play with Wumpus.</key>
+	<string>Wumpusと遊んでくれる人はいないようです。</string>
+	<key>No recent direct messages</key>
+	<string>最近のダイレクトメッセージはありません</string>
+	<key>No results</key>
+	<string>結果なし</string>
+	<key>No stickers available</key>
+	<string>利用できるスタンプはありません</string>
+	<key>No user named %@</key>
+	<string>%@ という名前のユーザーはいません</string>
+	<key>No visible connections</key>
+	<string>表示できる接続はありません</string>
+	<key>No visible roles</key>
+	<string>表示できるロールはありません</string>
+	<key>Note saved.</key>
+	<string>メモを保存しました。</string>
+	<key>Note unavailable. Reopen the profile to retry.</key>
+	<string>メモを利用できません。プロフィールを開き直してください。</string>
+	<key>Nothing</key>
+	<string>通知しない</string>
+	<key>Notification Settings</key>
+	<string>通知設定</string>
+	<key>Notifications</key>
+	<string>通知</string>
+	<key>OBJECTS</key>
+	<string>物</string>
+	<key>OFFLINE — %lu</key>
+	<string>オフライン — %lu</string>
+	<key>OK</key>
+	<string>OK</string>
+	<key>ONLINE</key>
+	<string>オンライン</string>
+	<key>ONLINE — %lu</key>
+	<string>オンライン — %lu</string>
+	<key>Offline</key>
+	<string>オフライン</string>
+	<key>Oh yeah. Pin it</key>
+	<string>ピン留めする</string>
+	<key>On click</key>
+	<string>クリックしたとき</string>
+	<key>On servers I moderate</key>
+	<string>自分がモデレーターのサーバー</string>
+	<key>Online</key>
+	<string>オンライン</string>
+	<key>Only @mentions</key>
+	<string>@mentionsのみ</string>
+	<key>Only you can see this note.</key>
+	<string>このメモはあなただけに表示されます。</string>
+	<key>Open %@</key>
+	<string>%@ を開く</string>
+	<key>Open Link</key>
+	<string>リンクを開く</string>
+	<key>Open Post</key>
+	<string>投稿を開く</string>
+	<key>Open Thread</key>
+	<string>スレッドを開く</string>
+	<key>Open external link?</key>
+	<string>外部リンクを開きますか？</string>
+	<key>Open full profile</key>
+	<string>プロフィール全体を表示</string>
+	<key>Open settings</key>
+	<string>設定を開く</string>
+	<key>Outgoing Friend Request</key>
+	<string>送信したフレンドリクエスト</string>
+	<key>PASSWORD</key>
+	<string>パスワード</string>
+	<key>PENDING</key>
+	<string>保留中</string>
+	<key>PEOPLE</key>
+	<string>人々</string>
+	<key>PRIVATE NOTE</key>
+	<string>メモ</string>
+	<key>PROFILE DETAILS</key>
+	<string>プロフィール詳細</string>
+	<key>Password:</key>
+	<string>パスワード:</string>
+	<key>Paste</key>
+	<string>ペースト</string>
+	<key>Paste and Match Style</key>
+	<string>ペーストしてスタイルを合わせる</string>
+	<key>Pending</key>
+	<string>保留中</string>
+	<key>Pin It. Pin It Good.</key>
+	<string>ピン留めしますか？</string>
+	<key>Pin Message</key>
+	<string>メッセージをピン留め</string>
+	<key>Pinned Messages</key>
+	<string>ピン留めされたメッセージ</string>
+	<key>Play a sound for mentions and direct messages</key>
+	<string>メンションとダイレクトメッセージで音を鳴らす</string>
+	<key>Plays the mention sound when you are mentioned or receive a direct message.</key>
+	<string>メンションされた時やダイレクトメッセージを受け取った時に通知音を鳴らします。</string>
+	<key>Please enter your two-factor authentication code:</key>
+	<string>2段階認証のコードを入力してください:</string>
+	<key>Post</key>
+	<string>投稿</string>
+	<key>Post title</key>
+	<string>投稿のタイトル</string>
+	<key>Preferences…</key>
+	<string>環境設定…</string>
+	<key>Profile</key>
+	<string>プロフィール</string>
+	<key>Pronouns: %@</key>
+	<string>代名詞: %@</string>
+	<key>Quit Legacy Discord</key>
+	<string>Legacy Discord を終了</string>
+	<key>ROLES</key>
+	<string>ロール</string>
+	<key>Reactions and counts</key>
+	<string>リアクションと数</string>
+	<key>Recent conversations</key>
+	<string>最近の会話</string>
+	<key>Recipients will land in #</key>
+	<string>招待された人の最初の表示先: #</string>
+	<key>Reconnecting…</key>
+	<string>再接続中…</string>
+	<key>Redo</key>
+	<string>やり直す</string>
+	<key>Reload the selected channel</key>
+	<string>選択中のチャンネルを再読み込み</string>
+	<key>Remove %@</key>
+	<string>%@ を外す</string>
+	<key>Remove Attachment</key>
+	<string>添付ファイルを削除</string>
+	<key>Remove Spoiler</key>
+	<string>ネタバレを解除</string>
+	<key>Remove it please!</key>
+	<string>外す</string>
+	<key>Remove reaction</key>
+	<string>リアクションを外す</string>
+	<key>Reply</key>
+	<string>返信</string>
+	<key>Replying to %@</key>
+	<string>%@ に返信</string>
+	<key>Restart Now</key>
+	<string>今すぐ再起動</string>
+	<key>Restart to change the language</key>
+	<string>言語を変更するには再起動が必要です</string>
+	<key>Return</key>
+	<string>Return</string>
+	<key>SERVER EMOJI</key>
+	<string>サーバー絵文字</string>
+	<key>SHOW SPOILER CONTENT</key>
+	<string>ネタバレ内容を表示</string>
+	<key>SPOILER</key>
+	<string>ネタバレ</string>
+	<key>STICKER</key>
+	<string>スタンプ</string>
+	<key>SYMBOLS</key>
+	<string>記号</string>
+	<key>Save</key>
+	<string>保存</string>
+	<key>Save Changes</key>
+	<string>変更を保存</string>
+	<key>Save Image</key>
+	<string>画像を保存</string>
+	<key>Save Note</key>
+	<string>メモを保存</string>
+	<key>Save failed. Please try again.</key>
+	<string>保存できませんでした。もう一度お試しください。</string>
+	<key>Saving…</key>
+	<string>保存中…</string>
+	<key>Scales message text, avatars and spacing.</key>
+	<string>メッセージの文字、アバター、間隔を拡大縮小します。</string>
+	<key>Scan images sent in all direct messages.</key>
+	<string>すべてのダイレクトメッセージの画像をスキャンします。</string>
+	<key>Scan images sent in direct messages unless they are from a friend.</key>
+	<string>フレンド以外からのダイレクトメッセージの画像をスキャンします。</string>
+	<key>Search Results</key>
+	<string>検索結果</string>
+	<key>Search emoji</key>
+	<string>絵文字を検索</string>
+	<key>Search messages</key>
+	<string>検索</string>
+	<key>Search posts</key>
+	<string>投稿を検索</string>
+	<key>Search stickers</key>
+	<string>スタンプを検索</string>
+	<key>Search threads</key>
+	<string>スレッドを検索</string>
+	<key>Searching message history…</key>
+	<string>メッセージ履歴を検索中…</string>
+	<key>Select All</key>
+	<string>すべてを選択</string>
+	<key>Select a channel</key>
+	<string>チャンネルを選択</string>
+	<key>Send a server invite link to a friend</key>
+	<string>サーバー招待リンクを友達に送る</string>
+	<key>Send message</key>
+	<string>メッセージを送信</string>
+	<key>Send messages, images, GIFs, emoji, opinions, and puns</key>
+	<string>メッセージ、画像、GIF、絵文字、意見、ダジャレを送信</string>
+	<key>Send sticker</key>
+	<string>スタンプを送信</string>
+	<key>Sent a message</key>
+	<string>メッセージを送信しました</string>
+	<key>Sent an attachment</key>
+	<string>添付ファイルを送信しました</string>
+	<key>Server Members</key>
+	<string>サーバーメンバー</string>
+	<key>Server Name</key>
+	<string>サーバー名</string>
+	<key>Server Nickname</key>
+	<string>サーバーニックネーム</string>
+	<key>Server Notification Settings</key>
+	<string>サーバー通知設定</string>
+	<key>Server Overview</key>
+	<string>サーバー概要</string>
+	<key>Server Settings</key>
+	<string>サーバー設定</string>
+	<key>Server names must be between 2 and 100 characters.</key>
+	<string>サーバー名は2〜100文字にしてください。</string>
+	<key>Services</key>
+	<string>サービス</string>
+	<key>Several People are Typing...</key>
+	<string>複数人が入力中...</string>
+	<key>Shift + Delete Message</key>
+	<string>Shift + メッセージを削除</string>
+	<key>Shift + Return</key>
+	<string>Shift + Return</string>
+	<key>Show All</key>
+	<string>すべてを表示</string>
+	<key>Show Spelling and Grammar</key>
+	<string>スペルと文法を表示</string>
+	<key>Show Substitutions</key>
+	<string>置換を表示</string>
+	<key>Show a Notification Center banner for mentions and direct messages while Legacy Discord is in the background.</key>
+	<string>Legacy Discordがバックグラウンドにある時、メンションとダイレクトメッセージを通知センターに表示します。</string>
+	<key>Show embeds and preview website links</key>
+	<string>埋め込みとWebサイトのリンクプレビューを表示</string>
+	<key>Show emoji reactions on messages</key>
+	<string>メッセージに絵文字リアクションを表示</string>
+	<key>Show link previews and rich embeds sent by bots.</key>
+	<string>リンクのプレビューとBotの埋め込みを表示します。</string>
+	<key>Show member list</key>
+	<string>メンバーリストを表示</string>
+	<key>Show pinned messages</key>
+	<string>ピン留めされたメッセージ</string>
+	<key>Show role colors in names</key>
+	<string>名前にロールの色を表示</string>
+	<key>Shows a red badge on the Dock icon with your mention and direct message count.</key>
+	<string>メンションとダイレクトメッセージの数をDockアイコンに赤いバッジで表示します。</string>
+	<key>Smart Copy/Paste</key>
+	<string>スマートコピー/ペースト</string>
+	<key>Smart Dashes</key>
+	<string>スマートダッシュ</string>
+	<key>Smart Links</key>
+	<string>スマートリンク</string>
+	<key>Smart Quotes</key>
+	<string>スマート引用符</string>
+	<key>Something went wrong (HTTP %ld).</key>
+	<string>問題が発生しました (HTTP %ld)。</string>
+	<key>Speech</key>
+	<string>スピーチ</string>
+	<key>Spelling</key>
+	<string>スペル</string>
+	<key>Spelling and Grammar</key>
+	<string>スペルと文法</string>
+	<key>Spoiler — click to reveal</key>
+	<string>ネタバレ — クリックで表示</string>
+	<key>Start Speaking</key>
+	<string>読み上げを開始</string>
+	<key>Stop Speaking</key>
+	<string>読み上げを停止</string>
+	<key>Substitutions</key>
+	<string>自動置換</string>
+	<key>Suppress @everyone and @here</key>
+	<string>@everyone と @here を抑制</string>
+	<key>Suppress All Role @mentions</key>
+	<string>すべてのロールの@mentionsを抑制</string>
+	<key>Suppress Highlights</key>
+	<string>ハイライトを抑制</string>
+	<key>THEME</key>
+	<string>テーマ</string>
+	<key>TRAVEL</key>
+	<string>旅行と場所</string>
+	<key>Text</key>
+	<string>テキスト</string>
+	<key>Text Replacement</key>
+	<string>テキストの置き換え</string>
+	<key>The max file size is 10 MB.
+
+%@</key>
+	<string>ファイルサイズの上限は10 MBです。
+
+%@</string>
+	<key>The post could not be created.</key>
+	<string>投稿を作成できませんでした。</string>
+	<key>The result channel is unavailable</key>
+	<string>結果のチャンネルを利用できません</string>
+	<key>There are no pending friend requests.</key>
+	<string>保留中のフレンドリクエストはありません。</string>
+	<key>There are no posts yet.</key>
+	<string>まだ投稿はありません。</string>
+	<key>There are no threads here yet.</key>
+	<string>まだスレッドはありません。</string>
+	<key>This channel doesn't have any pinned messages... yet.</key>
+	<string>このチャンネルにはまだピン留めされたメッセージがありません。</string>
+	<key>This forum requires at least one tag.</key>
+	<string>このフォーラムでは少なくとも1つのタグが必要です。</string>
+	<key>This setting is applied when you join a new server. It does not apply retroactively to your existing servers.</key>
+	<string>この設定は新しいサーバーに参加したときに適用されます。参加済みのサーバーには適用されません。</string>
+	<key>Thread Name</key>
+	<string>スレッド名</string>
+	<key>Threads</key>
+	<string>スレッド</string>
+	<key>Today at </key>
+	<string>今日 </string>
+	<key>Token</key>
+	<string>トークン</string>
+	<key>Transformations</key>
+	<string>変換</string>
+	<key>Turning this on will prevent you from being notified of new events.</key>
+	<string>オンにすると、新しいイベントの通知を受け取らなくなります。</string>
+	<key>Two Factor Authentication</key>
+	<string>2段階認証</string>
+	<key>USERNAME</key>
+	<string>ユーザー名</string>
+	<key>Unable to load pinned messages</key>
+	<string>ピン留めされたメッセージを読み込めません</string>
+	<key>Undo</key>
+	<string>取り消す</string>
+	<key>Unmute Category</key>
+	<string>カテゴリーのミュートを解除</string>
+	<key>Unmute Channel</key>
+	<string>チャンネルのミュートを解除</string>
+	<key>Unmute Conversation</key>
+	<string>会話のミュートを解除</string>
+	<key>Unmute Server</key>
+	<string>サーバーのミュートを解除</string>
+	<key>Unpin Message</key>
+	<string>ピン留めを外す</string>
+	<key>Until I turn it back on</key>
+	<string>再度オンにするまで</string>
+	<key>Untitled</key>
+	<string>無題</string>
+	<key>Up Arrow (empty message)</key>
+	<string>↑キー (未入力時)</string>
+	<key>Uploaded a file</key>
+	<string>ファイルをアップロードしました</string>
+	<key>Use Category Default</key>
+	<string>カテゴリーのデフォルトを使用</string>
+	<key>Use Selection for Find</key>
+	<string>選択部分を検索に使用</string>
+	<key>Use Server Default</key>
+	<string>サーバーのデフォルトを使用</string>
+	<key>Use Token...</key>
+	<string>トークンを使う...</string>
+	<key>User Profile</key>
+	<string>ユーザープロフィール</string>
+	<key>User Settings</key>
+	<string>ユーザー設定</string>
+	<key>Uses the first language in System Preferences &gt; Language &amp; Text.</key>
+	<string>システム環境設定の「言語とテキスト」の最上位の言語を使います。</string>
+	<key>View profile</key>
+	<string>プロフィールを表示</string>
+	<key>View your profile</key>
+	<string>自分のプロフィールを表示</string>
+	<key>Voice</key>
+	<string>ボイス</string>
+	<key>Voice chat is not available yet</key>
+	<string>ボイスチャットはまだ利用できません</string>
+	<key>WHO CAN SEND YOU A FRIEND REQUEST</key>
+	<string>フレンドリクエストを送信できるユーザー</string>
+	<key>We searched far and wide. Unfortunately, no results were found.</key>
+	<string>くまなく探しましたが、結果が見つかりませんでした。</string>
+	<key>We're so excited to see you again!</key>
+	<string>また会えてとてもうれしいです！</string>
+	<key>Welcome back!</key>
+	<string>おかえりなさい！</string>
+	<key>Welcome to Legacy Discord. Sign in to continue.</key>
+	<string>Legacy Discordへようこそ。続けるにはログインしてください。</string>
+	<key>When off, animated custom emoji show their first frame. Reduces CPU use on older Macs.</key>
+	<string>オフにすると、アニメーション絵文字は最初のコマだけを表示します。古いMacでのCPU使用量が減ります。</string>
+	<key>Window</key>
+	<string>ウインドウ</string>
+	<key>Wumpus is waiting on friends.</key>
+	<string>Wumpusはフレンドを待っています。</string>
+	<key>Yesterday at </key>
+	<string>昨日 </string>
+	<key>You can't unblock the Wumpus.</key>
+	<string>Wumpusのブロックは解除できません。</string>
+	<key>You do not have permission to change your nickname in this server.</key>
+	<string>このサーバーでニックネームを変更する権限がありません。</string>
+	<key>You sure you want to remove this pinned message?</key>
+	<string>このピン留めメッセージを外してよろしいですか？</string>
+	<key>You're Viewing Older Messages</key>
+	<string>過去のメッセージを表示しています</string>
+	<key>Your changes to this private note have not been saved.</key>
+	<string>このメモの変更は保存されていません。</string>
+	<key>Your files are too powerful</key>
+	<string>ファイルが大きすぎます</string>
+	<key>Your invite link expires in 7 days.</key>
+	<string>招待リンクは7日後に失効します。</string>
+	<key>Your nickname is shown to everyone in %@ instead of your display name.</key>
+	<string>%@では表示名の代わりにニックネームが全員に表示されます。</string>
+	<key>ZOOM LEVEL</key>
+	<string>ズームレベル</string>
+	<key>Zoom</key>
+	<string>拡大/縮小</string>
+	<key>in #%@</key>
+	<string>#%@ 内</string>
+	<key>in %@</key>
+	<string>%@ 内</string>
+	<key>just now</key>
+	<string>たった今</string>
+	<key>this conversation</key>
+	<string>この会話</string>
+	<key>↪ Forwarded</key>
+	<string>↪ 転送済み</string>
+</dict>
+</plist>

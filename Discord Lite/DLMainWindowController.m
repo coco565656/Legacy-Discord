@@ -7,6 +7,7 @@
 //
 
 #import "DLMainWindowController.h"
+#import "DLLocalization.h"
 #if LEGACY_DISCORD_UI_DIAGNOSTICS
 #import "DLUIDiagnostics.h"
 #endif
@@ -756,7 +757,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     if (![server isEqual:[[DLController sharedInstance] myServerItem]]) {
         [directMessageController restoreExpandedLayout];
     }
-    [self.window setTitle:([server isEqual:[[DLController sharedInstance] myServerItem]] ? @"Direct Messages" : ([server name] ? [server name] : @"Legacy Discord"))];
+    [self.window setTitle:([server isEqual:[[DLController sharedInstance] myServerItem]] ? DLLocalizedString(@"Direct Messages") : ([server name] ? [server name] : @"Legacy Discord"))];
     if ([memberListController isVisible]) {
         [memberListController setVisible:NO server:nil channel:nil];
     }
@@ -803,7 +804,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [chatScrollView registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
     [messageComposerController reset];
     NSString *topic = [channel respondsToSelector:@selector(topic)] ? [(DLServerChannel *)channel topic] : nil;
-    NSString *title = [channel name] ? [channel name] : @"Direct Message";
+    NSString *title = [channel name] ? [channel name] : DLLocalizedString(@"Direct Message");
     if ([channel isThread]) {
         // Official breadcrumb: "parent › thread" (forum › post).
         DLChannel *parent = [[DLController sharedInstance] loadedChannelWithID:[(DLServerChannel *)channel parentID]];

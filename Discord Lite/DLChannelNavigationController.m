@@ -4,6 +4,7 @@
 //
 
 #import "DLDarkMenu.h"
+#import "DLLocalization.h"
 #import "DLChannelNavigationController.h"
 #import "DLController.h"
 #import "DLServerMenuController.h"
@@ -268,7 +269,7 @@
         [[NSBezierPath bezierPathWithRoundedRect:hoverRect xRadius:5.0 yRadius:5.0] fill];
     }
 
-    NSString *name = [representedChannel name] ? [representedChannel name] : @"Untitled";
+    NSString *name = [representedChannel name] ? [representedChannel name] : DLLocalizedString(@"Untitled");
     // Muted channels (or channels in a muted server) show no unread state;
     // a channel or category muted itself is also dimmed, like Discord.
     DLController *controller = [DLController existingInstance];
@@ -522,7 +523,7 @@
 
 -(id)outlineView:(NSOutlineView *)inOutlineView objectValueForTableColumn:(NSTableColumn *)tableColumn byItem:(id)item {
     DLChannel *channel = (DLChannel *)item;
-    NSString *name = [channel name] ? [channel name] : @"Untitled";
+    NSString *name = [channel name] ? [channel name] : DLLocalizedString(@"Untitled");
     if ([channel type] == ChannelTypeHeader) return [name uppercaseString];
     NSString *kindPrefix = @"";
     if ([channel isThread]) kindPrefix = @"↳ ";
@@ -531,7 +532,7 @@
     else if ([channel type] == ChannelTypeVoice || [channel type] == ChannelTypeStageVoice) kindPrefix = @"◖ ";
     NSString *unreadPrefix = [channel hasUnreadMessages] ? @"● " : @"";
     NSString *mentionSuffix = [channel mentionCount] > 0
-        ? [NSString stringWithFormat:@"  (%ld)", (long)[channel mentionCount]] : @"";
+        ? [NSString stringWithFormat:DLLocalizedString(@"  (%ld)"), (long)[channel mentionCount]] : @"";
     return [NSString stringWithFormat:@"%@%@%@%@", unreadPrefix, kindPrefix, name, mentionSuffix];
 }
 
@@ -579,29 +580,29 @@
     BOOL isVoice = [channel type] == ChannelTypeVoice || [channel type] == ChannelTypeStageVoice;
     BOOL canManage = inServer && [serverMenu hasPermission:DLPermissionManageChannels inChannel:channel];
 
-    NSMenuItem *markRead = [self channelMenuItem:@"Mark As Read" action:@selector(markChannelAsRead:) channel:channel];
+    NSMenuItem *markRead = [self channelMenuItem:DLLocalizedString(@"Mark As Read") action:@selector(markChannelAsRead:) channel:channel];
     [markRead setEnabled:[self channelOrChildrenHaveUnread:channel]];
     [menu addItem:markRead];
     [menu addItem:[NSMenuItem separatorItem]];
     if (isCategory) {
-        NSMenuItem *collapse = [self channelMenuItem:@"Collapse Category" action:@selector(toggleCategory:) channel:channel];
+        NSMenuItem *collapse = [self channelMenuItem:DLLocalizedString(@"Collapse Category") action:@selector(toggleCategory:) channel:channel];
         [collapse setState:([outlineView isItemExpanded:channel] ? NSOffState : NSOnState)];
         [DLDarkMenu setStyle:DLDarkMenuItemStyleCheckbox forItem:collapse];
         [menu addItem:collapse];
-        [menu addItem:[self channelMenuItem:@"Collapse All Categories" action:@selector(collapseAllCategories:) channel:channel]];
+        [menu addItem:[self channelMenuItem:DLLocalizedString(@"Collapse All Categories") action:@selector(collapseAllCategories:) channel:channel]];
     } else {
         if (inServer && [serverMenu hasPermission:DLPermissionCreateInvite inChannel:channel]) {
-            NSMenuItem *invite = [self channelMenuItem:@"Invite People" action:@selector(invitePeople:) channel:channel];
+            NSMenuItem *invite = [self channelMenuItem:DLLocalizedString(@"Invite People") action:@selector(invitePeople:) channel:channel];
             [DLDarkMenu setStyle:DLDarkMenuItemStyleBrand forItem:invite];
             [menu addItem:invite];
         }
-        [menu addItem:[self channelMenuItem:@"Copy Link" action:@selector(copyChannelLink:) channel:channel]];
+        [menu addItem:[self channelMenuItem:DLLocalizedString(@"Copy Link") action:@selector(copyChannelLink:) channel:channel]];
     }
     if (isVoice && [DLVoiceManager isAvailable]) {
         DLVoiceManager *voice = [DLVoiceManager sharedManager];
         BOOL here = [voice state] != DLVoiceStateIdle && [[voice channel] isEqual:channel];
         [menu addItem:[NSMenuItem separatorItem]];
-        [menu addItem:[self channelMenuItem:(here ? @"Disconnect" : @"Join Voice")
+        [menu addItem:[self channelMenuItem:(here ? DLLocalizedString(@"Disconnect") : DLLocalizedString(@"Join Voice"))
                                      action:(here ? @selector(leaveVoice:) : @selector(joinVoice:)) channel:channel]];
     }
     [menu addItem:[NSMenuItem separatorItem]];
@@ -609,19 +610,19 @@
     if (inServer) [menu addItem:[serverMenu notificationItemForChannel:channel]];
     if (canManage) {
         [menu addItem:[NSMenuItem separatorItem]];
-        [menu addItem:[self channelMenuItem:(isCategory ? @"Edit Category" : @"Edit Channel")
+        [menu addItem:[self channelMenuItem:(isCategory ? DLLocalizedString(@"Edit Category") : DLLocalizedString(@"Edit Channel"))
                                      action:@selector(editChannel:) channel:channel]];
         if (isCategory) {
-            [menu addItem:[self channelMenuItem:@"Create Channel" action:@selector(createChannelInCategory:) channel:channel]];
+            [menu addItem:[self channelMenuItem:DLLocalizedString(@"Create Channel") action:@selector(createChannelInCategory:) channel:channel]];
         }
-        NSMenuItem *deleteItem = [self channelMenuItem:(isCategory ? @"Delete Category" : @"Delete Channel")
+        NSMenuItem *deleteItem = [self channelMenuItem:(isCategory ? DLLocalizedString(@"Delete Category") : DLLocalizedString(@"Delete Channel"))
                                                 action:@selector(deleteChannel:) channel:channel];
         [DLDarkMenu setStyle:DLDarkMenuItemStyleDanger forItem:deleteItem];
         [menu addItem:deleteItem];
     }
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
         [menu addItem:[NSMenuItem separatorItem]];
-        NSMenuItem *copyID = [self channelMenuItem:(isCategory ? @"Copy Category ID" : @"Copy Channel ID")
+        NSMenuItem *copyID = [self channelMenuItem:(isCategory ? DLLocalizedString(@"Copy Category ID") : DLLocalizedString(@"Copy Channel ID"))
                                             action:@selector(copyChannelID:) channel:channel];
         [DLDarkMenu setIconName:@"id" forItem:copyID];
         [menu addItem:copyID];
@@ -654,18 +655,19 @@
     BOOL isCategory = [channel type] == ChannelTypeHeader;
     BOOL isDirect = [channel isKindOfClass:[DLDirectMessageChannel class]] ||
                     [channel type] == ChannelTypeDM || [channel type] == ChannelTypeGroup;
-    NSString *noun = isCategory ? @"Category" : (isDirect ? @"Conversation" : @"Channel");
     if ([[DLController sharedInstance] isChannelMutedItself:channel]) {
-        NSMenuItem *unmute = [self channelMenuItem:[@"Unmute " stringByAppendingString:noun]
+        NSString *unmuteTitle = isCategory ? DLLocalizedString(@"Unmute Category") : (isDirect ? DLLocalizedString(@"Unmute Conversation") : DLLocalizedString(@"Unmute Channel"));
+        NSMenuItem *unmute = [self channelMenuItem:DLLocalizedString(unmuteTitle)
                                             action:@selector(unmuteChannel:) channel:channel];
         [menu addItem:unmute];
         return;
     }
-    NSMenuItem *mute = [[[NSMenuItem alloc] initWithTitle:[@"Mute " stringByAppendingString:noun]
+    NSString *muteTitle = isCategory ? DLLocalizedString(@"Mute Category") : (isDirect ? DLLocalizedString(@"Mute Conversation") : DLLocalizedString(@"Mute Channel"));
+    NSMenuItem *mute = [[[NSMenuItem alloc] initWithTitle:DLLocalizedString(muteTitle)
                                                    action:NULL keyEquivalent:@""] autorelease];
     NSMenu *durations = [[[NSMenu alloc] initWithTitle:@""] autorelease];
-    NSArray *titles = [NSArray arrayWithObjects:@"For 15 Minutes", @"For 1 Hour", @"For 3 Hours",
-                       @"For 8 Hours", @"For 24 Hours", @"Until I turn it back on", nil];
+    NSArray *titles = [NSArray arrayWithObjects:DLLocalizedString(@"For 15 Minutes"), DLLocalizedString(@"For 1 Hour"), DLLocalizedString(@"For 3 Hours"),
+                       DLLocalizedString(@"For 8 Hours"), DLLocalizedString(@"For 24 Hours"), DLLocalizedString(@"Until I turn it back on"), nil];
     NSInteger seconds[] = { 15 * 60, 60 * 60, 3 * 60 * 60, 8 * 60 * 60, 24 * 60 * 60, 0 };
     NSUInteger index;
     for (index = 0; index < [titles count]; index++) {

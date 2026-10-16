@@ -7,6 +7,7 @@
 //
 
 #import "PendingAttachmentViewController.h"
+#import "DLLocalization.h"
 
 @interface PendingAttachmentViewController ()
 -(void)updateSpoilerDisplay;
@@ -52,7 +53,7 @@
     BOOL spoiler = [self isSpoiler];
     if ([representedObject type] == AttachmentTypeImage) {
         [filenameTextField setHidden:!spoiler];
-        [filenameTextField setStringValue:(spoiler ? @"SPOILER" : @"")];
+        [filenameTextField setStringValue:(spoiler ? DLLocalizedString(@"SPOILER") : @"")];
         [attachmentImageView setAlphaValue:(spoiler ? 0.35 : 1.0)];
     } else {
         [filenameTextField setStringValue:[representedObject filename]];
@@ -61,12 +62,12 @@
 
 -(void)menuNeedsUpdate:(NSMenu *)menu {
     [menu removeAllItems];
-    NSMenuItem *spoiler = [[[NSMenuItem alloc] initWithTitle:([self isSpoiler] ? @"Remove Spoiler" : @"Mark as Spoiler")
+    NSMenuItem *spoiler = [[[NSMenuItem alloc] initWithTitle:([self isSpoiler] ? DLLocalizedString(@"Remove Spoiler") : DLLocalizedString(@"Mark as Spoiler"))
                                                       action:@selector(toggleSpoiler:) keyEquivalent:@""] autorelease];
     [spoiler setTarget:self];
     [menu addItem:spoiler];
     [menu addItem:[NSMenuItem separatorItem]];
-    NSMenuItem *remove = [[[NSMenuItem alloc] initWithTitle:@"Remove Attachment" action:@selector(deleteItem:) keyEquivalent:@""] autorelease];
+    NSMenuItem *remove = [[[NSMenuItem alloc] initWithTitle:DLLocalizedString(@"Remove Attachment") action:@selector(deleteItem:) keyEquivalent:@""] autorelease];
     [remove setTarget:self];
     [menu addItem:remove];
 }

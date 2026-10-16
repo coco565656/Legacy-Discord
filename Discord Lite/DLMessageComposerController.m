@@ -4,6 +4,7 @@
 //
 
 #import "DLMessageComposerController.h"
+#import "DLLocalization.h"
 #import "DLPreferencesHandler.h"
 #import "DLMessageComposerControls.h"
 #import "DLController.h"
@@ -151,7 +152,7 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
         [stickerButton setBordered:NO];
         [stickerButton setButtonType:NSMomentaryPushInButton];
         [stickerButton setTitle:@""];
-        [stickerButton setToolTip:@"Send sticker"];
+        [stickerButton setToolTip:DLLocalizedString(@"Send sticker")];
         [stickerButton setEnabled:NO];
         [containerView addSubview:stickerButton];
         stickerPickerController = [[DLStickerPickerController alloc] initWithButton:stickerButton];
@@ -163,7 +164,7 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
         [emojiButton setBordered:NO];
         [emojiButton setButtonType:NSMomentaryPushInButton];
         [emojiButton setTitle:@""];
-        [emojiButton setToolTip:@"Insert emoji"];
+        [emojiButton setToolTip:DLLocalizedString(@"Insert emoji")];
         [emojiButton setEnabled:NO];
         [containerView addSubview:emojiButton];
         emojiPickerController = [[DLEmojiPickerController alloc] initWithButton:emojiButton];
@@ -213,7 +214,7 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
     NSString *name = [channel name];
     if (![name length]) return nil;
     BOOL isDirectMessage = [channel type] == ChannelTypeDM || [channel type] == ChannelTypeGroup;
-    return [NSString stringWithFormat:(isDirectMessage ? @"Message @%@" : @"Message #%@"), name];
+    return [NSString stringWithFormat:(isDirectMessage ? DLLocalizedString(@"Message @%@") : DLLocalizedString(@"Message #%@")), name];
 }
 
 -(void)setEnabledForChannel:(DLChannel *)channel {
@@ -486,7 +487,7 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
 -(void)displayReferencedMessage:(DLMessage *)message {
     [messageEditor setReferencedMessage:message];
     NSString *authorName = [[message author] globalName];
-    NSString *baseString = [NSString stringWithFormat:@"Replying to %@", authorName];
+    NSString *baseString = [NSString stringWithFormat:DLLocalizedString(@"Replying to %@"), authorName];
     NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:baseString];
     [attributedString addAttribute:NSFontAttributeName value:[NSFont boldSystemFontOfSize:13] range:[baseString rangeOfString:authorName]];
     [replyTextField setAttributedStringValue:attributedString];
@@ -612,10 +613,10 @@ static const NSUInteger DLMaxAttachmentsPerMessage = 10;
     if ([tooLarge count]) {
         // The official client's wording for oversized uploads.
         NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-        [alert setMessageText:@"Your files are too powerful"];
-        [alert setInformativeText:[NSString stringWithFormat:@"The max file size is 10 MB.\n\n%@",
+        [alert setMessageText:DLLocalizedString(@"Your files are too powerful")];
+        [alert setInformativeText:[NSString stringWithFormat:DLLocalizedString(@"The max file size is 10 MB.\n\n%@"),
                                    [tooLarge componentsJoinedByString:@"\n"]]];
-        [alert addButtonWithTitle:@"OK"];
+        [alert addButtonWithTitle:DLLocalizedString(@"OK")];
         [alert beginSheetModalForWindow:hostWindow modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
     }
 }
@@ -675,7 +676,13 @@ static const NSUInteger DLMaxAttachmentsPerMessage = 10;
     if ([typingUsers count] > 0) {
         NSString *typingString = @"";
         [typingStatusTextField setHidden:NO];
-        if ([typingUsers count] == 1) {
+        if ([DLLocalization isJapanese] && [typingUsers count] < 4) {
+            NSMutableArray *names = [NSMutableArray array];
+            NSEnumerator *typingEnumerator = [typingUsers objectEnumerator];
+            DLUser *typingUser;
+            while (typingUser = [typingEnumerator nextObject]) [names addObject:([typingUser globalName] ? [typingUser globalName] : [typingUser username])];
+            typingString = [[names componentsJoinedByString:@"、"] stringByAppendingString:@"が入力中..."];
+        } else if ([typingUsers count] == 1) {
             typingString = [NSString stringWithFormat:@"%@ is Typing...", [[typingUsers objectAtIndex:0] globalName]];
         } else if ([typingUsers count] < 4) {
             for (NSInteger index = 0; index < (NSInteger)[typingUsers count]; index++) {
@@ -687,7 +694,7 @@ static const NSUInteger DLMaxAttachmentsPerMessage = 10;
                 }
             }
         } else {
-            typingString = @"Several People are Typing...";
+            typingString = DLLocalizedString(@"Several People are Typing...");
         }
         [typingStatusTextField setStringValue:typingString];
     } else {

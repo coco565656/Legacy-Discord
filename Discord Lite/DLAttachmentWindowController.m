@@ -7,6 +7,7 @@
 //
 
 #import "DLAttachmentWindowController.h"
+#import "DLLocalization.h"
 #import "DLDarkMenu.h"
 
 @interface DLAttachmentWindowController ()
@@ -17,12 +18,13 @@
 
 - (void)windowDidLoad {
     [super windowDidLoad];
+    [DLLocalization localizeWindow:self.window];
     
     [progressIndicator startAnimation:self];
     [viewedAttachment loadFullData];
     
     contextMenu = [[NSMenu alloc] init];
-    [contextMenu addItemWithTitle:@"Save Image" action:@selector(saveAttachment) keyEquivalent:@""];
+    [contextMenu addItemWithTitle:DLLocalizedString(@"Save Image") action:@selector(saveAttachment) keyEquivalent:@""];
     
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
 }

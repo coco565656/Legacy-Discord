@@ -4,6 +4,7 @@
 //
 
 #import "DLMessagePresentationController.h"
+#import "DLLocalization.h"
 #import "DLDialog.h"
 #import "ChatScrollView.h"
 #import "DLController.h"
@@ -40,7 +41,7 @@ static void DLPostDesktopNotification(DLMessage *message, DLChannel *channel, DL
         title = [NSString stringWithFormat:@"%@ (#%@, %@)", title, [channel name], [server name] ? [server name] : @""];
     }
     NSString *body = [[message content] length] ? [message content]
-                   : ([[message attachments] count] ? @"Uploaded a file" : @"Sent a message");
+                   : ([[message attachments] count] ? DLLocalizedString(@"Uploaded a file") : DLLocalizedString(@"Sent a message"));
     id notification = [[[notificationClass alloc] init] autorelease];
     [notification performSelector:NSSelectorFromString(@"setTitle:") withObject:title];
     [notification performSelector:NSSelectorFromString(@"setInformativeText:") withObject:body];
@@ -106,7 +107,7 @@ userProfileController:(DLUserProfileController *)inUserProfileController {
     searchHistoryWindowActive = NO;
     hasMoreNewerMessages = NO;
     [chatScrollView setContent:[NSArray array]];
-    [DLTwemojiRenderer setText:@"Select a channel" forLabel:chatHeaderLabel];
+    [DLTwemojiRenderer setText:DLLocalizedString(@"Select a channel") forLabel:chatHeaderLabel];
     [chatHeaderImage setImage:nil];
 }
 
@@ -453,10 +454,10 @@ userProfileController:(DLUserProfileController *)inUserProfileController {
         [[DLController sharedInstance] deleteMessage:message];
         return;
     }
-    DLDialog *dialog = [DLDialog dialogWithTitle:@"Delete Message"
-                                         message:@"Are you sure you want to delete this message?"];
-    [dialog addButtonWithTitle:@"Delete" style:DLDialogButtonStyleDanger];
-    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    DLDialog *dialog = [DLDialog dialogWithTitle:DLLocalizedString(@"Delete Message")
+                                         message:DLLocalizedString(@"Are you sure you want to delete this message?")];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Delete") style:DLDialogButtonStyleDanger];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Cancel") style:DLDialogButtonStyleLink];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
         if (buttonIndex == 0) [[DLController sharedInstance] deleteMessage:message];
         return YES;

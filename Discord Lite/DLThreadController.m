@@ -4,6 +4,7 @@
 //
 
 #import "DLThreadController.h"
+#import "DLLocalization.h"
 #import "DLController.h"
 #import "DLServerChannel.h"
 #import "ChatScrollView.h"
@@ -20,10 +21,10 @@ static const CGFloat DLForumTagRowHeight = 24.0;
 static NSString *DLRelativeActivityString(NSDate *date) {
     if (!date) return @"";
     NSTimeInterval age = -[date timeIntervalSinceNow];
-    if (age < 60.0) return @"just now";
-    if (age < 3600.0) return [NSString stringWithFormat:@"%ldm ago", (long)(age / 60.0)];
-    if (age < 86400.0) return [NSString stringWithFormat:@"%ldh ago", (long)(age / 3600.0)];
-    if (age < 30.0 * 86400.0) return [NSString stringWithFormat:@"%ldd ago", (long)(age / 86400.0)];
+    if (age < 60.0) return DLLocalizedString(@"just now");
+    if (age < 3600.0) return [NSString stringWithFormat:DLLocalizedString(@"%ldm ago"), (long)(age / 60.0)];
+    if (age < 86400.0) return [NSString stringWithFormat:DLLocalizedString(@"%ldh ago"), (long)(age / 3600.0)];
+    if (age < 30.0 * 86400.0) return [NSString stringWithFormat:DLLocalizedString(@"%ldd ago"), (long)(age / 86400.0)];
     NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
     [formatter setDateStyle:NSDateFormatterShortStyle];
     [formatter setTimeStyle:NSDateFormatterNoStyle];
@@ -128,7 +129,7 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
         cursor += DLForumTagRowHeight;
     }
 
-    NSString *title = [representedThread name] ? [representedThread name] : @"Untitled";
+    NSString *title = [representedThread name] ? [representedThread name] : DLLocalizedString(@"Untitled");
     NSColor *titleColor = [representedThread archivedThread] ? [DLUtil nativeSecondaryTextColor] : [DLUtil nativePrimaryTextColor];
     [[self lineWithString:title font:[NSFont boldSystemFontOfSize:15.0] color:titleColor]
         drawInRect:DLCardRect(cursor, 20.0)];
@@ -149,7 +150,7 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
                                                         font:[NSFont systemFontOfSize:13.0]
                                                        color:[DLUtil nativeSecondaryTextColor]]];
     } else if (!forumPost) {
-        [snippet appendAttributedString:[self lineWithString:([representedThread archivedThread] ? @"Archived thread" : @"Active thread")
+        [snippet appendAttributedString:[self lineWithString:([representedThread archivedThread] ? DLLocalizedString(@"Archived thread") : DLLocalizedString(@"Active thread"))
                                                         font:[NSFont systemFontOfSize:13.0]
                                                        color:[DLUtil nativeSecondaryTextColor]]];
     }
@@ -166,7 +167,7 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
     NSString *meta = [NSString stringWithFormat:@"%ld", (long)MAX(0, [representedThread messageCount])];
     NSString *activity = DLRelativeActivityString([representedThread lastActivityDate]);
     if ([activity length]) meta = [meta stringByAppendingFormat:@"   •   %@", activity];
-    if ([representedThread archivedThread]) meta = [meta stringByAppendingString:@"   •   Archived"];
+    if ([representedThread archivedThread]) meta = [meta stringByAppendingString:DLLocalizedString(@"   •   Archived")];
     NSRect metaRect = DLCardRect(cursor, 16.0);
     metaRect.origin.x += 20.0;
     metaRect.size.width -= 20.0;
@@ -264,7 +265,7 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     [titleField setSelectable:NO];
     [titleField setFont:[NSFont boldSystemFontOfSize:15.0]];
     [titleField setTextColor:[DLUtil nativePrimaryTextColor]];
-    [titleField setStringValue:@"Threads"];
+    [titleField setStringValue:DLLocalizedString(@"Threads")];
     [listPane addSubview:titleField];
 
     searchField = [[NSSearchField alloc] initWithFrame:
@@ -293,7 +294,7 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     [closeButton setBordered:NO];
     [closeButton setFont:[NSFont systemFontOfSize:17.0]];
     [closeButton setTitle:@"×"];
-    [closeButton setToolTip:@"Close"];
+    [closeButton setToolTip:DLLocalizedString(@"Close")];
     [closeButton setTarget:self];
     [closeButton setAction:@selector(closeThreadList:)];
     [listPane addSubview:closeButton];
@@ -301,7 +302,7 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     newPostButton = [[DLPrimaryButton alloc] initWithFrame:
                      NSMakeRect(NSWidth(paneBounds) - DLForumCardMargin - 96.0, NSHeight(paneBounds) - 42.0, 96.0, 28.0)];
     [newPostButton setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
-    [newPostButton setTitle:@"New Post"];
+    [newPostButton setTitle:DLLocalizedString(@"New Post")];
     [newPostButton setTarget:self];
     [newPostButton setAction:@selector(beginNewPost:)];
     [listPane addSubview:newPostButton];
@@ -310,9 +311,9 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     composeView = [[NSView_BGColor alloc] initWithFrame:NSZeroRect];
     [composeView setBackgroundColor:[DLUtil nativeSidebarColor]];
     [composeView setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin];
-    postTitleField = [DLDraftField(@"Post title", 15.0, NO) retain];
+    postTitleField = [DLDraftField(DLLocalizedString(@"Post title"), 15.0, NO) retain];
     [postTitleField setFont:[NSFont boldSystemFontOfSize:15.0]];
-    postMessageField = [DLDraftField(@"Enter a message (Option-Return for a new line)", 13.0, YES) retain];
+    postMessageField = [DLDraftField(DLLocalizedString(@"Enter a message (Option-Return for a new line)"), 13.0, YES) retain];
     postStatusField = [[NSTextField alloc] initWithFrame:NSZeroRect];
     [postStatusField setBezeled:NO];
     [postStatusField setDrawsBackground:NO];
@@ -321,12 +322,12 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     [postStatusField setFont:[NSFont systemFontOfSize:12.0]];
     [postStatusField setTextColor:[NSColor colorWithCalibratedRed:0.95 green:0.40 blue:0.40 alpha:1.0]];
     postSubmitButton = [[DLPrimaryButton alloc] initWithFrame:NSZeroRect];
-    [postSubmitButton setTitle:@"Post"];
+    [postSubmitButton setTitle:DLLocalizedString(@"Post")];
     [postSubmitButton setTarget:self];
     [postSubmitButton setAction:@selector(submitNewPost:)];
     postCancelButton = [[NSButton alloc] initWithFrame:NSZeroRect];
     [postCancelButton setBordered:NO];
-    [postCancelButton setAttributedTitle:[[[NSAttributedString alloc] initWithString:@"Cancel"
+    [postCancelButton setAttributedTitle:[[[NSAttributedString alloc] initWithString:DLLocalizedString(@"Cancel")
         attributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSFont systemFontOfSize:13.0], NSFontAttributeName,
                     [DLUtil nativePrimaryTextColor], NSForegroundColorAttributeName, nil]] autorelease]];
     [postCancelButton setTarget:self];
@@ -404,8 +405,8 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     CGFloat right = forum ? DLForumCardMargin + 106.0 : 46.0;
     [searchField setFrame:NSMakeRect(left, NSHeight(paneBounds) - 42.0,
                                      MAX(80.0, NSWidth(paneBounds) - left - right), 28.0)];
-    [[searchField cell] setPlaceholderString:(forum ? @"Search posts" : @"Search threads")];
-    [emptyField setStringValue:(forum ? @"There are no posts yet." : @"There are no threads here yet.")];
+    [[searchField cell] setPlaceholderString:(forum ? DLLocalizedString(@"Search posts") : DLLocalizedString(@"Search threads"))];
+    [emptyField setStringValue:(forum ? DLLocalizedString(@"There are no posts yet.") : DLLocalizedString(@"There are no threads here yet."))];
 }
 
 -(void)showThreadList {
@@ -587,11 +588,11 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
         if ([tagButton state] == NSOnState && [[tagButton cell] representedObject]) [tagIDs addObject:[[tagButton cell] representedObject]];
     }
     if (![title length] || ![message length]) {
-        [postStatusField setStringValue:@"A post needs a title and a message."];
+        [postStatusField setStringValue:DLLocalizedString(@"A post needs a title and a message.")];
         return;
     }
     if ([(DLServerChannel *)baseChannel requiresTag] && ![tagIDs count]) {
-        [postStatusField setStringValue:@"This forum requires at least one tag."];
+        [postStatusField setStringValue:DLLocalizedString(@"This forum requires at least one tag.")];
         return;
     }
     [postStatusField setStringValue:@""];
@@ -630,18 +631,18 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
     NSInteger row = [listTableView menuRow];
     if (row < 0 || row >= (NSInteger)[items count]) return;
     DLServerChannel *thread = [items objectAtIndex:row];
-    NSMenuItem *open = [[[NSMenuItem alloc] initWithTitle:([self isForumMode] ? @"Open Post" : @"Open Thread")
+    NSMenuItem *open = [[[NSMenuItem alloc] initWithTitle:([self isForumMode] ? DLLocalizedString(@"Open Post") : DLLocalizedString(@"Open Thread"))
                                                    action:@selector(openPostFromMenu:) keyEquivalent:@""] autorelease];
     [open setTarget:self];
     [open setRepresentedObject:thread];
     [menu addItem:open];
-    NSMenuItem *copyLink = [[[NSMenuItem alloc] initWithTitle:@"Copy Link" action:@selector(copyPostLink:) keyEquivalent:@""] autorelease];
+    NSMenuItem *copyLink = [[[NSMenuItem alloc] initWithTitle:DLLocalizedString(@"Copy Link") action:@selector(copyPostLink:) keyEquivalent:@""] autorelease];
     [copyLink setTarget:self];
     [copyLink setRepresentedObject:thread];
     [menu addItem:copyLink];
     if ([self canDeleteThread:thread]) {
         [menu addItem:[NSMenuItem separatorItem]];
-        NSMenuItem *delete = [[[NSMenuItem alloc] initWithTitle:([self isForumMode] ? @"Delete Post" : @"Delete Thread")
+        NSMenuItem *delete = [[[NSMenuItem alloc] initWithTitle:([self isForumMode] ? DLLocalizedString(@"Delete Post") : DLLocalizedString(@"Delete Thread"))
                                                          action:@selector(confirmDeletePost:) keyEquivalent:@""] autorelease];
         [delete setTarget:self];
         [delete setRepresentedObject:thread];
@@ -663,10 +664,10 @@ static NSTextField *DLDraftField(NSString *placeholder, CGFloat fontSize, BOOL m
 -(void)confirmDeletePost:(NSMenuItem *)sender {
     DLServerChannel *thread = [sender representedObject];
     NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-    [alert setMessageText:([self isForumMode] ? @"Delete Post" : @"Delete Thread")];
-    [alert setInformativeText:[NSString stringWithFormat:@"Are you sure you want to delete \u201C%@\u201D? This cannot be undone.", [thread name]]];
-    [alert addButtonWithTitle:@"Delete"];
-    [alert addButtonWithTitle:@"Cancel"];
+    [alert setMessageText:([self isForumMode] ? DLLocalizedString(@"Delete Post") : DLLocalizedString(@"Delete Thread"))];
+    [alert setInformativeText:[NSString stringWithFormat:DLLocalizedString(@"Are you sure you want to delete \u201C%@\u201D? This cannot be undone."), [thread name]]];
+    [alert addButtonWithTitle:DLLocalizedString(@"Delete")];
+    [alert addButtonWithTitle:DLLocalizedString(@"Cancel")];
     [alert beginSheetModalForWindow:[listPane window] modalDelegate:self
                      didEndSelector:@selector(deleteAlertDidEnd:returnCode:contextInfo:)
                         contextInfo:[thread retain]];

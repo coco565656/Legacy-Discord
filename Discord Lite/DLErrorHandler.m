@@ -7,6 +7,7 @@
 //
 
 #import "DLErrorHandler.h"
+#import "DLLocalization.h"
 
 @implementation DLErrorHandler
 
@@ -14,7 +15,7 @@
     NSAlert *alert = [[NSAlert alloc] init];
     [alert setMessageText:[e messageText]];
     [alert setInformativeText:[e infoText]];
-    [alert addButtonWithTitle:@"OK"];
+    [alert addButtonWithTitle:DLLocalizedString(@"OK")];
     return [alert autorelease];
 
 }

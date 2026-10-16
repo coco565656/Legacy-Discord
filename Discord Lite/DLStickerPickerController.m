@@ -4,6 +4,7 @@
 //
 
 #import "DLStickerPickerController.h"
+#import "DLLocalization.h"
 #import "DLCompatibilityPopover.h"
 #import "DLController.h"
 #import "DLServer.h"
@@ -77,7 +78,7 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
         [searchField setEditable:YES];
         [searchField setSelectable:YES];
         [searchCell release];
-        [[searchField cell] setPlaceholderString:@"Search stickers"];
+        [[searchField cell] setPlaceholderString:DLLocalizedString(@"Search stickers")];
         [searchField setBackgroundColor:[DLUtil nativeInputColor]];
         [searchField setTextColor:[DLUtil nativePrimaryTextColor]];
         [searchField setFocusRingType:NSFocusRingTypeNone];
@@ -193,7 +194,7 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
             [placeholder setAlignment:NSCenterTextAlignment];
             [placeholder setFont:[NSFont boldSystemFontOfSize:11.0]];
             [placeholder setTextColor:[DLUtil nativeSecondaryTextColor]];
-            [placeholder setStringValue:@"STICKER"];
+            [placeholder setStringValue:DLLocalizedString(@"STICKER")];
             [cellView addSubview:placeholder];
             [placeholder release];
             [stickerButton setTransparent:YES];
@@ -222,7 +223,7 @@ static NSString *DLStickerPickerURL(NSDictionary *sticker) {
         [emptyLabel setEditable:NO];
         [emptyLabel setAlignment:NSCenterTextAlignment];
         [emptyLabel setTextColor:[DLUtil nativeSecondaryTextColor]];
-        [emptyLabel setStringValue:([items count] ? @"No matching stickers" : @"No stickers available")];
+        [emptyLabel setStringValue:([items count] ? DLLocalizedString(@"No matching stickers") : DLLocalizedString(@"No stickers available"))];
         [grid addSubview:emptyLabel];
         [emptyLabel release];
     }

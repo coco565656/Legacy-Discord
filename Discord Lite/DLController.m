@@ -7,6 +7,7 @@
 //
 
 #import "DLController.h"
+#import "DLLocalization.h"
 #import <Security/Security.h>
 
 static const char DLKeychainService[] = "org.legacydiscord.client";
@@ -455,7 +456,7 @@ static DLController* sharedObject = nil;
             if (author) [summary setObject:author forKey:@"author"];
             NSString *text = [[message content] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
             text = [[text componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]] componentsJoinedByString:@" "];
-            if (![text length] && [[message attachments] count]) text = @"Sent an attachment";
+            if (![text length] && [[message attachments] count]) text = DLLocalizedString(@"Sent an attachment");
             if (text) [summary setObject:text forKey:@"text"];
         }
     }
@@ -495,7 +496,7 @@ static DLController* sharedObject = nil;
     }
     if (!userInfo) {
         NSString *message = [response isKindOfClass:[NSDictionary class]] ? [response objectForKey:@"message"] : nil;
-        userInfo = [NSDictionary dictionaryWithObject:([message isKindOfClass:[NSString class]] ? message : @"The post could not be created.")
+        userInfo = [NSDictionary dictionaryWithObject:([message isKindOfClass:[NSString class]] ? message : DLLocalizedString(@"The post could not be created."))
                                                forKey:@"error"];
     }
     [[NSNotificationCenter defaultCenter] postNotificationName:DLForumPostCreationDidFinishNotification
@@ -958,7 +959,7 @@ static DLController* sharedObject = nil;
         myServerItem = [[DLServer alloc] init];
         [myServerItem setIconImageData:[NSData dataWithContentsOfFile:[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"discord_purple.png"]]];
         [myServerItem setServerID:@"@me"];
-        [myServerItem setName:@"Direct Messages"];
+        [myServerItem setName:DLLocalizedString(@"Direct Messages")];
     }
     return myServerItem;
 }

@@ -7,6 +7,7 @@
 //
 
 #import "DLError.h"
+#import "DLLocalization.h"
 
 @implementation DLError
 
@@ -24,15 +25,15 @@
 
 -(id)init {
     self = [super init];
-    messageText = @"Error";
-    infoText = @"An error occurred.";
+    messageText = DLLocalizedString(@"Error");
+    infoText = DLLocalizedString(@"An error occurred.");
     return self;
 }
 
 
 -(void)setType:(ErrorType)t {
     if (t == ErrorTypeConnection) {
-        infoText = @"Could not connect to the Discord server. Please check your Internet connection and try again.";
+        infoText = DLLocalizedString(@"Could not connect to the Discord server. Please check your Internet connection and try again.");
     }
     type = t;
 }

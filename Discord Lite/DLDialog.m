@@ -414,6 +414,9 @@ static NSColor *DLDialogFooterColor(void) { return [DLUtil nativeSidebarColor]; 
 
 @implementation DLToggleSwitch
 
+// NSControl keeps target and action in its cell; without one they are lost.
++(Class)cellClass { return [NSActionCell class]; }
+
 -(BOOL)isFlipped { return YES; }
 -(BOOL)isOn { return on; }
 -(void)setOn:(BOOL)inOn { on = inOn; [self setNeedsDisplay:YES]; }
@@ -441,6 +444,9 @@ static NSColor *DLDialogFooterColor(void) { return [DLUtil nativeSidebarColor]; 
 @end
 
 @implementation DLOptionRow
+
+// NSControl keeps target and action in its cell; without one they are lost.
++(Class)cellClass { return [NSActionCell class]; }
 
 -(void)dealloc {
     if (trackingArea) [self removeTrackingArea:trackingArea];

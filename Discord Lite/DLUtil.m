@@ -7,6 +7,7 @@
 //
 
 #import "DLUtil.h"
+#import "DLLocalization.h"
 #import "DLServer.h"
 #import "DLPreferencesHandler.h"
 
@@ -98,10 +99,10 @@ static NSDictionary *superPropertiesDict;
     [timeFormatter setDateStyle:NSDateFormatterNoStyle];
     [timeFormatter setTimeStyle:NSDateFormatterShortStyle];
     if ([date isGreaterThan:today]) {
-        return [@"Today at " stringByAppendingString:[timeFormatter stringFromDate:date]];
+        return [DLLocalizedString(@"Today at ") stringByAppendingString:[timeFormatter stringFromDate:date]];
     }
     if ([date isGreaterThan:yesterday]) {
-        return [@"Yesterday at " stringByAppendingString:[timeFormatter stringFromDate:date]];
+        return [DLLocalizedString(@"Yesterday at ") stringByAppendingString:[timeFormatter stringFromDate:date]];
     }
     NSDateFormatter *fullFormatter = [[[NSDateFormatter alloc] init] autorelease];
     [fullFormatter setFormatterBehavior:NSDateFormatterBehavior10_4];

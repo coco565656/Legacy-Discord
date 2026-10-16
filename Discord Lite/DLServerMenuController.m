@@ -4,6 +4,7 @@
 //
 
 #import "DLServerMenuController.h"
+#import "DLLocalization.h"
 #import "DLDarkMenu.h"
 #import "DLDialog.h"
 #import "DLController.h"
@@ -29,8 +30,8 @@ static NSString *DLErrorMessageFromResponse(id json, NSInteger status) {
     if ([json isKindOfClass:[NSDictionary class]] && [[json objectForKey:@"message"] isKindOfClass:[NSString class]]) {
         return [json objectForKey:@"message"];
     }
-    if (status == 0) return @"Could not reach Discord. Check your connection and try again.";
-    return [NSString stringWithFormat:@"Something went wrong (HTTP %ld).", (long)status];
+    if (status == 0) return DLLocalizedString(@"Could not reach Discord. Check your connection and try again.");
+    return [NSString stringWithFormat:DLLocalizedString(@"Something went wrong (HTTP %ld)."), (long)status];
 }
 
 static BOOL DLStatusIsSuccess(NSInteger status) {
@@ -92,12 +93,12 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 
 -(NSMenuItem *)muteItemForServer:(DLServer *)server {
     if ([[DLController sharedInstance] isServerMuted:server]) {
-        return [self itemWithTitle:@"Unmute Server" action:@selector(unmuteServer:) server:server];
+        return [self itemWithTitle:DLLocalizedString(@"Unmute Server") action:@selector(unmuteServer:) server:server];
     }
-    NSMenuItem *mute = [self itemWithTitle:@"Mute Server" action:NULL server:server];
+    NSMenuItem *mute = [self itemWithTitle:DLLocalizedString(@"Mute Server") action:NULL server:server];
     NSMenu *durations = [[[NSMenu alloc] initWithTitle:@""] autorelease];
-    NSArray *titles = [NSArray arrayWithObjects:@"For 15 Minutes", @"For 1 Hour", @"For 3 Hours",
-                       @"For 8 Hours", @"For 24 Hours", @"Until I turn it back on", nil];
+    NSArray *titles = [NSArray arrayWithObjects:DLLocalizedString(@"For 15 Minutes"), DLLocalizedString(@"For 1 Hour"), DLLocalizedString(@"For 3 Hours"),
+                       DLLocalizedString(@"For 8 Hours"), DLLocalizedString(@"For 24 Hours"), DLLocalizedString(@"Until I turn it back on"), nil];
     NSInteger seconds[] = { 15 * 60, 60 * 60, 3 * 60 * 60, 8 * 60 * 60, 24 * 60 * 60, 0 };
     NSUInteger index;
     for (index = 0; index < [titles count]; index++) {
@@ -110,10 +111,10 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 }
 
 -(NSMenuItem *)notificationSubmenuItemForServer:(DLServer *)server {
-    NSMenuItem *notifications = [self itemWithTitle:@"Notification Settings" action:NULL server:server];
+    NSMenuItem *notifications = [self itemWithTitle:DLLocalizedString(@"Notification Settings") action:NULL server:server];
     NSMenu *submenu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
     NSInteger level = [self messageNotificationsForServer:server];
-    NSArray *titles = [NSArray arrayWithObjects:@"All Messages", @"Only @mentions", @"Nothing", nil];
+    NSArray *titles = [NSArray arrayWithObjects:DLLocalizedString(@"All Messages"), DLLocalizedString(@"Only @mentions"), DLLocalizedString(@"Nothing"), nil];
     NSInteger index;
     for (index = 0; index < 3; index++) {
         NSMenuItem *item = [self itemWithTitle:[titles objectAtIndex:index] action:@selector(setNotificationLevel:) server:server];
@@ -124,11 +125,11 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     }
     [submenu addItem:[NSMenuItem separatorItem]];
     NSArray *toggles = [NSArray arrayWithObjects:
-                        [NSArray arrayWithObjects:@"Suppress @everyone and @here", @"suppress_everyone", nil],
-                        [NSArray arrayWithObjects:@"Suppress All Role @mentions", @"suppress_roles", nil],
-                        [NSArray arrayWithObjects:@"Suppress Highlights", @"notify_highlights", nil],
-                        [NSArray arrayWithObjects:@"Mute New Events", @"mute_scheduled_events", nil],
-                        [NSArray arrayWithObjects:@"Mobile Push Notifications", @"mobile_push", nil], nil];
+                        [NSArray arrayWithObjects:DLLocalizedString(@"Suppress @everyone and @here"), @"suppress_everyone", nil],
+                        [NSArray arrayWithObjects:DLLocalizedString(@"Suppress All Role @mentions"), @"suppress_roles", nil],
+                        [NSArray arrayWithObjects:DLLocalizedString(@"Suppress Highlights"), @"notify_highlights", nil],
+                        [NSArray arrayWithObjects:DLLocalizedString(@"Mute New Events"), @"mute_scheduled_events", nil],
+                        [NSArray arrayWithObjects:DLLocalizedString(@"Mobile Push Notifications"), @"mobile_push", nil], nil];
     NSEnumerator *enumerator = [toggles objectEnumerator];
     NSArray *toggle;
     while (toggle = [enumerator nextObject]) {
@@ -151,7 +152,7 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 }
 
 -(NSMenuItem *)hideMutedItemForServer:(DLServer *)server {
-    NSMenuItem *item = [self itemWithTitle:@"Hide Muted Channels" action:@selector(toggleHideMutedChannels:) server:server];
+    NSMenuItem *item = [self itemWithTitle:DLLocalizedString(@"Hide Muted Channels") action:@selector(toggleHideMutedChannels:) server:server];
     [item setState:([[DLController sharedInstance] hidesMutedChannelsInServer:server] ? NSOnState : NSOffState)];
     [DLDarkMenu setStyle:DLDarkMenuItemStyleCheckbox forItem:item];
     return item;
@@ -159,13 +160,13 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 
 -(void)addManagementItemsForServer:(DLServer *)server toMenu:(NSMenu *)menu icons:(BOOL)icons {
     if ([server iHavePermission:DLPermissionManageGuild]) {
-        NSMenuItem *settings = [self itemWithTitle:@"Server Settings" action:@selector(openServerOverview:) server:server];
+        NSMenuItem *settings = [self itemWithTitle:DLLocalizedString(@"Server Settings") action:@selector(openServerOverview:) server:server];
         if (icons) [DLDarkMenu setIconName:@"settings" forItem:settings];
         [menu addItem:settings];
     }
     if ([server iHavePermission:DLPermissionManageChannels]) {
-        NSMenuItem *channel = [self itemWithTitle:@"Create Channel" action:@selector(createChannel:) server:server];
-        NSMenuItem *category = [self itemWithTitle:@"Create Category" action:@selector(createCategory:) server:server];
+        NSMenuItem *channel = [self itemWithTitle:DLLocalizedString(@"Create Channel") action:@selector(createChannel:) server:server];
+        NSMenuItem *category = [self itemWithTitle:DLLocalizedString(@"Create Category") action:@selector(createCategory:) server:server];
         if (icons) {
             [DLDarkMenu setIconName:@"add" forItem:channel];
             [DLDarkMenu setIconName:@"folder" forItem:category];
@@ -176,7 +177,7 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 }
 
 -(NSMenuItem *)leaveItemForServer:(DLServer *)server icon:(BOOL)icon {
-    NSMenuItem *leave = [self itemWithTitle:@"Leave Server" action:@selector(leaveServer:) server:server];
+    NSMenuItem *leave = [self itemWithTitle:DLLocalizedString(@"Leave Server") action:@selector(leaveServer:) server:server];
     [DLDarkMenu setStyle:DLDarkMenuItemStyleDanger forItem:leave];
     if (icon) [DLDarkMenu setIconName:@"leave" forItem:leave];
     return leave;
@@ -186,18 +187,18 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     NSMenu *menu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
     if (!server) return menu;
     if ([server iHavePermission:DLPermissionCreateInvite]) {
-        NSMenuItem *invite = [self itemWithTitle:@"Invite to Server" action:@selector(invitePeople:) server:server];
+        NSMenuItem *invite = [self itemWithTitle:DLLocalizedString(@"Invite to Server") action:@selector(invitePeople:) server:server];
         [DLDarkMenu setStyle:DLDarkMenuItemStyleBrand forItem:invite];
         [DLDarkMenu setIconName:@"invite" forItem:invite];
         [menu addItem:invite];
     }
     [self addManagementItemsForServer:server toMenu:menu icons:YES];
     [menu addItem:[NSMenuItem separatorItem]];
-    NSMenuItem *notifications = [self itemWithTitle:@"Notification Settings" action:@selector(openNotificationSettings:) server:server];
+    NSMenuItem *notifications = [self itemWithTitle:DLLocalizedString(@"Notification Settings") action:@selector(openNotificationSettings:) server:server];
     [DLDarkMenu setIconName:@"bell" forItem:notifications];
     [menu addItem:notifications];
     [menu addItem:[NSMenuItem separatorItem]];
-    NSMenuItem *profile = [self itemWithTitle:@"Edit Per-server Profile" action:@selector(editServerProfile:) server:server];
+    NSMenuItem *profile = [self itemWithTitle:DLLocalizedString(@"Edit Per-server Profile") action:@selector(editServerProfile:) server:server];
     [DLDarkMenu setIconName:@"pencil" forItem:profile];
     [menu addItem:profile];
     [menu addItem:[self hideMutedItemForServer:server]];
@@ -207,7 +208,7 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     }
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
         [menu addItem:[NSMenuItem separatorItem]];
-        NSMenuItem *copyID = [self itemWithTitle:@"Copy Server ID" action:@selector(copyServerID:) server:server];
+        NSMenuItem *copyID = [self itemWithTitle:DLLocalizedString(@"Copy Server ID") action:@selector(copyServerID:) server:server];
         [DLDarkMenu setIconName:@"id" forItem:copyID];
         [menu addItem:copyID];
     }
@@ -217,13 +218,13 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 -(NSMenu *)contextMenuForServer:(DLServer *)server {
     NSMenu *menu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
     if (!server || [server isEqual:[[DLController sharedInstance] myServerItem]]) return menu;
-    NSMenuItem *markRead = [self itemWithTitle:@"Mark As Read" action:@selector(markServerAsRead:) server:server];
+    NSMenuItem *markRead = [self itemWithTitle:DLLocalizedString(@"Mark As Read") action:@selector(markServerAsRead:) server:server];
     [markRead setEnabled:([server hasUnreadMessages] || [server mentionCount] > 0)];
     [menu setAutoenablesItems:NO];
     [menu addItem:markRead];
     [menu addItem:[NSMenuItem separatorItem]];
     if ([server iHavePermission:DLPermissionCreateInvite]) {
-        NSMenuItem *invite = [self itemWithTitle:@"Invite to Server" action:@selector(invitePeople:) server:server];
+        NSMenuItem *invite = [self itemWithTitle:DLLocalizedString(@"Invite to Server") action:@selector(invitePeople:) server:server];
         [DLDarkMenu setStyle:DLDarkMenuItemStyleBrand forItem:invite];
         [menu addItem:invite];
         [menu addItem:[NSMenuItem separatorItem]];
@@ -233,17 +234,17 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     [menu addItem:[self hideMutedItemForServer:server]];
     [menu addItem:[NSMenuItem separatorItem]];
     [self addManagementItemsForServer:server toMenu:menu icons:NO];
-    [menu addItem:[self itemWithTitle:@"Edit Per-server Profile" action:@selector(editServerProfile:) server:server]];
+    [menu addItem:[self itemWithTitle:DLLocalizedString(@"Edit Per-server Profile") action:@selector(editServerProfile:) server:server]];
     if (![self isOwnerOfServer:server]) {
         [menu addItem:[NSMenuItem separatorItem]];
         [menu addItem:[self leaveItemForServer:server icon:NO]];
     }
     [menu addItem:[NSMenuItem separatorItem]];
-    NSMenuItem *link = [self itemWithTitle:@"Copy Server Link" action:@selector(copyServerLink:) server:server];
+    NSMenuItem *link = [self itemWithTitle:DLLocalizedString(@"Copy Server Link") action:@selector(copyServerLink:) server:server];
     [DLDarkMenu setIconName:@"link" forItem:link];
     [menu addItem:link];
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
-        NSMenuItem *copyID = [self itemWithTitle:@"Copy Server ID" action:@selector(copyServerID:) server:server];
+        NSMenuItem *copyID = [self itemWithTitle:DLLocalizedString(@"Copy Server ID") action:@selector(copyServerID:) server:server];
         [DLDarkMenu setIconName:@"id" forItem:copyID];
         [menu addItem:copyID];
     }
@@ -309,11 +310,11 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 
 -(void)showInviteDialogForServer:(DLServer *)server channel:(DLChannel *)inviteChannel {
     DLChannel *channel = inviteChannel ? inviteChannel : (DLChannel *)[[DLController sharedInstance] defaultInviteChannelForServer:server];
-    DLDialog *dialog = [DLDialog dialogWithTitle:[NSString stringWithFormat:@"Invite friends to %@", [server name]]
-                                         message:(inviteChannel ? [@"Recipients will land in #" stringByAppendingString:[inviteChannel name]] : nil)];
+    DLDialog *dialog = [DLDialog dialogWithTitle:[NSString stringWithFormat:DLLocalizedString(@"Invite friends to %@"), [server name]]
+                                         message:(inviteChannel ? [DLLocalizedString(@"Recipients will land in #") stringByAppendingString:[inviteChannel name]] : nil)];
     CGFloat inner = 440.0 - 32.0;
     NSView *content = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, 92.0)] autorelease];
-    NSTextField *section = [DLDialog sectionLabelWithString:@"Send a server invite link to a friend"
+    NSTextField *section = [DLDialog sectionLabelWithString:DLLocalizedString(@"Send a server invite link to a friend")
                                                       frame:NSMakeRect(0.0, 66.0, inner, 16.0)];
     [content addSubview:section];
     NSView *box = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 22.0, inner, 40.0)] autorelease];
@@ -322,9 +323,9 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     [linkField setEditable:NO];
     [linkField setSelectable:YES];
     [linkField setDrawsBackground:NO];
-    [linkField setStringValue:(channel ? @"Creating an invite…" : @"No channel to invite to.")];
+    [linkField setStringValue:(channel ? DLLocalizedString(@"Creating an invite…") : DLLocalizedString(@"No channel to invite to."))];
     DLPrimaryButton *copyButton = [[[DLPrimaryButton alloc] initWithFrame:NSMakeRect(inner - 80.0, 4.0, 76.0, 32.0)] autorelease];
-    [copyButton setTitle:@"Copy"];
+    [copyButton setTitle:DLLocalizedString(@"Copy")];
     [copyButton setBordered:NO];
     [copyButton setEnabled:NO];
     NSBox *background = [[[NSBox alloc] initWithFrame:NSMakeRect(0.0, 22.0, inner, 40.0)] autorelease];
@@ -336,11 +337,11 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     [[background contentView] addSubview:linkField];
     [[background contentView] addSubview:copyButton];
     [content addSubview:background];
-    NSTextField *expiry = [DLDialog labelWithString:@"Your invite link expires in 7 days." frame:NSMakeRect(0.0, 0.0, inner, 16.0)];
+    NSTextField *expiry = [DLDialog labelWithString:DLLocalizedString(@"Your invite link expires in 7 days.") frame:NSMakeRect(0.0, 0.0, inner, 16.0)];
     [expiry setFont:[NSFont systemFontOfSize:12.0]];
     [content addSubview:expiry];
     [dialog setContentView:content];
-    [dialog addButtonWithTitle:@"Done" style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Done") style:DLDialogButtonStylePrimary];
     [dialog showInWindow:[self dialogWindow]];
     if (!channel) return;
 
@@ -370,7 +371,7 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 
 -(void)copyInviteLink:(NSButton *)sender {
     [DLUtil copyStringToPasteboard:[sender toolTip]];
-    [sender setTitle:@"Copied"];
+    [sender setTitle:DLLocalizedString(@"Copied")];
 }
 
 #pragma mark Notification settings
@@ -381,16 +382,16 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     NSMutableArray *rows = [NSMutableArray array];
 
     DLSwitchRow *muteRow = [[[DLSwitchRow alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, 10.0)
-        title:[NSString stringWithFormat:@"Mute %@", [server name]]
-        detail:@"Muting a server prevents unread indicators and notifications from appearing unless you are mentioned."] autorelease];
+        title:[NSString stringWithFormat:DLLocalizedString(@"Mute %@"), [server name]]
+        detail:DLLocalizedString(@"Muting a server prevents unread indicators and notifications from appearing unless you are mentioned.")] autorelease];
     [[muteRow toggle] setOn:[[DLController sharedInstance] isServerMuted:server]];
     [[muteRow toggle] setTarget:self];
     [[muteRow toggle] setAction:@selector(notificationSwitchChanged:)];
     [[muteRow toggle] setToolTip:@"muted"];
     [rows addObject:muteRow];
 
-    [rows addObject:[DLDialog sectionLabelWithString:@"Server Notification Settings" frame:NSMakeRect(0.0, 0.0, inner, 28.0)]];
-    NSArray *levels = [NSArray arrayWithObjects:@"All Messages", @"Only @mentions", @"Nothing", nil];
+    [rows addObject:[DLDialog sectionLabelWithString:DLLocalizedString(@"Server Notification Settings") frame:NSMakeRect(0.0, 0.0, inner, 28.0)]];
+    NSArray *levels = [NSArray arrayWithObjects:DLLocalizedString(@"All Messages"), DLLocalizedString(@"Only @mentions"), DLLocalizedString(@"Nothing"), nil];
     NSInteger level = [self messageNotificationsForServer:server];
     NSMutableArray *levelRows = [NSMutableArray array];
     NSInteger index;
@@ -406,13 +407,13 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     }
 
     NSArray *switches = [NSArray arrayWithObjects:
-        [NSArray arrayWithObjects:@"Suppress @everyone and @here", @"suppress_everyone", @"", nil],
-        [NSArray arrayWithObjects:@"Suppress All Role @mentions", @"suppress_roles", @"", nil],
-        [NSArray arrayWithObjects:@"Suppress Highlights", @"notify_highlights",
-         @"Highlights provide occasional updates when your friends are chatting in busy servers.", nil],
-        [NSArray arrayWithObjects:@"Mute New Events", @"mute_scheduled_events",
-         @"Turning this on will prevent you from being notified of new events.", nil],
-        [NSArray arrayWithObjects:@"Mobile Push Notifications", @"mobile_push", @"", nil], nil];
+        [NSArray arrayWithObjects:DLLocalizedString(@"Suppress @everyone and @here"), @"suppress_everyone", @"", nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Suppress All Role @mentions"), @"suppress_roles", @"", nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Suppress Highlights"), @"notify_highlights",
+         DLLocalizedString(@"Highlights provide occasional updates when your friends are chatting in busy servers."), nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Mute New Events"), @"mute_scheduled_events",
+         DLLocalizedString(@"Turning this on will prevent you from being notified of new events."), nil],
+        [NSArray arrayWithObjects:DLLocalizedString(@"Mobile Push Notifications"), @"mobile_push", @"", nil], nil];
     NSEnumerator *enumerator = [switches objectEnumerator];
     NSArray *spec;
     BOOL first = YES;
@@ -458,10 +459,10 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     objc_setAssociatedObject(content, &DLDialogServerKey, server, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(content, &DLDialogLevelRowsKey, levelRows, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
-    DLDialog *dialog = [DLDialog dialogWithTitle:@"Notification Settings" message:[server name]];
+    DLDialog *dialog = [DLDialog dialogWithTitle:DLLocalizedString(@"Notification Settings") message:[server name]];
     [dialog setWidth:480.0];
     [dialog setContentView:content];
-    [dialog addButtonWithTitle:@"Done" style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Done") style:DLDialogButtonStylePrimary];
     [dialog showInWindow:[self dialogWindow]];
 }
 
@@ -515,20 +516,20 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     NSMutableArray *typeRows = [NSMutableArray array];
     CGFloat y = 0.0;
     NSTextField *nameField = [DLDialog textFieldWithFrame:NSMakeRect(0.0, y, inner, 40.0)
-                                              placeholder:(category ? @"New Category" : @"new-channel")];
+                                              placeholder:(category ? DLLocalizedString(@"New Category") : @"new-channel")];
     [content addSubview:nameField];
     y += 40.0 + 8.0;
-    NSTextField *nameLabel = [DLDialog sectionLabelWithString:(category ? @"Category Name" : @"Channel Name")
+    NSTextField *nameLabel = [DLDialog sectionLabelWithString:(category ? DLLocalizedString(@"Category Name") : DLLocalizedString(@"Channel Name"))
                                                         frame:NSMakeRect(0.0, y, inner, 16.0)];
     [content addSubview:nameLabel];
     y += 16.0 + 16.0;
     if (!category) {
         NSArray *types = [NSArray arrayWithObjects:
-            [NSArray arrayWithObjects:@"Forum", @"Create a space for organized discussions", @"forum",
+            [NSArray arrayWithObjects:DLLocalizedString(@"Forum"), DLLocalizedString(@"Create a space for organized discussions"), @"forum",
              [NSNumber numberWithInt:ChannelTypeForum], nil],
-            [NSArray arrayWithObjects:@"Voice", @"Hang out together with voice, video, and screen share", @"speaker",
+            [NSArray arrayWithObjects:DLLocalizedString(@"Voice"), DLLocalizedString(@"Hang out together with voice, video, and screen share"), @"speaker",
              [NSNumber numberWithInt:ChannelTypeVoice], nil],
-            [NSArray arrayWithObjects:@"Text", @"Send messages, images, GIFs, emoji, opinions, and puns", @"hash",
+            [NSArray arrayWithObjects:DLLocalizedString(@"Text"), DLLocalizedString(@"Send messages, images, GIFs, emoji, opinions, and puns"), @"hash",
              [NSNumber numberWithInt:ChannelTypeStandard], nil], nil];
         NSEnumerator *enumerator = [types objectEnumerator];
         NSArray *type;
@@ -545,7 +546,7 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
             [typeRows insertObject:row atIndex:0];
             y += 56.0 + 8.0;
         }
-        NSTextField *typeLabel = [DLDialog sectionLabelWithString:@"Channel Type" frame:NSMakeRect(0.0, y, inner, 16.0)];
+        NSTextField *typeLabel = [DLDialog sectionLabelWithString:DLLocalizedString(@"Channel Type") frame:NSMakeRect(0.0, y, inner, 16.0)];
         [content addSubview:typeLabel];
         y += 16.0;
         objc_setAssociatedObject(content, &DLDialogTypeRowsKey, typeRows, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -555,20 +556,20 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     NSString *subtitle = nil;
     if (parentID) {
         DLChannel *parent = [[DLController sharedInstance] loadedChannelWithID:parentID];
-        if ([parent name]) subtitle = [NSString stringWithFormat:@"in %@", [parent name]];
+        if ([parent name]) subtitle = [NSString stringWithFormat:DLLocalizedString(@"in %@"), [parent name]];
     }
-    DLDialog *dialog = [DLDialog dialogWithTitle:(category ? @"Create Category" : @"Create Channel") message:subtitle];
+    DLDialog *dialog = [DLDialog dialogWithTitle:(category ? DLLocalizedString(@"Create Category") : DLLocalizedString(@"Create Channel")) message:subtitle];
     [dialog setWidth:460.0];
     [dialog setContentView:content];
-    [dialog addButtonWithTitle:(category ? @"Create Category" : @"Create Channel") style:DLDialogButtonStylePrimary];
-    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    [dialog addButtonWithTitle:(category ? DLLocalizedString(@"Create Category") : DLLocalizedString(@"Create Channel")) style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Cancel") style:DLDialogButtonStyleLink];
     NSString *serverID = [[server serverID] description];
     NSString *parent = [[parentID copy] autorelease];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
         if (buttonIndex != 0) return YES;
         NSString *name = [[nameField stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
         if (![name length]) {
-            [shown setErrorMessage:@"Enter a name."];
+            [shown setErrorMessage:DLLocalizedString(@"Enter a name.")];
             return NO;
         }
         NSInteger type = category ? ChannelTypeHeader : ChannelTypeStandard;
@@ -606,7 +607,7 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     CGFloat inner = 440.0 - 32.0;
     BOOL canChange = [server iHavePermission:DLPermissionChangeNickname];
     NSView *content = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, 64.0)] autorelease];
-    NSTextField *label = [DLDialog sectionLabelWithString:@"Server Nickname" frame:NSMakeRect(0.0, 48.0, inner, 16.0)];
+    NSTextField *label = [DLDialog sectionLabelWithString:DLLocalizedString(@"Server Nickname") frame:NSMakeRect(0.0, 48.0, inner, 16.0)];
     [content addSubview:label];
     DLUser *me = [[DLController sharedInstance] myUser];
     NSString *placeholder = [me globalName] ? [me globalName] : [me username];
@@ -614,12 +615,12 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     [field setStringValue:([server myNickname] ? [server myNickname] : @"")];
     [field setEditable:canChange];
     [content addSubview:field];
-    DLDialog *dialog = [DLDialog dialogWithTitle:@"Edit Per-server Profile"
-        message:(canChange ? [NSString stringWithFormat:@"Your nickname is shown to everyone in %@ instead of your display name.", [server name]]
-                           : @"You do not have permission to change your nickname in this server.")];
+    DLDialog *dialog = [DLDialog dialogWithTitle:DLLocalizedString(@"Edit Per-server Profile")
+        message:(canChange ? [NSString stringWithFormat:DLLocalizedString(@"Your nickname is shown to everyone in %@ instead of your display name."), [server name]]
+                           : DLLocalizedString(@"You do not have permission to change your nickname in this server."))];
     [dialog setContentView:content];
-    if (canChange) [dialog addButtonWithTitle:@"Save" style:DLDialogButtonStylePrimary];
-    [dialog addButtonWithTitle:(canChange ? @"Cancel" : @"Close") style:DLDialogButtonStyleLink];
+    if (canChange) [dialog addButtonWithTitle:DLLocalizedString(@"Save") style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:(canChange ? DLLocalizedString(@"Cancel") : DLLocalizedString(@"Close")) style:DLDialogButtonStyleLink];
     NSString *serverID = [[server serverID] description];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
         if (buttonIndex != 0 || !canChange) return YES;
@@ -649,20 +650,20 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 -(void)showServerOverviewForServer:(DLServer *)server {
     CGFloat inner = 440.0 - 32.0;
     NSView *content = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, 64.0)] autorelease];
-    [content addSubview:[DLDialog sectionLabelWithString:@"Server Name" frame:NSMakeRect(0.0, 48.0, inner, 16.0)]];
+    [content addSubview:[DLDialog sectionLabelWithString:DLLocalizedString(@"Server Name") frame:NSMakeRect(0.0, 48.0, inner, 16.0)]];
     NSTextField *field = [DLDialog textFieldWithFrame:NSMakeRect(0.0, 0.0, inner, 40.0) placeholder:nil];
     [field setStringValue:([server name] ? [server name] : @"")];
     [content addSubview:field];
-    DLDialog *dialog = [DLDialog dialogWithTitle:@"Server Overview" message:nil];
+    DLDialog *dialog = [DLDialog dialogWithTitle:DLLocalizedString(@"Server Overview") message:nil];
     [dialog setContentView:content];
-    [dialog addButtonWithTitle:@"Save Changes" style:DLDialogButtonStylePrimary];
-    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Save Changes") style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Cancel") style:DLDialogButtonStyleLink];
     NSString *serverID = [[server serverID] description];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
         if (buttonIndex != 0) return YES;
         NSString *name = [[field stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
         if ([name length] < 2) {
-            [shown setErrorMessage:@"Server names must be between 2 and 100 characters."];
+            [shown setErrorMessage:DLLocalizedString(@"Server names must be between 2 and 100 characters.")];
             return NO;
         }
         DLServer *current = [[DLController sharedInstance] loadedServerWithID:serverID];
@@ -715,14 +716,14 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 }
 
 -(NSMenuItem *)notificationItemForChannel:(DLChannel *)channel {
-    NSMenuItem *notifications = [[[NSMenuItem alloc] initWithTitle:@"Notification Settings" action:NULL keyEquivalent:@""] autorelease];
+    NSMenuItem *notifications = [[[NSMenuItem alloc] initWithTitle:DLLocalizedString(@"Notification Settings") action:NULL keyEquivalent:@""] autorelease];
     NSMenu *submenu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
     id value = [[self overrideForChannel:channel] objectForKey:@"message_notifications"];
     NSInteger level = [value respondsToSelector:@selector(integerValue)] ? [value integerValue] : DLNotifyServerDefault;
     BOOL inCategory = [channel isKindOfClass:[DLServerChannel class]] &&
                       [[(DLServerChannel *)channel parentID] isKindOfClass:[NSString class]] && [channel type] != ChannelTypeHeader;
-    NSArray *titles = [NSArray arrayWithObjects:(inCategory ? @"Use Category Default" : @"Use Server Default"),
-                       @"All Messages", @"Only @mentions", @"Nothing", nil];
+    NSArray *titles = [NSArray arrayWithObjects:(inCategory ? DLLocalizedString(@"Use Category Default") : DLLocalizedString(@"Use Server Default")),
+                       DLLocalizedString(@"All Messages"), DLLocalizedString(@"Only @mentions"), DLLocalizedString(@"Nothing"), nil];
     NSInteger values[] = { DLNotifyServerDefault, DLNotifyAllMessages, DLNotifyOnlyMentions, DLNotifyNothing };
     NSUInteger index;
     for (index = 0; index < [titles count]; index++) {
@@ -753,29 +754,29 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
     CGFloat inner = 440.0 - 32.0;
     NSView *content = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, category ? 64.0 : 148.0)] autorelease];
     CGFloat top = NSHeight([content frame]);
-    [content addSubview:[DLDialog sectionLabelWithString:(category ? @"Category Name" : @"Channel Name")
+    [content addSubview:[DLDialog sectionLabelWithString:(category ? DLLocalizedString(@"Category Name") : DLLocalizedString(@"Channel Name"))
                                                    frame:NSMakeRect(0.0, top - 16.0, inner, 16.0)]];
     NSTextField *nameField = [DLDialog textFieldWithFrame:NSMakeRect(0.0, top - 64.0, inner, 40.0) placeholder:nil];
     [nameField setStringValue:([channel name] ? [channel name] : @"")];
     [content addSubview:nameField];
     NSTextField *topicField = nil;
     if (!category) {
-        [content addSubview:[DLDialog sectionLabelWithString:@"Channel Topic" frame:NSMakeRect(0.0, 64.0, inner, 16.0)]];
-        topicField = [DLDialog textFieldWithFrame:NSMakeRect(0.0, 16.0, inner, 40.0) placeholder:@"Let everyone know how to use this channel!"];
+        [content addSubview:[DLDialog sectionLabelWithString:DLLocalizedString(@"Channel Topic") frame:NSMakeRect(0.0, 64.0, inner, 16.0)]];
+        topicField = [DLDialog textFieldWithFrame:NSMakeRect(0.0, 16.0, inner, 40.0) placeholder:DLLocalizedString(@"Let everyone know how to use this channel!")];
         NSString *topic = [channel respondsToSelector:@selector(topic)] ? [(DLServerChannel *)channel topic] : nil;
         [topicField setStringValue:([topic isKindOfClass:[NSString class]] ? topic : @"")];
         [content addSubview:topicField];
     }
-    DLDialog *dialog = [DLDialog dialogWithTitle:(category ? @"Edit Category" : @"Edit Channel") message:nil];
+    DLDialog *dialog = [DLDialog dialogWithTitle:(category ? DLLocalizedString(@"Edit Category") : DLLocalizedString(@"Edit Channel")) message:nil];
     [dialog setContentView:content];
-    [dialog addButtonWithTitle:@"Save Changes" style:DLDialogButtonStylePrimary];
-    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Save Changes") style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Cancel") style:DLDialogButtonStyleLink];
     NSString *channelID = [[channel channelID] description];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
         if (buttonIndex != 0) return YES;
         NSString *name = [[nameField stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
         if (![name length]) {
-            [shown setErrorMessage:@"Enter a name."];
+            [shown setErrorMessage:DLLocalizedString(@"Enter a name.")];
             return NO;
         }
         NSMutableDictionary *body = [NSMutableDictionary dictionaryWithObject:name forKey:@"name"];
@@ -802,11 +803,11 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 
 -(void)showDeleteChannelDialogForChannel:(DLChannel *)channel {
     BOOL category = [channel type] == ChannelTypeHeader;
-    DLDialog *dialog = [DLDialog dialogWithTitle:(category ? @"Delete Category" : @"Delete Channel")
-        message:[NSString stringWithFormat:@"Are you sure you want to delete %@%@? This cannot be undone.",
+    DLDialog *dialog = [DLDialog dialogWithTitle:(category ? DLLocalizedString(@"Delete Category") : DLLocalizedString(@"Delete Channel"))
+        message:[NSString stringWithFormat:DLLocalizedString(@"Are you sure you want to delete %@%@? This cannot be undone."),
                  (category ? @"" : @"#"), [channel name]]];
-    [dialog addButtonWithTitle:(category ? @"Delete Category" : @"Delete Channel") style:DLDialogButtonStyleDanger];
-    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    [dialog addButtonWithTitle:(category ? DLLocalizedString(@"Delete Category") : DLLocalizedString(@"Delete Channel")) style:DLDialogButtonStyleDanger];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Cancel") style:DLDialogButtonStyleLink];
     NSString *channelID = [[channel channelID] description];
     DLServer *server = [self serverForChannel:channel];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
@@ -833,10 +834,10 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 #pragma mark Leave
 
 -(void)showLeaveDialogForServer:(DLServer *)server {
-    DLDialog *dialog = [DLDialog dialogWithTitle:[NSString stringWithFormat:@"Leave '%@'", [server name]]
-        message:[NSString stringWithFormat:@"Are you sure you want to leave %@? You won't be able to rejoin this server unless you are re-invited.", [server name]]];
-    [dialog addButtonWithTitle:@"Leave Server" style:DLDialogButtonStyleDanger];
-    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    DLDialog *dialog = [DLDialog dialogWithTitle:[NSString stringWithFormat:DLLocalizedString(@"Leave '%@'"), [server name]]
+        message:[NSString stringWithFormat:DLLocalizedString(@"Are you sure you want to leave %@? You won't be able to rejoin this server unless you are re-invited."), [server name]]];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Leave Server") style:DLDialogButtonStyleDanger];
+    [dialog addButtonWithTitle:DLLocalizedString(@"Cancel") style:DLDialogButtonStyleLink];
     NSString *serverID = [[server serverID] description];
     [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
         if (buttonIndex != 0) return YES;

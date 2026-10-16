@@ -33,6 +33,7 @@
     NSButton *friendServerMembersToggle;
     NSArray *explicitFilterRows;
     NSArray *spoilerRows;
+    NSArray *languageRows;
     NSMutableArray *accountSettingsControls;
 }
 - (IBAction)useProxyToggled:(id)sender;

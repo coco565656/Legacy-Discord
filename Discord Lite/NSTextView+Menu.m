@@ -7,6 +7,7 @@
 //
 
 #import "NSTextView+Menu.h"
+#import "DLLocalization.h"
 #import "DLDarkMenu.h"
 
 @implementation NSTextView_Menu
@@ -54,7 +55,7 @@
     // Read-only message text shows the Discord-style message menu instead of
     // AppKit's Spotlight/Font/Speech items. A selection adds Copy at the top.
     if ([self selectedRange].length > 0) {
-        NSMenuItem *copyItem = [[[NSMenuItem alloc] initWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@""] autorelease];
+        NSMenuItem *copyItem = [[[NSMenuItem alloc] initWithTitle:DLLocalizedString(@"Copy") action:@selector(copy:) keyEquivalent:@""] autorelease];
         [copyItem setTarget:self];
         [DLDarkMenu setIconName:@"copy" forItem:copyItem];
         [ownerMenu insertItem:[NSMenuItem separatorItem] atIndex:0];

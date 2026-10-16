@@ -4,6 +4,7 @@
 //
 
 #import "DLUserProfileController.h"
+#import "DLLocalization.h"
 #import "DLController.h"
 #import "DLUtil.h"
 #import "DLTwemojiRenderer.h"
@@ -107,7 +108,7 @@
         [myProfileButton setBordered:NO];
         [myProfileButton setRefusesFirstResponder:YES];
         [myProfileButton setTitle:@""];
-        [myProfileButton setToolTip:@"View your profile"];
+        [myProfileButton setToolTip:DLLocalizedString(@"View your profile")];
         [myProfileButton setTarget:self];
         [myProfileButton setAction:@selector(showMyProfile:)];
         [userInfoView addSubview:myProfileButton];
@@ -248,7 +249,7 @@
 -(NSString *)profileConnectionsTextFromData:(NSDictionary *)profile {
     NSArray *connections = [[profile objectForKey:@"connected_accounts"] isKindOfClass:[NSArray class]]
         ? [profile objectForKey:@"connected_accounts"] : nil;
-    if ([connections count] == 0) return @"No visible connections";
+    if ([connections count] == 0) return DLLocalizedString(@"No visible connections");
     NSMutableArray *lines = [NSMutableArray array];
     NSInteger limit = MIN((NSInteger)[connections count], 5);
     for (NSInteger i = 0; i < limit; i++) {
@@ -260,7 +261,7 @@
             [lines addObject:[NSString stringWithFormat:@"%@: %@", [type capitalizedString], name]];
         }
     }
-    return [lines count] ? [lines componentsJoinedByString:@"\n"] : @"No visible connections";
+    return [lines count] ? [lines componentsJoinedByString:@"\n"] : DLLocalizedString(@"No visible connections");
 }
 
 -(NSString *)profileActivitiesTextFromData:(NSDictionary *)profile {
@@ -373,7 +374,7 @@
     }
     if (shown == 0) {
         NSTextField *empty = [self profileLabelWithFrame:NSMakeRect(0.0, MAX(0.0, y), maxWidth, 20.0)
-                                                    text:@"No visible roles"
+                                                    text:DLLocalizedString(@"No visible roles")
                                                     font:[NSFont systemFontOfSize:10.0]
                                                    color:[DLUtil nativeSecondaryTextColor]];
         [container addSubview:empty];
@@ -449,12 +450,12 @@
         ? [profile objectForKey:@"mutual_guilds"] : nil;
 
     NSMutableArray *metadata = [NSMutableArray array];
-    if (joined) [metadata addObject:[NSString stringWithFormat:@"Joined %@", joined]];
+    if (joined) [metadata addObject:[NSString stringWithFormat:DLLocalizedString(@"Joined %@"), joined]];
     if ([pronouns isKindOfClass:[NSString class]] && [pronouns length] > 0) {
-        [metadata addObject:[NSString stringWithFormat:@"Pronouns: %@", pronouns]];
+        [metadata addObject:[NSString stringWithFormat:DLLocalizedString(@"Pronouns: %@"), pronouns]];
     }
     if ([mutualGuilds count] > 0) {
-        [metadata addObject:[NSString stringWithFormat:@"%ld mutual server%@", (long)[mutualGuilds count], [mutualGuilds count] == 1 ? @"" : @"s"]];
+        [metadata addObject:[NSString stringWithFormat:DLLocalizedString(@"%ld mutual server%@"), (long)[mutualGuilds count], DLPluralSuffix([mutualGuilds count])]];
     }
     // Popout: "username • pronouns", ABOUT ME only with a bio, and MEMBER
     // SINCE with the account and server dates like the official card.
@@ -493,8 +494,8 @@
     NSString *activities = [self profileActivitiesTextFromData:profile];
     NSString *connections = [self profileConnectionsTextFromData:profile];
     [profileDetailConnectionsField setStringValue:activities
-     ? [NSString stringWithFormat:@"ACTIVE NOW\n%@\n\nCONNECTIONS\n%@", activities, connections]
-     : [NSString stringWithFormat:@"CONNECTIONS\n%@", connections]];
+     ? [NSString stringWithFormat:DLLocalizedString(@"ACTIVE NOW\n%@\n\nCONNECTIONS\n%@"), activities, connections]
+     : [NSString stringWithFormat:DLLocalizedString(@"CONNECTIONS\n%@"), connections]];
 
     NSColor *accent = [self profileAccentColorFromData:profile];
     [profileBannerView setBackgroundColor:accent];
@@ -597,7 +598,7 @@
     }
     [avatarButton setImage:avatar];
     [avatarButton setImagePosition:NSImageOnly];
-    [avatarButton setToolTip:@"Open full profile"];
+    [avatarButton setToolTip:DLLocalizedString(@"Open full profile")];
     [avatarButton setTarget:self];
     [avatarButton setAction:@selector(showExpandedProfile:)];
     [card addSubview:avatarButton];
@@ -646,13 +647,13 @@
     [card addSubview:panel];
     CGFloat panelHeight = NSHeight([panel bounds]);
     NSTextField *aboutHeader = [self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 26.0, 290.0, 16.0)
-                                                      text:@"ABOUT ME" font:[NSFont boldSystemFontOfSize:11.0]
+                                                      text:DLLocalizedString(@"ABOUT ME") font:[NSFont boldSystemFontOfSize:11.0]
                                                      color:[DLUtil nativePrimaryTextColor]];
     [panel addSubview:aboutHeader];
     [profileAboutHeader release];
     profileAboutHeader = [aboutHeader retain];
     NSTextField *bioField = [self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 78.0, 290.0, 50.0)
-                                                   text:@"Loading profile…"
+                                                   text:DLLocalizedString(@"Loading profile…")
                                                    font:[NSFont systemFontOfSize:12.0]
                                                   color:[DLUtil nativePrimaryTextColor]];
     [[bioField cell] setLineBreakMode:NSLineBreakByWordWrapping];
@@ -662,7 +663,7 @@
     [panel addSubview:bioField];
     profileBioField = [bioField retain];
     [panel addSubview:[self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 102.0, 290.0, 16.0)
-                                             text:@"MEMBER SINCE" font:[NSFont boldSystemFontOfSize:11.0]
+                                             text:DLLocalizedString(@"MEMBER SINCE") font:[NSFont boldSystemFontOfSize:11.0]
                                             color:[DLUtil nativePrimaryTextColor]]];
     NSTextField *metadataField = [self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 122.0, 290.0, 18.0)
                                                         text:@""
@@ -671,7 +672,7 @@
     [panel addSubview:metadataField];
     profileMetadataField = [metadataField retain];
     [panel addSubview:[self profileLabelWithFrame:NSMakeRect(12.0, panelHeight - 146.0, 290.0, 16.0)
-                                             text:@"ROLES" font:[NSFont boldSystemFontOfSize:11.0]
+                                             text:DLLocalizedString(@"ROLES") font:[NSFont boldSystemFontOfSize:11.0]
                                             color:[DLUtil nativePrimaryTextColor]]];
     NSView *roleContainer = [[[NSView alloc] initWithFrame:NSMakeRect(12.0, 6.0, 292.0, MAX(27.0, panelHeight - 156.0))] autorelease];
     [panel addSubview:roleContainer];
@@ -689,7 +690,7 @@
         [messageField setTextColor:[DLUtil nativePrimaryTextColor]];
         [messageField setFont:[NSFont systemFontOfSize:13.0]];
         [messageField setFocusRingType:NSFocusRingTypeNone];
-        [[messageField cell] setPlaceholderString:[NSString stringWithFormat:@"Message @%@", displayName]];
+        [[messageField cell] setPlaceholderString:[NSString stringWithFormat:DLLocalizedString(@"Message @%@"), displayName]];
         [[messageField cell] setScrollable:YES];
         [messageField setTarget:self];
         [messageField setAction:@selector(messageFromProfile:)];
@@ -735,7 +736,7 @@
                                                     styleMask:NSTitledWindowMask | NSClosableWindowMask
                                                       backing:NSBackingStoreBuffered
                                                         defer:NO];
-    [profileDetailPanel setTitle:@"User Profile"];
+    [profileDetailPanel setTitle:DLLocalizedString(@"User Profile")];
     [profileDetailPanel setReleasedWhenClosed:NO];
     [profileDetailPanel setDelegate:self];
     NSView_BGColor *content = [[[NSView_BGColor alloc] initWithFrame:NSMakeRect(0.0, 0.0, 760.0, 520.0)] autorelease];
@@ -794,7 +795,7 @@
                                                   text:[profileUser username] font:[NSFont systemFontOfSize:12.0]
                                                  color:[DLUtil nativeSecondaryTextColor]]];
     NSTextField *detailBio = [self profileLabelWithFrame:NSMakeRect(32.0, 204.0, 316.0, 45.0)
-                                                     text:@"Loading profile details…"
+                                                     text:DLLocalizedString(@"Loading profile details…")
                                                      font:[NSFont systemFontOfSize:12.0]
                                                     color:[DLUtil nativePrimaryTextColor]];
     [[detailBio cell] setLineBreakMode:NSLineBreakByWordWrapping];
@@ -804,13 +805,13 @@
     [summary addSubview:detailBio];
     profileDetailBioField = [detailBio retain];
     NSTextField *detailMetadata = [self profileLabelWithFrame:NSMakeRect(32.0, 175.0, 316.0, 22.0)
-                                                          text:@"Loading membership details…"
+                                                          text:DLLocalizedString(@"Loading membership details…")
                                                           font:[NSFont systemFontOfSize:10.0]
                                                          color:[DLUtil nativeSecondaryTextColor]];
     [summary addSubview:detailMetadata];
     profileDetailMetadataField = [detailMetadata retain];
     [summary addSubview:[self profileLabelWithFrame:NSMakeRect(32.0, 140.0, 316.0, 20.0)
-                                                  text:@"ROLES" font:[NSFont boldSystemFontOfSize:10.0]
+                                                  text:DLLocalizedString(@"ROLES") font:[NSFont boldSystemFontOfSize:10.0]
                                                  color:[DLUtil nativeSecondaryTextColor]]];
     NSView *detailRoleContainer = [[[NSView alloc] initWithFrame:NSMakeRect(32.0, 24.0, 316.0, 110.0)] autorelease];
     [summary addSubview:detailRoleContainer];
@@ -818,10 +819,10 @@
     [self reloadRoleChipsInView:detailRoleContainer roleIDs:[profileMember roles] maxWidth:316.0];
 
     [content addSubview:[self profileLabelWithFrame:NSMakeRect(410.0, 460.0, 320.0, 30.0)
-                                                 text:@"PROFILE DETAILS" font:[NSFont boldSystemFontOfSize:14.0]
+                                                 text:DLLocalizedString(@"PROFILE DETAILS") font:[NSFont boldSystemFontOfSize:14.0]
                                                 color:[DLUtil nativePrimaryTextColor]]];
     NSTextField *detailConnections = [self profileLabelWithFrame:NSMakeRect(410.0, 252.0, 320.0, 198.0)
-                                                             text:@"Loading activity and connections…"
+                                                             text:DLLocalizedString(@"Loading activity and connections…")
                                                              font:[NSFont systemFontOfSize:11.0]
                                                             color:[DLUtil nativePrimaryTextColor]];
     [[detailConnections cell] setLineBreakMode:NSLineBreakByWordWrapping];
@@ -831,7 +832,7 @@
     [content addSubview:detailConnections];
     profileDetailConnectionsField = [detailConnections retain];
     [content addSubview:[self profileLabelWithFrame:NSMakeRect(410.0, 218.0, 320.0, 22.0)
-                                                 text:@"PRIVATE NOTE" font:[NSFont boldSystemFontOfSize:11.0]
+                                                 text:DLLocalizedString(@"PRIVATE NOTE") font:[NSFont boldSystemFontOfSize:11.0]
                                                 color:[DLUtil nativeSecondaryTextColor]]];
     NSScrollView *noteScroll = [[[NSScrollView alloc] initWithFrame:NSMakeRect(410.0, 96.0, 320.0, 116.0)] autorelease];
     [noteScroll setBorderType:NSBezelBorder];
@@ -853,20 +854,20 @@
     [noteView setBackgroundColor:[DLUtil nativeInputColor]];
     [noteView setTextColor:[DLUtil nativePrimaryTextColor]];
     [noteView setInsertionPointColor:[DLUtil nativePrimaryTextColor]];
-    [noteView setString:@"Loading note…"];
+    [noteView setString:DLLocalizedString(@"Loading note…")];
     [noteView setEditable:NO];
     [noteView setDelegate:self];
     [noteScroll setDocumentView:noteView];
     [content addSubview:noteScroll];
     profileNoteView = [noteView retain];
     NSTextField *noteStatus = [self profileLabelWithFrame:NSMakeRect(410.0, 65.0, 235.0, 22.0)
-                                                      text:@"Only you can see this note."
+                                                      text:DLLocalizedString(@"Only you can see this note.")
                                                       font:[NSFont systemFontOfSize:10.0]
                                                      color:[DLUtil nativeSecondaryTextColor]];
     [content addSubview:noteStatus];
     profileNoteStatusField = [noteStatus retain];
     NSButton *saveNoteButton = [[[NSButton alloc] initWithFrame:NSMakeRect(650.0, 60.0, 80.0, 30.0)] autorelease];
-    [saveNoteButton setTitle:@"Save Note"];
+    [saveNoteButton setTitle:DLLocalizedString(@"Save Note")];
     [saveNoteButton setBezelStyle:NSRoundedBezelStyle];
     [saveNoteButton setTarget:self];
     [saveNoteButton setAction:@selector(saveProfileNote:)];
@@ -912,7 +913,7 @@
     if ([notification object] != profileNoteView || !profileSavedNote) return;
     [profileNoteSaveButton setEnabled:!profileNoteSaving &&
      ![[profileNoteView string] isEqualToString:profileSavedNote]];
-    [profileNoteStatusField setStringValue:@"Only you can see this note."];
+    [profileNoteStatusField setStringValue:DLLocalizedString(@"Only you can see this note.")];
 }
 
 -(void)saveProfileNote:(id)sender {
@@ -921,7 +922,7 @@
     if ([note isEqualToString:profileSavedNote]) return;
     profileNoteSaving = YES;
     [profileNoteSaveButton setEnabled:NO];
-    [profileNoteStatusField setStringValue:@"Saving…"];
+    [profileNoteStatusField setStringValue:DLLocalizedString(@"Saving…")];
     [[DLController sharedInstance] saveNote:note forUser:profileNoteUser];
 }
 
@@ -929,10 +930,10 @@
     if (!profileNoteView || !profileSavedNote || profileNoteSaving ||
         [[profileNoteView string] isEqualToString:profileSavedNote]) return YES;
     NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-    [alert setMessageText:@"Discard unsaved note?"];
-    [alert setInformativeText:@"Your changes to this private note have not been saved."];
-    [alert addButtonWithTitle:@"Keep Editing"];
-    [alert addButtonWithTitle:@"Discard Changes"];
+    [alert setMessageText:DLLocalizedString(@"Discard unsaved note?")];
+    [alert setInformativeText:DLLocalizedString(@"Your changes to this private note have not been saved.")];
+    [alert addButtonWithTitle:DLLocalizedString(@"Keep Editing")];
+    [alert addButtonWithTitle:DLLocalizedString(@"Discard Changes")];
     return [alert runModal] == NSAlertSecondButtonReturn;
 }
 
@@ -952,8 +953,8 @@
 -(void)userNote:(NSString *)note didLoadForUser:(DLUser *)user error:(BOOL)error {
     if (!profileDetailPanel || ![[user userID] isEqualToString:profileNoteUserID]) return;
     if (error) {
-        [profileNoteView setString:@"Could not load note."];
-        [profileNoteStatusField setStringValue:@"Note unavailable. Reopen the profile to retry."];
+        [profileNoteView setString:DLLocalizedString(@"Could not load note.")];
+        [profileNoteStatusField setStringValue:DLLocalizedString(@"Note unavailable. Reopen the profile to retry.")];
         return;
     }
     [profileSavedNote release];
@@ -961,18 +962,18 @@
     [profileNoteView setString:note];
     [profileNoteView setEditable:YES];
     [profileNoteSaveButton setEnabled:NO];
-    [profileNoteStatusField setStringValue:@"Only you can see this note."];
+    [profileNoteStatusField setStringValue:DLLocalizedString(@"Only you can see this note.")];
 }
 
 -(void)userNote:(NSString *)note didSaveForUser:(DLUser *)user error:(BOOL)error {
     if (!profileDetailPanel || ![[user userID] isEqualToString:profileNoteUserID]) return;
     profileNoteSaving = NO;
     if (error) {
-        [profileNoteStatusField setStringValue:@"Save failed. Please try again."];
+        [profileNoteStatusField setStringValue:DLLocalizedString(@"Save failed. Please try again.")];
     } else {
         [profileSavedNote release];
         profileSavedNote = [note copy];
-        [profileNoteStatusField setStringValue:@"Note saved."];
+        [profileNoteStatusField setStringValue:DLLocalizedString(@"Note saved.")];
     }
     [profileNoteSaveButton setEnabled:![[profileNoteView string] isEqualToString:profileSavedNote]];
 }

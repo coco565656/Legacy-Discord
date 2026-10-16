@@ -4,6 +4,7 @@
 //
 
 #import "DLMessageReadStateController.h"
+#import "DLLocalization.h"
 #import "ChatScrollView.h"
 #import "DLChannel.h"
 #import "DLController.h"
@@ -89,7 +90,7 @@ static NSTextField *DLBannerLabel(NSRect frame, NSColor *color, BOOL bold) {
     unreadMessageBannerLabel = DLBannerLabel(NSMakeRect(12.0, 4.0, MAX(40.0, width - 130.0), 17.0), [NSColor whiteColor], YES);
     [unreadMessageBannerLabel setAutoresizingMask:NSViewWidthSizable];
     [unreadMessageBanner addSubview:unreadMessageBannerLabel];
-    markMessagesReadButton = [DLBannerTextButton(@"Mark As Read", [NSColor whiteColor],
+    markMessagesReadButton = [DLBannerTextButton(DLLocalizedString(@"Mark As Read"), [NSColor whiteColor],
                                                  NSMakeRect(width - 112.0, 3.0, 100.0, 20.0),
                                                  self, @selector(markLatestMessagesRead:)) retain];
     [markMessagesReadButton setAutoresizingMask:NSViewMinXMargin];
@@ -101,9 +102,9 @@ static NSTextField *DLBannerLabel(NSRect frame, NSColor *color, BOOL bold) {
     [(NSView_BGColor *)historyMessageBanner setBackgroundColor:[DLUtil nativeSidebarColor]];
     historyMessageBannerLabel = DLBannerLabel(NSMakeRect(12.0, 6.0, MAX(40.0, width - 150.0), 17.0), [DLUtil nativeSecondaryTextColor], NO);
     [historyMessageBannerLabel setAutoresizingMask:NSViewWidthSizable];
-    [historyMessageBannerLabel setStringValue:@"You're Viewing Older Messages"];
+    [historyMessageBannerLabel setStringValue:DLLocalizedString(@"You're Viewing Older Messages")];
     [historyMessageBanner addSubview:historyMessageBannerLabel];
-    jumpToLatestButton = [DLBannerTextButton(@"Jump To Present", [DLUtil nativePrimaryTextColor],
+    jumpToLatestButton = [DLBannerTextButton(DLLocalizedString(@"Jump To Present"), [DLUtil nativePrimaryTextColor],
                                              NSMakeRect(width - 132.0, 5.0, 120.0, 20.0),
                                              self, @selector(jumpToLatestMessages:)) retain];
     [jumpToLatestButton setAutoresizingMask:NSViewMinXMargin];
@@ -178,8 +179,8 @@ static NSTextField *DLBannerLabel(NSRect frame, NSColor *color, BOOL bold) {
                                          timeStyle:NSDateFormatterShortStyle]
         : @"--:--";
     [unreadMessageBannerLabel setStringValue:
-     [NSString stringWithFormat:@"%ld new message%@ since %@",
-      (long)pendingNewMessageCount, (pendingNewMessageCount == 1 ? @"" : @"s"), timeText]];
+     [NSString stringWithFormat:DLLocalizedString(@"%ld new message%@ since %@"),
+      (long)pendingNewMessageCount, DLPluralSuffix(pendingNewMessageCount), timeText]];
     [self refreshMessageBannerVisibility];
 }
 
