@@ -36,6 +36,24 @@ hides every C++ and OpenSSL symbol:
 The Objective-C app (still built with Xcode 5 for 10.6+) loads the voice
 library at run time only on 10.8+, so the Snow Leopard binary is unchanged.
 
+## Phase 1 result (2026-10-16)
+
+`scripts/fetch-voice-sources.sh` (on a modern Mac) and
+`scripts/build-voice-deps.sh` (on MBP2012) produce
+`libLegacyDiscordVoice.dylib` (about 6 MB): OpenSSL 3.0.15 (static, no-asm),
+mlspp 1cc50a1, libdave 8de72b1, Opus 1.5.2 and `Voice/ldv_transport.c`. It links
+only Security, CoreFoundation and libSystem, targets 10.8, and exports just
+45 `dave*`, 80 `opus_*` and 2 `ldv_transport_*` functions (checked with
+`dyldinfo -export`). `Voice/voice_selftest.c`, built with Xcode 5's clang,
+passes on 10.8.5: DAVE session and MLS key package, Opus round trip and
+AES-256-GCM transport seal/open with tamper detection.
+
+On 10.8 dyld did not resolve `@rpath` through `@executable_path` for the
+test binary, so the app will `dlopen` the library by absolute path from
+`Contents/Frameworks` (only on 10.8+), which also keeps the Snow Leopard
+binary free of any link-time dependency on it. libdave logs verbosely
+(including key packages) by default; the app must install a log sink.
+
 ## Phases
 
 1. Toolchain: build OpenSSL 3, mlspp, libdave, libopus on MBP2012 with a
