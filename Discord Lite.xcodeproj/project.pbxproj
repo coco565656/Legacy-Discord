@@ -110,6 +110,9 @@
 		E30000000000000000000011 /* DLVoiceLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000013 /* DLVoiceLibrary.m */; };
 		E30000000000000000000021 /* DLVoiceConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000023 /* DLVoiceConnection.m */; };
 		E30000000000000000000031 /* DLVoiceManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000033 /* DLVoiceManager.m */; };
+		E30000000000000000000101 /* DLDarkMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000103 /* DLDarkMenu.m */; };
+		E30000000000000000000111 /* DLDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000113 /* DLDialog.m */; };
+		E30000000000000000000121 /* DLServerMenuController.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000123 /* DLServerMenuController.m */; };
 		E30000000000000000000041 /* ldv_protocol.c in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000043 /* ldv_protocol.c */; };
 		E30000000000000000000001 /* DLUserPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000003 /* DLUserPanelController.m */; };
 		F10000000000000000000001 /* DLTwemojiRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* DLTwemojiRenderer.m */; };
@@ -352,6 +355,12 @@
 		E30000000000000000000023 /* DLVoiceConnection.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLVoiceConnection.m; sourceTree = "<group>"; };
 		E30000000000000000000032 /* DLVoiceManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLVoiceManager.h; sourceTree = "<group>"; };
 		E30000000000000000000033 /* DLVoiceManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLVoiceManager.m; sourceTree = "<group>"; };
+		E30000000000000000000102 /* DLDarkMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLDarkMenu.h; sourceTree = "<group>"; };
+		E30000000000000000000103 /* DLDarkMenu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLDarkMenu.m; sourceTree = "<group>"; };
+		E30000000000000000000112 /* DLDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLDialog.h; sourceTree = "<group>"; };
+		E30000000000000000000113 /* DLDialog.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLDialog.m; sourceTree = "<group>"; };
+		E30000000000000000000122 /* DLServerMenuController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLServerMenuController.h; sourceTree = "<group>"; };
+		E30000000000000000000123 /* DLServerMenuController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLServerMenuController.m; sourceTree = "<group>"; };
 		E30000000000000000000043 /* ldv_protocol.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = ldv_protocol.c; path = Voice/ldv_protocol.c; sourceTree = SOURCE_ROOT; };
 		E30000000000000000000002 /* DLUserPanelController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLUserPanelController.h; sourceTree = "<group>"; };
 		E30000000000000000000003 /* DLUserPanelController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLUserPanelController.m; sourceTree = "<group>"; };
@@ -551,6 +560,12 @@
 				E30000000000000000000023 /* DLVoiceConnection.m */,
 				E30000000000000000000032 /* DLVoiceManager.h */,
 				E30000000000000000000033 /* DLVoiceManager.m */,
+				E30000000000000000000102 /* DLDarkMenu.h */,
+				E30000000000000000000103 /* DLDarkMenu.m */,
+				E30000000000000000000112 /* DLDialog.h */,
+				E30000000000000000000113 /* DLDialog.m */,
+				E30000000000000000000122 /* DLServerMenuController.h */,
+				E30000000000000000000123 /* DLServerMenuController.m */,
 				E30000000000000000000043 /* ldv_protocol.c */,
 				E30000000000000000000002 /* DLUserPanelController.h */,
 				E30000000000000000000003 /* DLUserPanelController.m */,
@@ -987,6 +1002,9 @@
 				E30000000000000000000011 /* DLVoiceLibrary.m in Sources */,
 				E30000000000000000000021 /* DLVoiceConnection.m in Sources */,
 				E30000000000000000000031 /* DLVoiceManager.m in Sources */,
+				E30000000000000000000101 /* DLDarkMenu.m in Sources */,
+				E30000000000000000000111 /* DLDialog.m in Sources */,
+				E30000000000000000000121 /* DLServerMenuController.m in Sources */,
 				E30000000000000000000041 /* ldv_protocol.c in Sources */,
 				E30000000000000000000001 /* DLUserPanelController.m in Sources */,
 				87A38DE327337386002385EE /* DLDirectMessageChannel.m in Sources */,

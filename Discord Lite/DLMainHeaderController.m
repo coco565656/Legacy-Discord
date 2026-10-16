@@ -10,6 +10,64 @@
 #import "ChatScrollView.h"
 #import "DLUtil.h"
 #import "DLTwemojiRenderer.h"
+#import "DLDarkMenu.h"
+
+// Clickable server header: hover tint and the chevron that turns into a
+// close mark while the server menu is open, as in the official client.
+@interface DLServerMenuButton : NSView {
+    id target;
+    SEL action;
+    BOOL hovered;
+    BOOL open;
+    NSTrackingArea *trackingArea;
+}
+-(void)setTarget:(id)target action:(SEL)action;
+-(void)setOpen:(BOOL)open;
+@end
+
+@implementation DLServerMenuButton
+-(void)dealloc {
+    if (trackingArea) [self removeTrackingArea:trackingArea];
+    [trackingArea release];
+    [super dealloc];
+}
+-(void)setTarget:(id)inTarget action:(SEL)inAction {
+    target = inTarget;
+    action = inAction;
+}
+-(void)setOpen:(BOOL)inOpen {
+    open = inOpen;
+    [self setNeedsDisplay:YES];
+}
+-(void)setHidden:(BOOL)hidden {
+    [super setHidden:hidden];
+    if (hidden) hovered = NO;
+}
+-(void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (trackingArea) {
+        [self removeTrackingArea:trackingArea];
+        [trackingArea release];
+    }
+    trackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
+        options:(NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect) owner:self userInfo:nil];
+    [self addTrackingArea:trackingArea];
+}
+-(void)mouseEntered:(NSEvent *)event { hovered = YES; [self setNeedsDisplay:YES]; }
+-(void)mouseExited:(NSEvent *)event { hovered = NO; [self setNeedsDisplay:YES]; }
+-(BOOL)acceptsFirstMouse:(NSEvent *)event { return YES; }
+-(void)mouseDown:(NSEvent *)event {
+    if (target && action) [target performSelector:action withObject:self];
+}
+-(void)drawRect:(NSRect)dirtyRect {
+    if (hovered || open) {
+        [[NSColor colorWithCalibratedWhite:1.0 alpha:0.04] setFill];
+        NSRectFillUsingOperation([self bounds], NSCompositeSourceOver);
+    }
+    NSRect icon = NSMakeRect(NSWidth([self bounds]) - 30.0, floor(NSMidY([self bounds]) - 9.0), 18.0, 18.0);
+    [DLDarkMenu drawIconNamed:(open ? @"close" : @"chevron-down") inRect:icon color:[DLUtil nativePrimaryTextColor]];
+}
+@end
 
 @interface DLMainHeaderController ()
 -(void)installHeaderControls;
@@ -59,6 +117,13 @@
                              NSMakeRect(NSWidth(channelHeaderBounds) - 29.0, 10.0, 20.0, 22.0)];
     [connectionStatusField setAutoresizingMask:NSViewMinXMargin | NSViewMinYMargin];
     [channelHeaderView addSubview:connectionStatusField];
+    serverMenuButton = [[DLServerMenuButton alloc] initWithFrame:channelHeaderBounds];
+    [serverMenuButton setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [(DLServerMenuButton *)serverMenuButton setTarget:self action:@selector(serverMenuButtonClicked:)];
+    [serverMenuButton setHidden:YES];
+    [channelHeaderView addSubview:serverMenuButton positioned:NSWindowBelow relativeTo:connectionStatusField];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(darkMenuDidClose:)
+                                                 name:DLDarkMenuDidCloseNotification object:nil];
     NSRect serverLabelFrame = [serverLabel frame];
     serverLabelFrame.size.width = MAX(40.0, NSWidth(channelHeaderBounds) - serverLabelFrame.origin.x - 38.0);
     [serverLabel setFrame:serverLabelFrame];
@@ -206,6 +271,22 @@
     }
 }
 
+-(void)setServerMenuEnabled:(BOOL)enabled {
+    [serverMenuButton setHidden:!enabled];
+    [(DLServerMenuButton *)serverMenuButton setOpen:NO];
+}
+
+-(void)serverMenuButtonClicked:(id)sender {
+    if (![delegate respondsToSelector:@selector(mainHeaderController:didRequestServerMenuFromView:)]) return;
+    [(DLServerMenuButton *)serverMenuButton setOpen:YES];
+    [delegate mainHeaderController:self didRequestServerMenuFromView:channelHeaderView];
+    if (![DLDarkMenu isShown]) [(DLServerMenuButton *)serverMenuButton setOpen:NO];
+}
+
+-(void)darkMenuDidClose:(NSNotification *)notification {
+    [(DLServerMenuButton *)serverMenuButton setOpen:NO];
+}
+
 -(void)setReloadEnabled:(BOOL)enabled {
     [reloadButton setEnabled:enabled];
 }
@@ -299,6 +380,7 @@
     [membersButton release];
     [reloadButton release];
     [connectionStatusField release];
+    [serverMenuButton release];
     [composerView release];
     [chatScrollView release];
     [chatHeaderLabel release];

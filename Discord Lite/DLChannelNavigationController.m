@@ -3,6 +3,7 @@
 //  Legacy Discord
 //
 
+#import "DLDarkMenu.h"
 #import "DLChannelNavigationController.h"
 #import "DLController.h"
 #import "DLVoiceManager.h"
@@ -46,7 +47,9 @@
 // Not calling super avoids AppKit's blue outline around the right-clicked row.
 -(NSMenu *)menuForEvent:(NSEvent *)event {
     menuRow = [self rowAtPoint:[self convertPoint:[event locationInWindow] fromView:nil]];
-    return menuRow >= 0 ? [self menu] : nil;
+    // Shown as the Discord-style dark menu instead of the Aqua one.
+    if (menuRow >= 0 && [self menu]) [DLDarkMenu popUpContextMenu:[self menu] withEvent:event forView:self];
+    return nil;
 }
 
 // A click on a category row expands or collapses it. Done here rather than in

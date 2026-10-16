@@ -16,6 +16,8 @@
 -(void)mainHeaderControllerDidRequestMemberListToggle:(DLMainHeaderController *)controller;
 @optional
 -(void)mainHeaderControllerDidRequestThreadList:(DLMainHeaderController *)controller;
+// The server name was clicked; show the server menu under view.
+-(void)mainHeaderController:(DLMainHeaderController *)controller didRequestServerMenuFromView:(NSView *)view;
 @end
 
 @interface DLMainHeaderController : NSObject {
@@ -32,6 +34,7 @@
     NSSearchField *messageSearchField;
     NSButton *pinsButton;
     NSButton *threadsButton;
+    NSView *serverMenuButton;
     DLMessageSearchController *messageSearchController;
     DLPinsController *pinsController;
     DLWSConnectionState connectionState;
@@ -58,5 +61,7 @@
 // Channel name with its topic after a divider, like the official header.
 -(void)setChannelTitle:(NSString *)title topic:(NSString *)topic;
 -(void)applyCurrentTheme;
+// The server name opens the server menu (not on the Direct Messages home).
+-(void)setServerMenuEnabled:(BOOL)enabled;
 
 @end

@@ -25,6 +25,11 @@
 #import "DLDirectMessageController.h"
 #import "DLMessagePresentationController.h"
 #import "DLMainHeaderController.h"
+#import "DLServerMenuController.h"
+#import "DLDarkMenu.h"
+
+// Server shown by the channel-navigation replay fixture.
+static DLServer *replayServer = nil;
 #if LEGACY_DISCORD_LOCAL_DEV
 #import "DLReplayFixtureProvider.h"
 #endif
@@ -138,6 +143,9 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
                                    showingDirectMessages:NO
                                           selectedChannel:selectedChannel];
         [DLTwemojiRenderer setText:[selectedServer name] forLabel:serverLabel];
+        [replayServer release];
+        replayServer = [selectedServer retain];
+        [mainHeaderController setServerMenuEnabled:YES];
     }
     [messageComposerController prepareForOfflineReplay];
     NSMutableArray *messages = [NSMutableArray array];
@@ -192,6 +200,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
                                                                       chatScrollView:chatScrollView
                                                                         composerView:messageEntryContainerView];
     [mainHeaderController setDelegate:self];
+    [[DLServerMenuController sharedController] setWindow:self.window];
     messageSearchController = [mainHeaderController messageSearchController];
     pinsController = [mainHeaderController pinsController];
     [messageSearchController setDelegate:self];
@@ -666,6 +675,34 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [directMessageController relationshipsDidUpdate];
 }
 
+-(void)mainHeaderController:(DLMainHeaderController *)controller didRequestServerMenuFromView:(NSView *)view {
+    DLServer *server = [[DLController sharedInstance] selectedServer];
+    if (!server) server = replayServer;
+    if (!server || [server isEqual:[[DLController sharedInstance] myServerItem]]) return;
+    NSRect bounds = [view bounds];
+    [DLDarkMenu popUpMenu:[[DLServerMenuController sharedController] headerMenuForServer:server]
+                belowRect:bounds ofView:view width:NSWidth(bounds) - 16.0];
+}
+
+-(void)channelsDidChangeForServer:(DLServer *)server {
+    if (![server isEqual:[[DLController sharedInstance] selectedServer]]) return;
+    [self setServerTitle:[server name]];
+    [channelNavigationController displayChannelItems:[[DLController sharedInstance] channelsForServer:server]];
+}
+
+-(void)serverWasRemoved:(DLServer *)server {
+    DLServer *home = [[DLController sharedInstance] myServerItem];
+    BOOL wasSelected = [server isEqual:[[DLController sharedInstance] selectedServer]];
+    NSMutableArray *servers = [NSMutableArray arrayWithObject:home];
+    NSEnumerator *enumerator = [[[DLController sharedInstance] userServers] objectEnumerator];
+    DLServer *item;
+    while (item = [enumerator nextObject]) if (![item isEqual:home]) [servers addObject:item];
+    [serverNavigationController displayServerItems:servers
+                                    selectedServer:(wasSelected ? home : [[DLController sharedInstance] selectedServer])
+                                          myServer:home];
+    if (wasSelected) [self selectServer:home];
+}
+
 -(void)memberPermissionsDidLoadForServer:(DLServer *)server {
     if (![server isEqual:[[DLController sharedInstance] selectedServer]]) return;
     [channelNavigationController displayChannelItems:[[DLController sharedInstance] channelsForServer:server]];
@@ -725,6 +762,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     }
     [self hideThreadBrowser];
     [mainHeaderController setMembersEnabled:![server isEqual:[[DLController sharedInstance] myServerItem]]];
+    [mainHeaderController setServerMenuEnabled:![server isEqual:[[DLController sharedInstance] myServerItem]]];
     [pinsController setEnabled:NO];
     [messageComposerController setEnabledForChannel:nil];
     [chatScrollView unregisterDraggedTypes];

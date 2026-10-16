@@ -7,6 +7,7 @@
 //
 
 #import "DLServer.h"
+#import "DLController.h"
 
 @implementation DLServer
 
@@ -31,6 +32,15 @@
     if ([myMember isKindOfClass:[NSDictionary class]] && [[myMember objectForKey:@"roles"] isKindOfClass:[NSArray class]]) {
         myRoleIDs = [[myMember objectForKey:@"roles"] copy];
     }
+    if ([myMember isKindOfClass:[NSDictionary class]] && [[myMember objectForKey:@"nick"] isKindOfClass:[NSString class]]) {
+        myNickname = [[myMember objectForKey:@"nick"] copy];
+    }
+    id notifications = [d objectForKey:@"default_message_notifications"];
+    if (![notifications respondsToSelector:@selector(integerValue)]) {
+        notifications = [[d objectForKey:@"properties"] isKindOfClass:[NSDictionary class]]
+            ? [[d objectForKey:@"properties"] objectForKey:@"default_message_notifications"] : nil;
+    }
+    defaultMessageNotifications = [notifications respondsToSelector:@selector(integerValue)] ? [notifications integerValue] : 0;
     NSMutableArray *membersList = [[NSMutableArray alloc] init];
     NSEnumerator *e = [[d objectForKey:@"members"] objectEnumerator];
     NSDictionary *memberData;
@@ -192,6 +202,19 @@
 -(NSArray *)myRoleIDs {
     return myRoleIDs;
 }
+-(NSString *)myNickname {
+    return myNickname;
+}
+
+-(void)setMyNickname:(NSString *)nickname {
+    [myNickname release];
+    myNickname = ([nickname isKindOfClass:[NSString class]] && [nickname length]) ? [nickname copy] : nil;
+}
+
+-(NSInteger)defaultMessageNotifications {
+    return defaultMessageNotifications;
+}
+
 -(NSString *)ownerID {
     return ownerID;
 }
@@ -210,6 +233,20 @@ static unsigned long long DLPermissionValue(id value) {
     if ([value isKindOfClass:[NSString class]]) return strtoull([value UTF8String], NULL, 10);
     if ([value isKindOfClass:[NSNumber class]]) return [value unsignedLongLongValue];
     return 0;
+}
+
+-(BOOL)iHavePermission:(unsigned long long)permission {
+    NSString *me = [[[[DLController existingInstance] myUser] userID] description];
+    if (ownerID && me && [[ownerID description] isEqualToString:me]) return YES;
+    if (!myRoleIDs) return NO;
+    unsigned long long permissions = DLPermissionValue([[self roleWithID:[serverID description]] objectForKey:@"permissions"]);
+    NSEnumerator *roleEnumerator = [myRoleIDs objectEnumerator];
+    id roleID;
+    while (roleID = [roleEnumerator nextObject]) {
+        permissions |= DLPermissionValue([[self roleWithID:[roleID description]] objectForKey:@"permissions"]);
+    }
+    if (permissions & (1ULL << 3)) return YES;
+    return (permissions & permission) == permission;
 }
 
 -(BOOL)canUserWithID:(NSString *)userID viewChannelWithOverwrites:(NSArray *)overwrites {
@@ -260,6 +297,7 @@ static unsigned long long DLPermissionValue(id value) {
 
 -(void)dealloc {
     [ownerID release];
+    [myNickname release];
     [myRoleIDs release];
     [serverID release];
     [name release];

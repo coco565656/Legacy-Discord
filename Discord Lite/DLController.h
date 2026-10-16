@@ -58,7 +58,8 @@ typedef enum {
     RequestIDForumStarter = 23,
     RequestIDCreateForumPost = 24,
     RequestIDDeleteThread = 25,
-    RequestIDOpenDirectMessage = 26
+    RequestIDOpenDirectMessage = 26,
+    RequestIDGeneric = 27
 } RequestID;
 
 @protocol DLLoginDelegate <NSObject>
@@ -93,6 +94,10 @@ typedef enum {
 -(void)channelPins:(NSArray *)messages didLoadForChannel:(DLChannel *)channel;
 -(void)userNote:(NSString *)note didLoadForUser:(DLUser *)user error:(BOOL)error;
 -(void)userNote:(NSString *)note didSaveForUser:(DLUser *)user error:(BOOL)error;
+// A channel was created or removed by this client.
+-(void)channelsDidChangeForServer:(DLServer *)server;
+// The user left the server (or it was removed).
+-(void)serverWasRemoved:(DLServer *)server;
 @end
 
 @interface DLController : NSObject <AsyncHTTPRequestDelegate, DLWSControllerDelegate> {
@@ -199,6 +204,25 @@ typedef enum {
 // Finds the 1:1 DM with user (creating it with POST /users/@me/channels when
 // needed) and posts DLDirectMessageChannelReadyNotification with draft.
 -(void)openDirectMessageWithUser:(DLUser *)user draft:(NSString *)draft;
+// Generic REST call; completion runs on the main thread with the parsed JSON
+// (or nil) and the HTTP status (0 when the request did not complete).
+typedef void (^DLAPICompletion)(id json, NSInteger status);
+-(void)sendAPIRequestWithMethod:(NSString *)method path:(NSString *)path body:(NSDictionary *)body
+                     completion:(DLAPICompletion)completion;
+// Notification settings for a server ("@me" for DMs), as Discord stores them.
+-(NSDictionary *)notificationSettingsForServerID:(NSString *)serverID;
+// user_guild_settings.hide_muted_channels for the server.
+-(BOOL)hidesMutedChannelsInServer:(DLServer *)server;
+// Adds a channel returned by POST /guilds/{id}/channels and refreshes lists.
+-(void)addServerChannelWithData:(NSDictionary *)data;
+// Asks the delegate to rebuild the channel list and header of the server.
+-(void)notifyChannelsChangedForServer:(DLServer *)server;
+// The channel an invite is created for: the selected channel when it is in
+// the server, else the first visible text channel.
+-(DLServerChannel *)defaultInviteChannelForServer:(DLServer *)server;
+// Forgets a server the user left and tells the delegate.
+-(void)removeServer:(DLServer *)server;
+-(void)updateNotificationSettings:(NSDictionary *)changes forServerID:(NSString *)serverID;
 
 
 -(DLServer *)myServerItem;

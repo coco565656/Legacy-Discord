@@ -554,6 +554,43 @@ static DLController* sharedObject = nil;
     [self postDirectMessageReady:channel draft:[[req userInfo] objectForKey:@"draft"]];
 }
 
+-(void)sendAPIRequestWithMethod:(NSString *)method path:(NSString *)path body:(NSDictionary *)body
+                     completion:(DLAPICompletion)completion {
+    AsyncHTTPRequest *req;
+    if ([method isEqualToString:@"GET"]) {
+        req = [[AsyncHTTPGetRequest alloc] init];
+    } else {
+        AsyncHTTPPostRequest *post = [[AsyncHTTPPostRequest alloc] init];
+        [post setMethod:method];
+        [post setParameters:(body ? body : [NSDictionary dictionary])];
+        req = post;
+    }
+    [req setDelegate:self];
+    [req setHeaders:[self requestHeaders]];
+    [req setIdentifier:RequestIDGeneric];
+    if (completion) {
+        DLAPICompletion copy = [[completion copy] autorelease];
+        [req setUserInfo:[NSDictionary dictionaryWithObject:copy forKey:@"completion"]];
+    }
+    [req setUrl:[@API_ROOT stringByAppendingString:path]];
+    [req start];
+}
+
+-(void)handleGenericResponse:(AsyncHTTPRequest *)req {
+    DLAPICompletion completion = [[req userInfo] objectForKey:@"completion"];
+    if (!completion) return;
+    id json = [[req responseData] length] ? [[CJSONDeserializer deserializer] deserialize:[req responseData] error:nil] : nil;
+    completion(json, [req statusCode]);
+}
+
+-(NSDictionary *)notificationSettingsForServerID:(NSString *)serverID {
+    return [guildNotificationSettings objectForKey:[self settingsKeyForServerID:serverID]];
+}
+
+-(void)updateNotificationSettings:(NSDictionary *)changes forServerID:(NSString *)serverID {
+    [self patchNotificationSettings:changes forServerKey:[self settingsKeyForServerID:serverID]];
+}
+
 -(void)loadPinsForChannel:(DLChannel *)channel {
     if (!channel) return;
     AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
@@ -761,6 +798,7 @@ static DLController* sharedObject = nil;
     NSArray *roles = [member objectForKey:@"roles"];
     if ([roles isKindOfClass:[NSArray class]]) [server setMyRoleIDs:roles];
     else [server setMyRolesUnavailable:YES];
+    if ([member isKindOfClass:[NSDictionary class]]) [server setMyNickname:[member objectForKey:@"nick"]];
     if ([delegate respondsToSelector:@selector(memberPermissionsDidLoadForServer:)]) {
         [delegate memberPermissionsDidLoadForServer:server];
     }
@@ -774,6 +812,7 @@ static DLController* sharedObject = nil;
     [s retain];
     selectedServer = s;
     NSMutableArray *channels = [[NSMutableArray alloc] init];
+    BOOL hideMuted = [self hidesMutedChannelsInServer:s];
     
     NSEnumerator *e = [[loadedChannels allKeys] objectEnumerator];
     NSString *channelKey;
@@ -781,6 +820,7 @@ static DLController* sharedObject = nil;
         DLServerChannel *c = [loadedChannels objectForKey:channelKey];
         if ([[c serverID] isEqualToString:[s serverID]] &&
             [s canUserWithID:[[self myUser] userID] viewChannelWithOverwrites:[c permissionOverwrites]]) {
+            if (hideMuted && c != (DLServerChannel *)selectedChannel && [self isChannelMutedIgnoringServer:c]) continue;
             [channels addObject:c];
         }
     }
@@ -1390,6 +1430,9 @@ receivedAroundSearchResult:[context objectForKey:@"messageID"]
         case RequestIDCreateForumPost:
             [self handleCreateForumPostResponse:request];
             break;
+        case RequestIDGeneric:
+            [self handleGenericResponse:request];
+            break;
         case RequestIDOpenDirectMessage:
             [self handleOpenDirectMessageResponse:request];
             break;
@@ -1613,6 +1656,77 @@ static BOOL DLMuteEntryIsActive(NSDictionary *entry) {
     if ([parentID isKindOfClass:[NSString class]] && [parentID length] &&
         [self isChannelMutedItself:[self loadedChannelWithID:parentID]]) return YES;
     return [self isServerMuted:[self loadedServerWithID:[(DLServerChannel *)channel serverID]]];
+}
+
+// Hide Muted Channels hides muted channels and categories, not the whole
+// list of a muted server.
+-(BOOL)isChannelMutedIgnoringServer:(DLChannel *)channel {
+    if ([self isChannelMutedItself:channel]) return YES;
+    if (![channel isKindOfClass:[DLServerChannel class]]) return NO;
+    id parentID = [(DLServerChannel *)channel parentID];
+    return [parentID isKindOfClass:[NSString class]] && [parentID length] &&
+           [self isChannelMutedItself:[self loadedChannelWithID:parentID]];
+}
+
+-(BOOL)hidesMutedChannelsInServer:(DLServer *)server {
+    NSDictionary *settings = [guildNotificationSettings objectForKey:[self settingsKeyForServerID:[server serverID]]];
+    id value = [settings objectForKey:@"hide_muted_channels"];
+    return [value respondsToSelector:@selector(boolValue)] && [value boolValue];
+}
+
+-(void)addServerChannelWithData:(NSDictionary *)data {
+    if (![data isKindOfClass:[NSDictionary class]] || ![data objectForKey:@"id"]) return;
+    NSString *serverID = [[data objectForKey:@"guild_id"] description];
+    if (![loadedChannels objectForKey:[data objectForKey:@"id"]]) {
+        DLServerChannel *channel = [[[DLServerChannel alloc] initWithDict:data] autorelease];
+        [channel setServerID:serverID];
+        [loadedChannels setObject:channel forKey:[data objectForKey:@"id"]];
+    }
+    [self notifyChannelsChangedForServer:[self loadedServerWithID:serverID]];
+}
+
+-(void)notifyChannelsChangedForServer:(DLServer *)server {
+    if (server && [delegate respondsToSelector:@selector(channelsDidChangeForServer:)]) {
+        [delegate channelsDidChangeForServer:server];
+    }
+}
+
+-(DLServerChannel *)defaultInviteChannelForServer:(DLServer *)server {
+    NSString *serverID = [[server serverID] description];
+    if ([selectedChannel isKindOfClass:[DLServerChannel class]] &&
+        [[[(DLServerChannel *)selectedChannel serverID] description] isEqualToString:serverID] &&
+        ![selectedChannel isThread] && [selectedChannel type] != ChannelTypeHeader) {
+        return (DLServerChannel *)selectedChannel;
+    }
+    DLServerChannel *best = nil;
+    NSEnumerator *enumerator = [loadedChannels objectEnumerator];
+    DLChannel *channel;
+    while (channel = [enumerator nextObject]) {
+        if (![channel isKindOfClass:[DLServerChannel class]] || [channel type] != ChannelTypeStandard) continue;
+        DLServerChannel *serverChannel = (DLServerChannel *)channel;
+        if (![[[serverChannel serverID] description] isEqualToString:serverID]) continue;
+        if (![server canUserWithID:[[self myUser] userID] viewChannelWithOverwrites:[serverChannel permissionOverwrites]]) continue;
+        if (!best || [serverChannel position] < [best position]) best = serverChannel;
+    }
+    return best;
+}
+
+-(void)removeServer:(DLServer *)server {
+    if (!server || [server isEqual:[self myServerItem]]) return;
+    [[server retain] autorelease];
+    NSString *serverID = [[server serverID] description];
+    NSEnumerator *enumerator = [[loadedChannels allKeys] objectEnumerator];
+    NSString *channelID;
+    while (channelID = [enumerator nextObject]) {
+        DLChannel *channel = [loadedChannels objectForKey:channelID];
+        if ([channel isKindOfClass:[DLServerChannel class]] &&
+            [[[(DLServerChannel *)channel serverID] description] isEqualToString:serverID]) {
+            [loadedChannels removeObjectForKey:channelID];
+        }
+    }
+    [loadedServers removeObjectForKey:serverID];
+    [guildNotificationSettings removeObjectForKey:serverID];
+    if ([delegate respondsToSelector:@selector(serverWasRemoved:)]) [delegate serverWasRemoved:server];
 }
 
 -(BOOL)suppressesEveryoneInServerWithID:(NSString *)serverID {

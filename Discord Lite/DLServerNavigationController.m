@@ -3,6 +3,7 @@
 //  Legacy Discord
 //
 
+#import "DLServerMenuController.h"
 #import "DLServerNavigationController.h"
 #import "DLController.h"
 #import "DLUtil.h"
@@ -153,75 +154,22 @@
     return (row >= 0 && row < (NSInteger)[serverItems count]) ? [serverItems objectAtIndex:row] : nil;
 }
 
--(NSMenuItem *)menuItemWithTitle:(NSString *)title action:(SEL)action server:(DLServer *)server {
-    NSMenuItem *item = [[[NSMenuItem alloc] initWithTitle:title action:action keyEquivalent:@""] autorelease];
-    [item setTarget:self];
-    [item setRepresentedObject:server];
-    return item;
-}
-
-// Same order as the official server menu, limited to actions this client
-// performs.
+// The official server menu, built by DLServerMenuController.
 -(void)menuNeedsUpdate:(NSMenu *)menu {
     [menu removeAllItems];
-    DLServer *server = [self clickedServer];
-    if (!server) return;
-    BOOL isHome = [server isEqual:[[DLController sharedInstance] myServerItem]];
-    if (isHome) {
-        return;
+    [menu setAutoenablesItems:NO];
+    NSMenu *serverMenu = [[DLServerMenuController sharedController] contextMenuForServer:[self clickedServer]];
+    NSArray *items = [[[serverMenu itemArray] copy] autorelease];
+    NSEnumerator *enumerator = [items objectEnumerator];
+    NSMenuItem *item;
+    while (item = [enumerator nextObject]) {
+        [serverMenu removeItem:item];
+        [menu addItem:item];
     }
-    NSMenuItem *markRead = [self menuItemWithTitle:@"Mark As Read" action:@selector(markServerAsRead:) server:server];
-    [markRead setEnabled:([server hasUnreadMessages] || [server mentionCount] > 0)];
-    [menu addItem:markRead];
-    [menu addItem:[NSMenuItem separatorItem]];
-    if ([[DLController sharedInstance] isServerMuted:server]) {
-        [menu addItem:[self menuItemWithTitle:@"Unmute Server" action:@selector(unmuteServer:) server:server]];
-    } else {
-        NSMenuItem *mute = [[[NSMenuItem alloc] initWithTitle:@"Mute Server" action:NULL keyEquivalent:@""] autorelease];
-        NSMenu *durations = [[[NSMenu alloc] initWithTitle:@""] autorelease];
-        NSArray *titles = [NSArray arrayWithObjects:@"For 15 Minutes", @"For 1 Hour", @"For 3 Hours",
-                           @"For 8 Hours", @"For 24 Hours", @"Until I turn it back on", nil];
-        NSInteger seconds[] = { 15 * 60, 60 * 60, 3 * 60 * 60, 8 * 60 * 60, 24 * 60 * 60, 0 };
-        NSUInteger index;
-        for (index = 0; index < [titles count]; index++) {
-            NSMenuItem *item = [self menuItemWithTitle:[titles objectAtIndex:index] action:@selector(muteServer:) server:server];
-            [item setTag:seconds[index]];
-            [durations addItem:item];
-        }
-        [mute setSubmenu:durations];
-        [menu addItem:mute];
-    }
-    [menu addItem:[NSMenuItem separatorItem]];
-    [menu addItem:[self menuItemWithTitle:@"Copy Server Link" action:@selector(copyServerLink:) server:server]];
-    if ([[DLPreferencesHandler sharedInstance] developerMode]) {
-        [menu addItem:[NSMenuItem separatorItem]];
-        [menu addItem:[self menuItemWithTitle:@"Copy Server ID" action:@selector(copyServerID:) server:server]];
-    }
-}
-
--(void)markServerAsRead:(NSMenuItem *)sender {
-    [[DLController sharedInstance] markServerAsRead:[sender representedObject]];
-    [tableView setNeedsDisplay:YES];
-}
-
--(void)muteServer:(NSMenuItem *)sender {
-    [[DLController sharedInstance] setMuted:YES duration:(NSTimeInterval)[sender tag] forServer:[sender representedObject]];
-}
-
--(void)unmuteServer:(NSMenuItem *)sender {
-    [[DLController sharedInstance] setMuted:NO duration:0 forServer:[sender representedObject]];
 }
 
 -(void)notificationSettingsDidChange:(NSNotification *)notification {
     [tableView setNeedsDisplay:YES];
-}
-
--(void)copyServerLink:(NSMenuItem *)sender {
-    [DLUtil copyStringToPasteboard:[NSString stringWithFormat:@"https://discord.com/channels/%@", [[sender representedObject] serverID]]];
-}
-
--(void)copyServerID:(NSMenuItem *)sender {
-    [DLUtil copyStringToPasteboard:[[[sender representedObject] serverID] description]];
 }
 
 -(void)displayServerItems:(NSArray *)items {

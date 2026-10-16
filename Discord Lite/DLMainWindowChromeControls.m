@@ -1,3 +1,4 @@
+#import "DLDarkMenu.h"
 #import "DLMainWindowChromeControls.h"
 #import "DLUtil.h"
 
@@ -283,7 +284,9 @@
 // delegate builds items for menuRow.
 -(NSMenu *)menuForEvent:(NSEvent *)event {
     menuRow = [self rowAtPoint:[self convertPoint:[event locationInWindow] fromView:nil]];
-    return menuRow >= 0 ? [self menu] : nil;
+    // Shown as the Discord-style dark menu instead of the Aqua one.
+    if (menuRow >= 0 && [self menu]) [DLDarkMenu popUpContextMenu:[self menu] withEvent:event forView:self];
+    return nil;
 }
 @end
 
