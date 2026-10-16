@@ -686,7 +686,7 @@ enum {
                            help:@"Show link previews and rich embeds sent by bots."
                             tag:DLSettingsToggleEmbeds on:[preferences showEmbeds]];
     top = [self addToggleToPane:pane top:top title:@"Automatically convert emoticons in your messages to emoji"
-                           help:@"For example, when you type :-) Legacy Discord will convert it to \U0001F642"
+                           help:@"For example, when you type :-) Legacy Discord will convert it to the smiling face emoji."
                             tag:DLSettingsToggleConvertEmoticons on:[preferences convertEmoticons]];
     [self sectionHeaderInPane:pane top:top text:@"SHOW SPOILER CONTENT"];
     top -= 22.0;
