@@ -28,6 +28,12 @@
     NSMutableArray *themeButtons;
     NSInteger selectedSection;
     NSTextField *cacheUsageField;
+    NSButton *friendEveryoneToggle;
+    NSButton *friendsOfFriendsToggle;
+    NSButton *friendServerMembersToggle;
+    NSArray *explicitFilterRows;
+    NSArray *spoilerRows;
+    NSMutableArray *accountSettingsControls;
 }
 - (IBAction)useProxyToggled:(id)sender;
 - (IBAction)useSOCKSPasswordToggled:(id)sender;

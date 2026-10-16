@@ -27,6 +27,27 @@
 -(void)chatScrollViewBoundsDidChange:(NSNotification *)notification;
 @end
 
+// Notification Center banner for a mention or DM (OS X 10.8+; the class
+// does not exist on 10.6/10.7, so it is looked up at run time).
+static void DLPostDesktopNotification(DLMessage *message, DLChannel *channel, DLServer *server, BOOL isDirect) {
+    Class notificationClass = NSClassFromString(@"NSUserNotification");
+    Class centerClass = NSClassFromString(@"NSUserNotificationCenter");
+    if (!notificationClass || !centerClass) return;
+    DLUser *author = [message author];
+    NSString *name = [author globalName] ? [author globalName] : [author username];
+    NSString *title = name ? name : @"Legacy Discord";
+    if (!isDirect && [channel name]) {
+        title = [NSString stringWithFormat:@"%@ (#%@, %@)", title, [channel name], [server name] ? [server name] : @""];
+    }
+    NSString *body = [[message content] length] ? [message content]
+                   : ([[message attachments] count] ? @"Uploaded a file" : @"Sent a message");
+    id notification = [[[notificationClass alloc] init] autorelease];
+    [notification performSelector:NSSelectorFromString(@"setTitle:") withObject:title];
+    [notification performSelector:NSSelectorFromString(@"setInformativeText:") withObject:body];
+    id center = [centerClass performSelector:NSSelectorFromString(@"defaultUserNotificationCenter")];
+    [center performSelector:NSSelectorFromString(@"deliverNotification:") withObject:notification];
+}
+
 @implementation DLMessagePresentationController
 
 -(id)initWithWindow:(NSWindow *)inWindow
@@ -364,6 +385,9 @@ userProfileController:(DLUserProfileController *)inUserProfileController {
                 [server notifyOfNewMention];
                 if (!muted) {
                     [[DLAudioPlayer sharedInstance] playAudioWithID:AudioIDNotificationNewMention];
+                    if (![NSApp isActive] && [[DLPreferencesHandler sharedInstance] desktopNotifications]) {
+                        DLPostDesktopNotification(message, channel, server, isDirect);
+                    }
                     if (![NSApp isActive] && [[DLPreferencesHandler sharedInstance] bounceDockIcon]) {
                         [NSApp requestUserAttention:NSInformationalRequest];
                     }

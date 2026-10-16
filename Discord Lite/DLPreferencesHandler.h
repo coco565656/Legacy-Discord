@@ -28,6 +28,15 @@
 #define kBounceDockIcon "BounceDockIcon"
 #define DLUnreadBadgePreferenceDidChangeNotification @"DLUnreadBadgePreferenceDidChangeNotification"
 #define kDeveloperMode "DeveloperMode"
+#define kConvertEmoticons "ConvertEmoticons"
+#define kSpoilerDisplay "SpoilerDisplay"
+#define kDesktopNotifications "DesktopNotifications"
+// Show spoiler content: 0 on click, 1 in servers I moderate, 2 always.
+enum {
+    DLSpoilerDisplayOnClick = 0,
+    DLSpoilerDisplayModerated = 1,
+    DLSpoilerDisplayAlways = 2
+};
 // Posted when a setting that changes how messages are rendered is changed.
 // Observers re-render messages and lists; the object is the handler.
 #define DLChatDisplayPreferencesDidChangeNotification @"DLChatDisplayPreferencesDidChangeNotification"
@@ -54,6 +63,9 @@
 -(BOOL)showUnreadBadge;
 -(BOOL)bounceDockIcon;
 -(BOOL)developerMode;
+-(BOOL)convertEmoticons;
+-(NSInteger)spoilerDisplay;
+-(BOOL)desktopNotifications;
 
 -(void)setShouldUseSOCKSProxy:(BOOL)shouldUse;
 -(void)setSOCKSProxyPort:(NSInteger)proxyPort;
@@ -72,5 +84,8 @@
 -(void)setShowUnreadBadge:(BOOL)show;
 -(void)setBounceDockIcon:(BOOL)bounce;
 -(void)setDeveloperMode:(BOOL)enabled;
+-(void)setConvertEmoticons:(BOOL)convert;
+-(void)setSpoilerDisplay:(NSInteger)display;
+-(void)setDesktopNotifications:(BOOL)enabled;
 
 @end

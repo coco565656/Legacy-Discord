@@ -83,6 +83,26 @@ static DLPreferencesHandler* sharedObject = nil;
 -(BOOL)playMentionSound {
     return [self boolForKey:@kPlayMentionSound defaultValue:YES];
 }
+-(BOOL)convertEmoticons {
+    return [self boolForKey:@kConvertEmoticons defaultValue:YES];
+}
+-(NSInteger)spoilerDisplay {
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:@kSpoilerDisplay];
+    return value ? [value integerValue] : DLSpoilerDisplayOnClick;
+}
+-(BOOL)desktopNotifications {
+    return [self boolForKey:@kDesktopNotifications defaultValue:YES];
+}
+-(void)setConvertEmoticons:(BOOL)convert {
+    [self setBool:convert forKey:@kConvertEmoticons notify:nil];
+}
+-(void)setSpoilerDisplay:(NSInteger)display {
+    [[NSUserDefaults standardUserDefaults] setInteger:display forKey:@kSpoilerDisplay];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLChatDisplayPreferencesDidChangeNotification object:self];
+}
+-(void)setDesktopNotifications:(BOOL)enabled {
+    [self setBool:enabled forKey:@kDesktopNotifications notify:nil];
+}
 -(BOOL)showUnreadBadge {
     return [self boolForKey:@kShowUnreadBadge defaultValue:YES];
 }

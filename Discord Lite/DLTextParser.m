@@ -284,6 +284,14 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
     return [DLUtil nativeLinkColor];
 }
 
++(BOOL)revealsSpoilersInServerWithID:(NSString *)serverID {
+    NSInteger display = [[DLPreferencesHandler sharedInstance] spoilerDisplay];
+    if (display == DLSpoilerDisplayAlways) return YES;
+    if (display != DLSpoilerDisplayModerated || !serverID) return NO;
+    DLServer *server = [[DLController existingInstance] loadedServerWithID:serverID];
+    return server && [server iHavePermission:DLPermissionManageMessages];
+}
+
 +(BOOL)isEmojiOnlyMessage:(DLMessage *)m {
     // The "Forwarded" line above keeps a forward at text size.
     if ([m isForwarded]) return NO;
@@ -371,11 +379,17 @@ static void DLApplyQuoteStyling(NSMutableAttributedString *text) {
             DLApplyDelimitedAttributes(as, @"~~", [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName]);
             DLApplyDelimitedAttributes(as, @"*", [NSDictionary dictionaryWithObject:[NSNumber numberWithFloat:0.20] forKey:NSObliquenessAttributeName]);
             NSColor *spoilerColor = [DLUtil nativeServerRailColor];
-            DLApplyDelimitedAttributes(as, @"||", [NSDictionary dictionaryWithObjectsAndKeys:
-                [NSString stringWithFormat:@"%@:", DLSpoilerLinkScheme], NSLinkAttributeName,
-                spoilerColor, NSForegroundColorAttributeName,
-                spoilerColor, NSBackgroundColorAttributeName,
-                @"Spoiler — click to reveal", NSToolTipAttributeName, nil]);
+            if ([DLTextParser revealsSpoilersInServerWithID:[m serverID]]) {
+                // Shown spoilers keep the revealed look: a subtle background.
+                DLApplyDelimitedAttributes(as, @"||", [NSDictionary dictionaryWithObject:[DLUtil nativeSelectionColor]
+                                                                                  forKey:NSBackgroundColorAttributeName]);
+            } else {
+                DLApplyDelimitedAttributes(as, @"||", [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSString stringWithFormat:@"%@:", DLSpoilerLinkScheme], NSLinkAttributeName,
+                    spoilerColor, NSForegroundColorAttributeName,
+                    spoilerColor, NSBackgroundColorAttributeName,
+                    @"Spoiler — click to reveal", NSToolTipAttributeName, nil]);
+            }
             DLApplyQuoteStyling(as);
         }
 

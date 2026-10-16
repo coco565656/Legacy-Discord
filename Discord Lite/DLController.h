@@ -117,6 +117,7 @@ typedef enum {
     DLChannel *selectedChannel;
     DLUser *myUser;
     DLUserSettings *myUserSettings;
+    NSMutableDictionary *accountSettings;
     NSMutableDictionary *loadedServers;
     NSMutableDictionary *loadedChannels;
     NSMutableArray *loadedMessages;
@@ -211,6 +212,10 @@ typedef void (^DLAPICompletion)(id json, NSInteger status);
                      completion:(DLAPICompletion)completion;
 // Notification settings for a server ("@me" for DMs), as Discord stores them.
 -(NSDictionary *)notificationSettingsForServerID:(NSString *)serverID;
+// Account-wide settings from READY user_settings (nil before login), and a
+// PATCH /users/@me/settings that applies the change locally at once.
+-(NSDictionary *)accountSettings;
+-(void)updateAccountSettings:(NSDictionary *)changes;
 // user_guild_settings.hide_muted_channels for the server.
 -(BOOL)hidesMutedChannelsInServer:(DLServer *)server;
 // Adds a channel returned by POST /guilds/{id}/channels and refreshes lists.

@@ -7,6 +7,8 @@
 //
 
 #import "AttachmentPreviewViewController.h"
+#import "DLTextParser.h"
+#import "DLController.h"
 #import <WebKit/WebKit.h>
 #import "DLUtil.h"
 
@@ -76,7 +78,8 @@ static NSImage *DLSpoilerImage(NSData *data) {
         eventHandlerView = [[NSView_Events alloc] initWithFrame:frame];
         [eventHandlerView setDelegate:self];
         [attachmentView addSubview:eventHandlerView];
-        spoilerHidden = [[representedObject filename] hasPrefix:@"SPOILER_"];
+        spoilerHidden = [[representedObject filename] hasPrefix:@"SPOILER_"] &&
+            ![DLTextParser revealsSpoilersInServerWithID:[[[DLController existingInstance] selectedServer] serverID]];
         if (spoilerHidden) {
             spoilerLabel = [[DLSpoilerLabelView alloc] initWithFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
             [spoilerLabel setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];

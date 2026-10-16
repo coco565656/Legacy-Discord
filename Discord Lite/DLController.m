@@ -1878,6 +1878,25 @@ static BOOL DLMuteEntryIsActive(NSDictionary *entry) {
 -(void)wsDidReceiveUserSettingsData:(NSDictionary *)data {
     [myUserSettings release];
     myUserSettings = [[DLUserSettings alloc] initWithDict:data];
+    [accountSettings release];
+    accountSettings = [data isKindOfClass:[NSDictionary class]] ? [data mutableCopy] : nil;
+}
+
+-(NSDictionary *)accountSettings {
+    return accountSettings;
+}
+
+-(void)updateAccountSettings:(NSDictionary *)changes {
+    if (![changes count]) return;
+    if (!accountSettings) accountSettings = [[NSMutableDictionary alloc] init];
+    [accountSettings addEntriesFromDictionary:changes];
+    [self sendAPIRequestWithMethod:@"PATCH" path:@"/users/@me/settings" body:changes completion:^(id json, NSInteger status) {
+        if (status >= 200 && status < 300 && [json isKindOfClass:[NSDictionary class]]) {
+            [accountSettings addEntriesFromDictionary:json];
+        } else {
+            NSLog(@"Account settings update failed (HTTP %ld)", (long)status);
+        }
+    }];
 }
 
 -(void)wsDidLoadAllDataAfterReconnection:(BOOL)didReconnect {

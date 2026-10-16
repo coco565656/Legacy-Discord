@@ -4,6 +4,7 @@
 //
 
 #import "DLMessageComposerController.h"
+#import "DLPreferencesHandler.h"
 #import "DLMessageComposerControls.h"
 #import "DLController.h"
 #import "DLChannel.h"
@@ -41,6 +42,39 @@ static const NSTimeInterval DLComposerTypingSendInterval = 8.0;
 -(BOOL)isEditingTag;
 -(void)updatePendingAttachmentsWithFilePaths:(NSArray *)paths;
 @end
+
+// Settings > Chat > "Automatically convert emoticons": standalone :) and
+// friends become emoji when sent, as in the official client. Messages with
+// code are left alone.
+static NSString *DLConvertEmoticons(NSString *text) {
+    if (![text length] || [text rangeOfString:@"`"].location != NSNotFound) return text;
+    static NSDictionary *emoticons = nil;
+    if (!emoticons) {
+        emoticons = [[NSDictionary alloc] initWithObjectsAndKeys:
+            @"🙂", @":)", @"🙂", @":-)", @"🙁", @":(", @"🙁", @":-(",
+            @"😃", @":D", @"😃", @":-D", @"😉", @";)", @"😉", @";-)",
+            @"😛", @":P", @"😛", @":p", @"😛", @":-P", @"😮", @":O",
+            @"😮", @":o", @"😐", @":|", @"😢", @":'(", @"❤️", @"<3",
+            @"💔", @"</3", @"😎", @"B)", @"😠", @">:(", @"😕", @":/", nil];
+    }
+    NSMutableString *result = [NSMutableString stringWithCapacity:[text length]];
+    NSCharacterSet *whitespace = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+    NSUInteger length = [text length];
+    NSUInteger location = 0;
+    while (location < length) {
+        NSRange space = [text rangeOfCharacterFromSet:whitespace options:0 range:NSMakeRange(location, length - location)];
+        NSUInteger end = (space.location == NSNotFound) ? length : space.location;
+        if (end > location) {
+            NSString *token = [text substringWithRange:NSMakeRange(location, end - location)];
+            NSString *emoji = [emoticons objectForKey:token];
+            [result appendString:(emoji ? emoji : token)];
+        }
+        if (space.location == NSNotFound) break;
+        [result appendString:[text substringWithRange:space]];
+        location = NSMaxRange(space);
+    }
+    return result;
+}
 
 @implementation DLMessageComposerController
 
@@ -763,7 +797,9 @@ static const NSUInteger DLMaxAttachmentsPerMessage = 10;
                     [messageEditor addAttachment:[attachmentView representedObject]];
                 }
                 DLMessage *message = [messageEditor finalizedMessage];
-                [message setContent:[self serializedContent]];
+                NSString *outgoing = [self serializedContent];
+                if ([[DLPreferencesHandler sharedInstance] convertEmoticons]) outgoing = DLConvertEmoticons(outgoing);
+                [message setContent:outgoing];
                 if ([delegate respondsToSelector:@selector(messageComposerController:sendPreparedMessage:toChannel:)]) {
                     [delegate messageComposerController:self sendPreparedMessage:message toChannel:[[DLController sharedInstance] selectedChannel]];
                 }

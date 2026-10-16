@@ -13,19 +13,23 @@
 #import "DLMainWindowChromeControls.h"
 #import "DLTwemojiRenderer.h"
 #import "NSView+BGColor.h"
+#import "DLDialog.h"
+#import "DLPreferencesHandler.h"
 
 static const CGFloat DLSettingsWindowWidth = 760.0;
-static const CGFloat DLSettingsWindowHeight = 520.0;
+static const CGFloat DLSettingsWindowHeight = 600.0;
 static const CGFloat DLSettingsSidebarWidth = 210.0;
 static const CGFloat DLSettingsContentLeft = 38.0;
 static const CGFloat DLSettingsContentWidth = 470.0;
 
 enum {
     DLSettingsSectionMyAccount = 0,
+    DLSettingsSectionContentSocial,
     DLSettingsSectionAppearance,
     DLSettingsSectionAccessibility,
     DLSettingsSectionChat,
     DLSettingsSectionNotifications,
+    DLSettingsSectionKeybinds,
     DLSettingsSectionAdvanced,
     DLSettingsSectionCount
 };
@@ -39,7 +43,13 @@ enum {
     DLSettingsToggleMentionSound,
     DLSettingsToggleUnreadBadge,
     DLSettingsToggleBounceDock,
-    DLSettingsToggleDeveloperMode
+    DLSettingsToggleDeveloperMode,
+    DLSettingsToggleConvertEmoticons,
+    DLSettingsToggleDesktopNotifications,
+    DLSettingsToggleServerDMs,
+    DLSettingsToggleFriendsEveryone,
+    DLSettingsToggleFriendsOfFriends,
+    DLSettingsToggleFriendsServerMembers
 };
 
 #pragma mark - Draw-only controls
@@ -148,6 +158,9 @@ enum {
 -(NSView *)buildChatPane;
 -(NSView *)buildNotificationsPane;
 -(NSView *)buildAdvancedPane;
+-(NSView *)buildContentSocialPane;
+-(NSView *)buildKeybindsPane;
+-(void)syncAccountControls;
 -(void)selectSection:(NSInteger)section;
 -(void)refreshCacheUsage;
 -(void)syncThemeButtons;
@@ -186,11 +199,12 @@ enum {
     // Sidebar entries follow the web client's grouping. Voice & Video is
     // listed but disabled until voice support exists.
     NSArray *entries = [NSArray arrayWithObjects:
-        @"#USER SETTINGS", @"My Account",
-        @"#APP SETTINGS", @"Appearance", @"Accessibility", @"-Voice & Video", @"Chat", @"Notifications", @"Advanced", nil];
-    NSInteger sectionTags[] = { -1, DLSettingsSectionMyAccount, -1, DLSettingsSectionAppearance,
-                                DLSettingsSectionAccessibility, -1, DLSettingsSectionChat,
-                                DLSettingsSectionNotifications, DLSettingsSectionAdvanced };
+        @"#USER SETTINGS", @"My Account", @"Content & Social",
+        @"#APP SETTINGS", @"Appearance", @"Accessibility", @"-Voice & Video", @"Chat", @"Notifications",
+        @"Keybinds", @"Advanced", nil];
+    NSInteger sectionTags[] = { -1, DLSettingsSectionMyAccount, DLSettingsSectionContentSocial, -1,
+                                DLSettingsSectionAppearance, DLSettingsSectionAccessibility, -1, DLSettingsSectionChat,
+                                DLSettingsSectionNotifications, DLSettingsSectionKeybinds, DLSettingsSectionAdvanced };
     settingsSidebarButtons = [[NSMutableArray alloc] init];
     CGFloat y = height - 40.0;
     for (NSUInteger index = 0; index < [entries count]; index++) {
@@ -250,6 +264,8 @@ enum {
     themeButtons = [[NSMutableArray alloc] init];
     NSView *panes[DLSettingsSectionCount];
     panes[DLSettingsSectionMyAccount] = [self buildAccountPane];
+    panes[DLSettingsSectionContentSocial] = [self buildContentSocialPane];
+    panes[DLSettingsSectionKeybinds] = [self buildKeybindsPane];
     panes[DLSettingsSectionAppearance] = [self buildAppearancePane];
     panes[DLSettingsSectionAccessibility] = [self buildAccessibilityPane];
     panes[DLSettingsSectionChat] = [self buildChatPane];
@@ -339,6 +355,185 @@ enum {
     [pane addSubview:toggle];
     [self addDividerToPane:pane y:top - 62.0];
     return top - 78.0;
+}
+
+// A one-line setting with a switch (friend request sources).
+-(DLSettingsSwitch *)addCompactToggleToPane:(NSView *)pane top:(CGFloat)top title:(NSString *)title tag:(NSInteger)tag on:(BOOL)on {
+    NSTextField *titleField = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft, top - 22.0, DLSettingsContentWidth - 60.0, 18.0)
+                                              text:title
+                                              font:[NSFont systemFontOfSize:13.0]
+                                             color:[DLUtil nativePrimaryTextColor]];
+    [titleField setAutoresizingMask:NSViewMinYMargin];
+    [pane addSubview:titleField];
+    DLSettingsSwitch *toggle = [[[DLSettingsSwitch alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft + DLSettingsContentWidth - 42.0, top - 26.0, 42.0, 24.0)] autorelease];
+    [toggle setButtonType:NSToggleButton];
+    [toggle setBordered:NO];
+    [toggle setTitle:@""];
+    [toggle setState:(on ? NSOnState : NSOffState)];
+    [toggle setTag:tag];
+    [toggle setTarget:self];
+    [toggle setAction:@selector(toggleChanged:)];
+    [toggle setAutoresizingMask:NSViewMinYMargin];
+    [pane addSubview:toggle];
+    return toggle;
+}
+
+// Radio group of full-width option rows; returns the rows (tag = value).
+-(NSArray *)addOptionRowsToPane:(NSView *)pane top:(CGFloat)top titles:(NSArray *)titles details:(NSArray *)details
+                         values:(NSArray *)values selected:(NSInteger)selected action:(SEL)action {
+    NSMutableArray *rows = [NSMutableArray array];
+    CGFloat height = details ? 52.0 : 40.0;
+    for (NSUInteger index = 0; index < [titles count]; index++) {
+        DLOptionRow *row = [[[DLOptionRow alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft, top - (index + 1) * (height + 6.0),
+                                                                          DLSettingsContentWidth, height)] autorelease];
+        [row setTitle:[titles objectAtIndex:index]];
+        if (details) [row setDetail:[details objectAtIndex:index]];
+        NSInteger value = [[values objectAtIndex:index] integerValue];
+        [row setTag:value];
+        [row setSelected:(value == selected)];
+        [row setTarget:self];
+        [row setAction:action];
+        [row setAutoresizingMask:NSViewMinYMargin];
+        [pane addSubview:row];
+        [rows addObject:row];
+    }
+    return rows;
+}
+
+-(void)selectOptionRow:(DLOptionRow *)selectedRow inRows:(NSArray *)rows {
+    NSEnumerator *enumerator = [rows objectEnumerator];
+    DLOptionRow *row;
+    while (row = [enumerator nextObject]) [row setSelected:(row == selectedRow)];
+}
+
+-(NSView *)buildContentSocialPane {
+    NSView *pane = [self newPaneWithTitle:@"Content & Social"];
+    CGFloat top = NSHeight([pane bounds]) - 82.0;
+    [self sectionHeaderInPane:pane top:top text:@"DIRECT MESSAGES"];
+    top -= 24.0;
+    top = [self addToggleToPane:pane top:top title:@"Allow DMs from other members in your servers"
+                           help:@"This setting is applied when you join a new server. It does not apply retroactively to your existing servers."
+                            tag:DLSettingsToggleServerDMs on:YES];
+    [self sectionHeaderInPane:pane top:top text:@"WHO CAN SEND YOU A FRIEND REQUEST"];
+    top -= 22.0;
+    friendEveryoneToggle = [[self addCompactToggleToPane:pane top:top title:@"Everyone" tag:DLSettingsToggleFriendsEveryone on:YES] retain];
+    top -= 36.0;
+    friendsOfFriendsToggle = [[self addCompactToggleToPane:pane top:top title:@"Friends of Friends" tag:DLSettingsToggleFriendsOfFriends on:YES] retain];
+    top -= 36.0;
+    friendServerMembersToggle = [[self addCompactToggleToPane:pane top:top title:@"Server Members" tag:DLSettingsToggleFriendsServerMembers on:YES] retain];
+    top -= 44.0;
+    [self addDividerToPane:pane y:top + 6.0];
+    top -= 8.0;
+    [self sectionHeaderInPane:pane top:top text:@"EXPLICIT IMAGE FILTER"];
+    top -= 22.0;
+    explicitFilterRows = [[self addOptionRowsToPane:pane top:top
+        titles:[NSArray arrayWithObjects:@"Keep me safe", @"My friends are nice", @"I live on the edge", nil]
+        details:[NSArray arrayWithObjects:@"Scan images sent in all direct messages.",
+                 @"Scan images sent in direct messages unless they are from a friend.",
+                 @"Do not scan direct messages.", nil]
+        values:[NSArray arrayWithObjects:[NSNumber numberWithInt:2], [NSNumber numberWithInt:1], [NSNumber numberWithInt:0], nil]
+        selected:1 action:@selector(explicitFilterChanged:)] retain];
+    accountSettingsControls = [[NSMutableArray alloc] init];
+    NSEnumerator *enumerator = [[pane subviews] objectEnumerator];
+    NSView *subview;
+    while (subview = [enumerator nextObject]) {
+        if ([subview isKindOfClass:[NSControl class]]) [accountSettingsControls addObject:subview];
+    }
+    return pane;
+}
+
+// Mirrors the account settings into the Content & Social controls.
+-(void)syncAccountControls {
+    NSDictionary *settings = [[DLController sharedInstance] accountSettings];
+    NSEnumerator *enumerator = [accountSettingsControls objectEnumerator];
+    NSControl *control;
+    while (control = [enumerator nextObject]) [control setEnabled:(settings != nil)];
+    if (!settings) return;
+    enumerator = [accountSettingsControls objectEnumerator];
+    while (control = [enumerator nextObject]) {
+        if ([control tag] == DLSettingsToggleServerDMs && [control isKindOfClass:[DLSettingsSwitch class]]) {
+            id restricted = [settings objectForKey:@"default_guilds_restricted"];
+            BOOL restrictedOn = [restricted respondsToSelector:@selector(boolValue)] && [restricted boolValue];
+            [(NSButton *)control setState:(restrictedOn ? NSOffState : NSOnState)];
+        }
+    }
+    // Values may be JSON null; a missing friend_source_flags means everyone.
+    NSDictionary *sources = [settings objectForKey:@"friend_source_flags"];
+    if (![sources isKindOfClass:[NSDictionary class]]) sources = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:@"all"];
+    BOOL everyone = [[sources objectForKey:@"all"] respondsToSelector:@selector(boolValue)] && [[sources objectForKey:@"all"] boolValue];
+    [friendEveryoneToggle setState:(everyone ? NSOnState : NSOffState)];
+    id mutualFriends = [sources objectForKey:@"mutual_friends"];
+    id mutualGuilds = [sources objectForKey:@"mutual_guilds"];
+    [friendsOfFriendsToggle setState:((everyone || ([mutualFriends respondsToSelector:@selector(boolValue)] && [mutualFriends boolValue])) ? NSOnState : NSOffState)];
+    [friendServerMembersToggle setState:((everyone || ([mutualGuilds respondsToSelector:@selector(boolValue)] && [mutualGuilds boolValue])) ? NSOnState : NSOffState)];
+    [friendsOfFriendsToggle setEnabled:!everyone];
+    [friendServerMembersToggle setEnabled:!everyone];
+    NSInteger filter = [[settings objectForKey:@"explicit_content_filter"] respondsToSelector:@selector(integerValue)]
+        ? [[settings objectForKey:@"explicit_content_filter"] integerValue] : 1;
+    enumerator = [explicitFilterRows objectEnumerator];
+    DLOptionRow *row;
+    while (row = [enumerator nextObject]) [row setSelected:([row tag] == filter)];
+    [friendEveryoneToggle setNeedsDisplay:YES];
+    [friendsOfFriendsToggle setNeedsDisplay:YES];
+    [friendServerMembersToggle setNeedsDisplay:YES];
+}
+
+-(void)saveFriendSources {
+    BOOL everyone = [friendEveryoneToggle state] == NSOnState;
+    NSDictionary *sources = everyone ? [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:@"all"]
+        : [NSDictionary dictionaryWithObjectsAndKeys:
+           [NSNumber numberWithBool:([friendsOfFriendsToggle state] == NSOnState)], @"mutual_friends",
+           [NSNumber numberWithBool:([friendServerMembersToggle state] == NSOnState)], @"mutual_guilds", nil];
+    [[DLController sharedInstance] updateAccountSettings:[NSDictionary dictionaryWithObject:sources forKey:@"friend_source_flags"]];
+    [self syncAccountControls];
+}
+
+-(void)explicitFilterChanged:(DLOptionRow *)sender {
+    [self selectOptionRow:sender inRows:explicitFilterRows];
+    [[DLController sharedInstance] updateAccountSettings:
+        [NSDictionary dictionaryWithObject:[NSNumber numberWithInteger:[sender tag]] forKey:@"explicit_content_filter"]];
+}
+
+-(void)spoilerDisplayChanged:(DLOptionRow *)sender {
+    [self selectOptionRow:sender inRows:spoilerRows];
+    [[DLPreferencesHandler sharedInstance] setSpoilerDisplay:[sender tag]];
+}
+
+-(NSView *)buildKeybindsPane {
+    NSView *pane = [self newPaneWithTitle:@"Keybinds"];
+    CGFloat top = NSHeight([pane bounds]) - 82.0;
+    [self sectionHeaderInPane:pane top:top text:@"MESSAGES"];
+    top -= 24.0;
+    NSArray *bindings = [NSArray arrayWithObjects:
+        [NSArray arrayWithObjects:@"Send message", @"Return", nil],
+        [NSArray arrayWithObjects:@"New line in message", @"Shift + Return", nil],
+        [NSArray arrayWithObjects:@"Edit your last message", @"Up Arrow (empty message)", nil],
+        [NSArray arrayWithObjects:@"Cancel reply or editing", @"Escape", nil],
+        [NSArray arrayWithObjects:@"Delete without confirmation", @"Shift + Delete Message", nil],
+        [NSArray arrayWithObjects:@"Search messages", @"\u2318 F", nil],
+        [NSArray arrayWithObjects:@"Open settings", @"\u2318 ,", nil],
+        [NSArray arrayWithObjects:@"Close window", @"\u2318 W", nil],
+        [NSArray arrayWithObjects:@"Quit Legacy Discord", @"\u2318 Q", nil], nil];
+    NSEnumerator *enumerator = [bindings objectEnumerator];
+    NSArray *binding;
+    while (binding = [enumerator nextObject]) {
+        NSTextField *action = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft, top - 22.0, 260.0, 18.0)
+                                              text:[binding objectAtIndex:0]
+                                              font:[NSFont systemFontOfSize:13.0]
+                                             color:[DLUtil nativePrimaryTextColor]];
+        [action setAutoresizingMask:NSViewMinYMargin];
+        [pane addSubview:action];
+        NSTextField *keys = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft + 260.0, top - 22.0, DLSettingsContentWidth - 260.0, 18.0)
+                                            text:[binding objectAtIndex:1]
+                                            font:[NSFont boldSystemFontOfSize:12.0]
+                                           color:[DLUtil nativeSecondaryTextColor]];
+        [keys setAlignment:NSRightTextAlignment];
+        [keys setAutoresizingMask:NSViewMinYMargin];
+        [pane addSubview:keys];
+        [self addDividerToPane:pane y:top - 32.0];
+        top -= 40.0;
+    }
+    return pane;
 }
 
 -(NSView *)buildAccountPane {
@@ -487,9 +682,20 @@ enum {
     top = [self addToggleToPane:pane top:top title:@"Show emoji reactions on messages"
                            help:@"Display the reaction bar under messages that have reactions."
                             tag:DLSettingsToggleReactions on:[preferences showReactions]];
-    [self addToggleToPane:pane top:top title:@"Show embeds and preview website links"
-                     help:@"Show link previews and rich embeds sent by bots."
-                      tag:DLSettingsToggleEmbeds on:[preferences showEmbeds]];
+    top = [self addToggleToPane:pane top:top title:@"Show embeds and preview website links"
+                           help:@"Show link previews and rich embeds sent by bots."
+                            tag:DLSettingsToggleEmbeds on:[preferences showEmbeds]];
+    top = [self addToggleToPane:pane top:top title:@"Automatically convert emoticons in your messages to emoji"
+                           help:@"For example, when you type :-) Legacy Discord will convert it to \U0001F642"
+                            tag:DLSettingsToggleConvertEmoticons on:[preferences convertEmoticons]];
+    [self sectionHeaderInPane:pane top:top text:@"SHOW SPOILER CONTENT"];
+    top -= 22.0;
+    spoilerRows = [[self addOptionRowsToPane:pane top:top
+        titles:[NSArray arrayWithObjects:@"On click", @"On servers I moderate", @"Always", nil]
+        details:nil
+        values:[NSArray arrayWithObjects:[NSNumber numberWithInt:DLSpoilerDisplayOnClick],
+                [NSNumber numberWithInt:DLSpoilerDisplayModerated], [NSNumber numberWithInt:DLSpoilerDisplayAlways], nil]
+        selected:[preferences spoilerDisplay] action:@selector(spoilerDisplayChanged:)] retain];
     return pane;
 }
 
@@ -497,6 +703,12 @@ enum {
     NSView *pane = [self newPaneWithTitle:@"Notifications"];
     CGFloat top = NSHeight([pane bounds]) - 82.0;
     DLPreferencesHandler *preferences = [DLPreferencesHandler sharedInstance];
+    // Notification Center exists from OS X 10.8.
+    BOOL notificationCenter = NSClassFromString(@"NSUserNotificationCenter") != nil;
+    top = [self addToggleToPane:pane top:top title:@"Enable Desktop Notifications"
+                           help:(notificationCenter ? @"Show a Notification Center banner for mentions and direct messages while Legacy Discord is in the background."
+                                                    : @"Desktop notifications need OS X 10.8 or later.")
+                            tag:DLSettingsToggleDesktopNotifications on:(notificationCenter && [preferences desktopNotifications])];
     top = [self addToggleToPane:pane top:top title:@"Enable Unread Message Badge"
                            help:@"Shows a red badge on the Dock icon with your mention and direct message count."
                             tag:DLSettingsToggleUnreadBadge on:[preferences showUnreadBadge]];
@@ -591,6 +803,7 @@ enum {
     if (section < 0 || section >= DLSettingsSectionCount) return;
     selectedSection = section;
     if (section == DLSettingsSectionAdvanced) [self refreshCacheUsage];
+    if (section == DLSettingsSectionContentSocial) [self syncAccountControls];
     for (NSInteger index = 0; index < (NSInteger)[settingsPanes count]; index++) {
         [[settingsPanes objectAtIndex:index] setHidden:(index != section)];
     }
@@ -683,6 +896,17 @@ enum {
         case DLSettingsToggleUnreadBadge: [preferences setShowUnreadBadge:on]; break;
         case DLSettingsToggleBounceDock: [preferences setBounceDockIcon:on]; break;
         case DLSettingsToggleDeveloperMode: [preferences setDeveloperMode:on]; break;
+        case DLSettingsToggleConvertEmoticons: [preferences setConvertEmoticons:on]; break;
+        case DLSettingsToggleDesktopNotifications: [preferences setDesktopNotifications:on]; break;
+        case DLSettingsToggleServerDMs:
+            [[DLController sharedInstance] updateAccountSettings:
+                [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:!on] forKey:@"default_guilds_restricted"]];
+            break;
+        case DLSettingsToggleFriendsEveryone:
+        case DLSettingsToggleFriendsOfFriends:
+        case DLSettingsToggleFriendsServerMembers:
+            [self saveFriendSources];
+            break;
     }
     [sender setNeedsDisplay:YES];
 }
@@ -693,7 +917,7 @@ enum {
 
 #if LEGACY_DISCORD_LOCAL_DEV
 -(void)selectSettingsSectionNamed:(NSString *)name {
-    NSArray *names = [NSArray arrayWithObjects:@"account", @"appearance", @"accessibility", @"chat", @"notifications", @"advanced", nil];
+    NSArray *names = [NSArray arrayWithObjects:@"account", @"content", @"appearance", @"accessibility", @"chat", @"notifications", @"keybinds", @"advanced", nil];
     NSUInteger index = [names indexOfObject:name];
     if (index != NSNotFound) [self selectSection:(NSInteger)index];
 }
@@ -723,6 +947,12 @@ enum {
     [settingsPanes release];
     [settingsSidebarButtons release];
     [themeButtons release];
+    [friendEveryoneToggle release];
+    [friendsOfFriendsToggle release];
+    [friendServerMembersToggle release];
+    [explicitFilterRows release];
+    [spoilerRows release];
+    [accountSettingsControls release];
     [super dealloc];
 }
 @end

@@ -18,6 +18,9 @@ extern NSString * const DLSpoilerLinkScheme;
 +(NSColor *)DEFAULT_TEXT_HIGHLIGHT_COLOR;
 +(NSColor *)DEFAULT_LINK_TEXT_COLOR;
 +(BOOL)isEmojiOnlyMessage:(DLMessage *)m;
+// Settings > Chat > Show spoiler content: YES when spoilers in this server
+// (nil for direct messages) are shown without a click.
++(BOOL)revealsSpoilersInServerWithID:(NSString *)serverID;
 
 +(NSAttributedString *)attributedContentStringForMessage:(DLMessage *)m;
 
