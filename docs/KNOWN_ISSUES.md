@@ -425,6 +425,24 @@ Regression test: test-local-regression.sh --screenshots uses absolute artifact p
 Legacy OS status: NOT APPLICABLE (DevLocal-only script)
 ```
 
+```text
+Issue ID: LD-2026-003
+Found: 2026-10-16
+Priority: P0 (no connectivity at all on AquaProxy networks)
+Screen: any network operation (REST, Gateway, voice signaling)
+Reproduction steps: On Mac OS X 10.6 with AquaProxy installed and set as the system HTTP/HTTPS proxy, launch the app and log in.
+Reproduction rate: 2/2 (Snow Leopard 10.6.8 MacBook-Mid2007, Mountain Lion 10.8.5 MBP 2012)
+Expected result: login, servers, DMs and the gateway connection work with AquaProxy left enabled.
+Actual result (before fix): every TLS connection failed ("SSL connect error" cycles from the gateway, silent REST failures); only localhost reachability checks ran.
+Screenshot: artifacts/snow-leopard/screenshots/20261017-083503-62669.png (after fix: full session)
+Log: /tmp/AquaProxy.error.log on the test machine ("Failed to connect to upstream host gateway.discord.gg:443: dial tcp: lookup gateway.discord.gg: no such host") and /var/log/system.log (app side)
+Crash report: none
+Cause: the app never read the system proxy settings, so nothing pointed at 127.0.0.1:6531; separately, AquaProxy routes TLS 1.3 / ALPN-h2 clients (our bundled curl + OpenSSL 3) to passthrough mode, which makes AquaProxy itself resolve and dial the target host, so a broken system resolver also breaks the proxy path.
+Fix commit: pending user validation (see docs/AQUAPROXY_HANDOFF.md for the full change list)
+Regression test: manual on both remote machines; scripts/verify-source.sh covers transport-safety checks.
+Legacy OS status: PASS on 10.6.8 and 10.8.5 with AquaProxy enabled (2026-10-17 real-device sessions; voice UDP still cannot traverse an HTTP proxy)
+```
+
 ## Entry template
 
 ```text

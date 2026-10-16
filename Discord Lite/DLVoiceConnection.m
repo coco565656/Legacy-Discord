@@ -690,8 +690,9 @@ static void DLVoiceMLSFailure(const char *source, const char *reason, void *user
     curl_easy_setopt(t->ws, CURLOPT_URL, [url UTF8String]);
     curl_easy_setopt(t->ws, CURLOPT_SSL_VERIFYPEER, 1L);
     curl_easy_setopt(t->ws, CURLOPT_SSL_VERIFYHOST, 2L);
-    if ([DLUtil caBundlePath]) curl_easy_setopt(t->ws, CURLOPT_CAINFO, [[DLUtil caBundlePath] fileSystemRepresentation]);
+    if ([DLUtil effectiveCAPath]) curl_easy_setopt(t->ws, CURLOPT_CAINFO, [[DLUtil effectiveCAPath] fileSystemRepresentation]);
     curl_easy_setopt(t->ws, CURLOPT_USERAGENT, [[DLUtil userAgentString] UTF8String]);
+    [DLUtil applySystemProxyToCurlHandle:t->ws url:url];
     curl_easy_setopt(t->ws, CURLOPT_CONNECT_ONLY, 2L);
     curl_easy_setopt(t->ws, CURLOPT_CONNECTTIMEOUT, 15L);
     CURLcode connectResult = curl_easy_perform(t->ws);

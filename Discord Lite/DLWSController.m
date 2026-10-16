@@ -17,6 +17,10 @@
 static DLWSController* sharedObject = nil;
 // READY's geo_ordered_rtc_regions, sent with voice state updates like the official client.
 static NSArray *preferredVoiceRegions = nil;
+// Enqueued as a frame marker; the WebSocket thread turns it into a ping.
+// MITM proxies such as AquaProxy close tunnels that stay quiet for ~30 s,
+// and Discord's heartbeat interval is longer than that.
+static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
 
 -(void)deliverConnectionState:(NSNumber *)stateNumber {
     [delegate wsConnectionStateDidChange:(DLWSConnectionState)[stateNumber intValue]];
@@ -33,6 +37,9 @@ static NSArray *preferredVoiceRegions = nil;
 }
 
 -(BOOL)isDiscordNetworkReachable {
+    // When the system proxy (AquaProxy and friends) carries the connection,
+    // direct-host reachability flags do not describe the usable path.
+    if ([DLUtil systemProxyServesHost:@"discord.com"]) return YES;
     SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(NULL, "discord.com");
     if (!reachability) {
         return YES;
@@ -112,6 +119,12 @@ static NSArray *preferredVoiceRegions = nil;
     NSEnumerator *enumerator = [frames objectEnumerator];
     NSData *frame;
     while (frame = [enumerator nextObject]) {
+        if ([frame isKindOfClass:[NSString class]] && [(NSString *)frame isEqualToString:GatewayKeepalivePingMarker]) {
+            size_t sent = 0;
+            CURLcode pingResult = curl_ws_send(handle, "", 0, &sent, 0, CURLWS_PING);
+            if (pingResult != CURLE_OK) NSLog(@"Gateway keepalive ping failed (%s).", curl_easy_strerror(pingResult));
+            continue;
+        }
         // Gateway frames are small; libcurl either accepts the whole frame or
         // asks to retry it unchanged (CURLE_AGAIN).
         for (int attempt = 0; attempt < 200; attempt++) {
@@ -144,20 +157,28 @@ static NSArray *preferredVoiceRegions = nil;
     CURL *handle = curl_easy_init();
     if (handle) {
         curl_easy_setopt(handle, CURLOPT_URL, WS_GATEWAY_URL);
-        NSString *caBundlePath = [DLUtil caBundlePath];
+        char errorBuffer[CURL_ERROR_SIZE];
+        errorBuffer[0] = '\0';
+        curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, errorBuffer);
+        NSString *caBundlePath = [DLUtil effectiveCAPath];
         curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 1L);
         curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 2L);
         if (caBundlePath) {
             curl_easy_setopt(handle, CURLOPT_CAINFO, [caBundlePath fileSystemRepresentation]);
         }
         curl_easy_setopt(handle, CURLOPT_USERAGENT, [[DLUtil userAgentString] UTF8String]);
+        [DLUtil applySystemProxyToCurlHandle:handle url:[NSString stringWithUTF8String:WS_GATEWAY_URL]];
+        // The upgrade handshake needs HTTP/1.1; never let curl pick h2 here.
+        curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
         curl_easy_setopt(handle, CURLOPT_CONNECT_ONLY, 2L);
         curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT, 20L);
         CURLcode res = curl_easy_perform(handle);
         if (res != CURLE_OK) {
-            printf("WebSocket connect failed: %s\n", curl_easy_strerror(res));
+            NSLog(@"WebSocket connect failed: %s (%s)", curl_easy_strerror(res), errorBuffer[0] ? errorBuffer : "no detail");
         } else {
+            NSLog(@"Gateway connection established.");
             curlWebSocketHandle = handle;
+            [self performSelectorOnMainThread:@selector(scheduleGatewayKeepalive) withObject:nil waitUntilDone:NO];
             NSMutableData *message = [[NSMutableData alloc] init];
             char buffer[16384];
             BOOL open = YES;
@@ -174,7 +195,10 @@ static NSArray *preferredVoiceRegions = nil;
                 [self sendQueuedFramesOnHandle:handle];
                 curl_socket_t socket = CURL_SOCKET_BAD;
                 curl_easy_getinfo(handle, CURLINFO_ACTIVESOCKET, &socket);
-                if (socket == CURL_SOCKET_BAD) open = NO;
+                if (socket == CURL_SOCKET_BAD) {
+                    NSLog(@"Gateway socket disappeared after %.1f seconds.", -[connectedAt timeIntervalSinceNow]);
+                    open = NO;
+                }
                 if (open) {
                     fd_set readSet;
                     FD_ZERO(&readSet);
@@ -187,8 +211,25 @@ static NSArray *preferredVoiceRegions = nil;
                     const struct curl_ws_frame *meta = NULL;
                     CURLcode result = curl_ws_recv(handle, buffer, sizeof(buffer), &received, &meta);
                     if (result == CURLE_AGAIN) break;
-                    if (result != CURLE_OK) { open = NO; break; }
-                    if (meta && (meta->flags & CURLWS_CLOSE)) { open = NO; break; }
+                    if (result != CURLE_OK) {
+                        NSLog(@"Gateway receive failed after %.1f seconds (%s).", -[connectedAt timeIntervalSinceNow], curl_easy_strerror(result));
+                        open = NO;
+                        break;
+                    }
+                    if (meta && (meta->flags & CURLWS_CLOSE)) {
+                        unsigned int closeCode = 0;
+                        if (received >= 2) closeCode = ((unsigned char)buffer[0] << 8) | (unsigned char)buffer[1];
+                        NSLog(@"Gateway close frame after %.1f seconds (code %u).", -[connectedAt timeIntervalSinceNow], closeCode);
+                        open = NO;
+                        break;
+                    }
+                    if (meta && (meta->flags & CURLWS_PONG)) continue;
+                    if (meta && (meta->flags & CURLWS_PING)) {
+                        // A server ping must be answered with the same payload.
+                        size_t sent = 0;
+                        if (received > 0) curl_ws_send(handle, buffer, received, &sent, 0, CURLWS_PONG);
+                        continue;
+                    }
                     if (received > 0) {
                         [message appendBytes:buffer length:received];
                         receivedAnyFrame = YES;
@@ -203,6 +244,7 @@ static NSArray *preferredVoiceRegions = nil;
                 [loopPool release];
             }
             [message release];
+            [self performSelectorOnMainThread:@selector(invalidateGatewayKeepalive) withObject:nil waitUntilDone:NO];
             curlWebSocketHandle = NULL;
         }
         curl_easy_cleanup(handle);
@@ -231,6 +273,7 @@ static NSArray *preferredVoiceRegions = nil;
     [NSThread detachNewThreadSelector:@selector(startWebSocketThread) toTarget:self withObject:nil];
 }
 -(void)stop {
+    [self invalidateGatewayKeepalive];
     if (heartbeatTimer) {
         [heartbeatTimer invalidate];
         heartbeatTimer = nil;
@@ -247,6 +290,28 @@ static NSArray *preferredVoiceRegions = nil;
     if (![textData length]) return;
     @synchronized(outgoingFrames) {
         [outgoingFrames addObject:textData];
+    }
+}
+// Keep the tunnel warmer than MITM-proxy idle deadlines (about 30 s). Pings
+// are queued like other frames so all curl_ws_send calls stay on the
+// WebSocket thread.
+-(void)scheduleGatewayKeepalive {
+    if (connectionState == DLWSConnectionStateDisconnected) return;
+    if (keepaliveTimer) return;
+    keepaliveTimer = [NSTimer timerWithTimeInterval:15.0 target:self selector:@selector(gatewayKeepaliveTick:) userInfo:nil repeats:YES];
+    [[NSRunLoop currentRunLoop] addTimer:keepaliveTimer forMode:NSRunLoopCommonModes];
+}
+-(void)gatewayKeepaliveTick:(NSTimer *)timer {
+    if (!curlWebSocketHandle) return;
+    @synchronized(outgoingFrames) {
+        [outgoingFrames addObject:GatewayKeepalivePingMarker];
+    }
+}
+-(void)invalidateGatewayKeepalive {
+    if (keepaliveTimer) {
+        [keepaliveTimer invalidate];
+        [keepaliveTimer release];
+        keepaliveTimer = nil;
     }
 }
 

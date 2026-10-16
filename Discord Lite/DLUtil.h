@@ -34,6 +34,14 @@
 +(NSString *)superPropertiesString;
 +(NSDictionary *)defaultHTTPPostHeaders;
 +(NSString *)caBundlePath;
+// CA bundle including the macOS Keychain trusted anchors (AquaProxy and
+// similar local MITM proxies install their root certificate there).
++(NSString *)effectiveCAPath;
+// Honor the system Proxy settings (10.6 Network > Advanced > Proxies), which
+// AquaProxy configures. curlHandle is a CURL * to keep this header curl-free.
++(void)applySystemProxyToCurlHandle:(void *)curlHandle url:(NSString *)url;
+// YES when a system proxy would carry connections to this host.
++(BOOL)systemProxyServesHost:(NSString *)host;
 +(NSString *)URLPathEncodedString:(NSString *)string;
 
 // Discord-inspired appearance shared by the legacy-compatible AppKit UI.

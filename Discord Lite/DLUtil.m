@@ -11,8 +11,18 @@
 #import "DLServer.h"
 #import "DLPreferencesHandler.h"
 #import "DLThemes.h"
+#include "curl_headers/curl.h"
+#include <pthread.h>
+#import <Security/Security.h>
+#import <SystemConfiguration/SystemConfiguration.h>
 
 @implementation DLUtil
+
+// System proxy state (SCDynamicStoreCopyProxies) shared by REST and Gateway
+// threads; refreshed at most every 10 seconds.
+static pthread_mutex_t systemProxyInfoMutex = PTHREAD_MUTEX_INITIALIZER;
+static NSDictionary *systemProxyInfoCache = nil;
+static NSDate *systemProxyInfoTimestamp = nil;
 
 static NSDictionary *superPropertiesDict;
 
@@ -147,6 +157,259 @@ static NSDictionary *superPropertiesDict;
 }
 +(NSString *)caBundlePath {
     return [[NSBundle mainBundle] pathForResource:@"cacert" ofType:@"pem"];
+}
+
++(NSString *)wrappedPEMBodyOfBase64String:(NSString *)base64 {
+    NSMutableString *wrapped = [[NSMutableString alloc] init];
+    NSInteger length = [base64 length];
+    for (NSInteger offset = 0; offset < length; offset += 64) {
+        NSInteger end = offset + 64;
+        if (end > length) end = length;
+        [wrapped appendString:[base64 substringWithRange:NSMakeRange(offset, end - offset)]];
+        [wrapped appendString:@"\n"];
+    }
+    return [wrapped autorelease];
+}
+
++(NSData *)keychainAnchorData {
+    // PEM for the certificates that macOS trust settings treat as anchors:
+    // the System and user keychain trust domains. When AquaProxy and similar
+    // local MITM proxies were installed, their root certificate is trusted
+    // there by the user, so verification keeps working through them while
+    // staying strict everywhere else.
+    NSData *beginMarker = [@"-----BEGIN CERTIFICATE-----\n" dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *endMarker = [@"-----END CERTIFICATE-----\n" dataUsingEncoding:NSUTF8StringEncoding];
+    NSMutableData *pemData = [[NSMutableData alloc] init];
+    SecTrustSettingsDomain domains[] = {kSecTrustSettingsDomainSystem, kSecTrustSettingsDomainUser};
+    NSMutableArray *seenCerts = [[NSMutableArray alloc] init];
+    unsigned int domainIndex;
+    for (domainIndex = 0; domainIndex < sizeof(domains) / sizeof(domains[0]); domainIndex++) {
+        CFArrayRef anchors = NULL;
+        OSStatus status = SecTrustSettingsCopyCertificates(domains[domainIndex], &anchors);
+        if (status != errSecSuccess || !anchors) {
+            if (anchors) CFRelease(anchors);
+            continue;
+        }
+        CFIndex anchorCount = CFArrayGetCount(anchors);
+        CFIndex anchorIndex;
+        for (anchorIndex = 0; anchorIndex < anchorCount; anchorIndex++) {
+            SecCertificateRef certificate = (SecCertificateRef)CFArrayGetValueAtIndex(anchors, anchorIndex);
+            if (!certificate || CFGetTypeID(certificate) != SecCertificateGetTypeID()) continue;
+            if ([seenCerts containsObject:((SecCertificateRef)certificate)]) continue;
+            CFDataRef certificateData = SecCertificateCopyData(certificate);
+            if (!certificateData) continue;
+            NSString *base64Body = [NSString encodeBase64WithData:(NSData *)certificateData];
+            CFRelease(certificateData);
+            if (![base64Body length]) continue;
+            // A certificate trusted in both domains appears once in the
+            // combined bundle (the anchor list is deduplicated by instance).
+            [seenCerts addObject:certificate];
+            [pemData appendData:beginMarker];
+            [pemData appendData:[[self wrappedPEMBodyOfBase64String:base64Body] dataUsingEncoding:NSUTF8StringEncoding]];
+            [pemData appendData:endMarker];
+        }
+        CFRelease(anchors);
+    }
+    [seenCerts release];
+    if (![pemData length]) {
+        [pemData release];
+        return nil;
+    }
+    return [pemData autorelease];
+}
+
++(void)refreshSystemProxyInfoCache {
+    SCDynamicStoreRef store = SCDynamicStoreCreate(kCFAllocatorDefault, CFSTR("LegacyDiscord"), NULL, NULL);
+    if (!store) return;
+    CFDictionaryRef proxies = SCDynamicStoreCopyProxies(store);
+    CFRelease(store);
+    if (!proxies) return;
+
+    NSMutableDictionary *info = [[NSMutableDictionary alloc] init];
+    NSString *httpsProxyURL = [self proxyURLFromProxiesDictionary:proxies enableKey:kSCPropNetProxiesHTTPSEnable hostKey:kSCPropNetProxiesHTTPSProxy portKey:kSCPropNetProxiesHTTPSPort];
+    if ([httpsProxyURL length]) [info setObject:httpsProxyURL forKey:@"httpsProxy"];
+    NSString *httpProxyURL = [self proxyURLFromProxiesDictionary:proxies enableKey:kSCPropNetProxiesHTTPEnable hostKey:kSCPropNetProxiesHTTPProxy portKey:kSCPropNetProxiesHTTPPort];
+    if ([httpProxyURL length]) [info setObject:httpProxyURL forKey:@"httpProxy"];
+    CFArrayRef exceptions = (CFArrayRef)CFDictionaryGetValue(proxies, kSCPropNetProxiesExceptionsList);
+    if (exceptions && CFArrayGetCount(exceptions) > 0) {
+        NSMutableArray *bypassList = [[NSMutableArray alloc] init];
+        CFIndex exceptionIndex;
+        for (exceptionIndex = 0; exceptionIndex < CFArrayGetCount(exceptions); exceptionIndex++) {
+            CFStringRef exception = (CFStringRef)CFArrayGetValueAtIndex(exceptions, exceptionIndex);
+            if (exception && CFGetTypeID(exception) == CFStringGetTypeID()) {
+                [bypassList addObject:[(NSString *)exception lowercaseString]];
+            }
+        }
+        if ([bypassList count]) [info setObject:bypassList forKey:@"bypass"];
+        [bypassList release];
+    }
+    CFRelease(proxies);
+
+    pthread_mutex_lock(&systemProxyInfoMutex);
+    [systemProxyInfoCache release];
+    systemProxyInfoCache = [info copy];
+    [systemProxyInfoTimestamp release];
+    systemProxyInfoTimestamp = [[NSDate date] retain];
+    pthread_mutex_unlock(&systemProxyInfoMutex);
+    [info release];
+}
+
++(NSString *)proxyURLFromProxiesDictionary:(CFDictionaryRef)proxies enableKey:(CFStringRef)enableKey hostKey:(CFStringRef)hostKey portKey:(CFStringRef)portKey {
+    CFNumberRef enabledNumber = (CFNumberRef)CFDictionaryGetValue(proxies, enableKey);
+    if (!enabledNumber || CFGetTypeID(enabledNumber) != CFNumberGetTypeID()) return nil;
+    int enabled = 0;
+    if (!CFNumberGetValue(enabledNumber, kCFNumberIntType, &enabled) || !enabled) return nil;
+    CFStringRef host = (CFStringRef)CFDictionaryGetValue(proxies, hostKey);
+    if (!host || CFGetTypeID(host) != CFStringGetTypeID() || CFStringGetLength(host) == 0) return nil;
+    CFNumberRef portNumber = (CFNumberRef)CFDictionaryGetValue(proxies, portKey);
+    int port = 80;
+    if (portNumber && CFGetTypeID(portNumber) == CFNumberGetTypeID()) {
+        if (!CFNumberGetValue(portNumber, kCFNumberIntType, &port) || port <= 0 || port > 65535) return nil;
+    }
+    return [NSString stringWithFormat:@"http://%@:%d", (NSString *)host, port];
+}
+
++(NSString *)systemProxyInfoValue:(NSString *)key {
+    pthread_mutex_lock(&systemProxyInfoMutex);
+    NSDictionary *info = systemProxyInfoCache;
+    NSDate *stamp = systemProxyInfoTimestamp;
+    BOOL stale = (!stamp || -[[NSDate date] timeIntervalSinceDate:stamp] >= 10.0);
+    pthread_mutex_unlock(&systemProxyInfoMutex);
+    if (stale || !info) [self refreshSystemProxyInfoCache];
+    pthread_mutex_lock(&systemProxyInfoMutex);
+    // The value is retained on its own; refresh may safely release the
+    // container dictionary afterwards.
+    NSString *value = [[systemProxyInfoCache objectForKey:key] retain];
+    pthread_mutex_unlock(&systemProxyInfoMutex);
+    return [value autorelease];
+}
+
++(BOOL)hostIsInSystemProxyBypassList:(NSString *)host {
+    if (![host length]) return NO;
+    NSString *lowerHost = [host lowercaseString];
+    for (NSString *entry in [DLUtil systemProxyInfoValue:@"bypass"]) {
+        if (![entry length]) continue;
+        if ([entry hasPrefix:@"."]) {
+            // macOS exception lists commonly use ".example.com" for whole
+            // domain entries, which the browser meaning matches the apex host
+            // and every subdomain.
+            if ([lowerHost hasSuffix:entry] || [lowerHost isEqualToString:[entry substringFromIndex:1]]) return YES;
+        } else if ([entry hasPrefix:@"*."]) {
+            NSString *entryDomain = [entry substringFromIndex:1];
+            if ([lowerHost hasSuffix:entryDomain]) return YES;
+        } else if ([entry isEqualToString:lowerHost]) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
++(NSString *)schemeOfURLString:(NSString *)url {
+    NSRange schemeSeparatorRange = [url rangeOfString:@"://"];
+    if (schemeSeparatorRange.location == NSNotFound || schemeSeparatorRange.location == 0) return nil;
+    return [url substringToIndex:schemeSeparatorRange.location];
+}
+
++(NSString *)hostOfURLString:(NSString *)url {
+    NSRange schemeSeparatorRange = [url rangeOfString:@"://"];
+    if (schemeSeparatorRange.location == NSNotFound) return nil;
+    NSString *authority = [url substringFromIndex:schemeSeparatorRange.location + 3];
+    NSUInteger hostLength = [authority length];
+    NSRange slashRange = [authority rangeOfString:@"/"];
+    if (slashRange.location != NSNotFound) hostLength = slashRange.location;
+    NSRange colonRange = [authority rangeOfString:@":"];
+    if (colonRange.location != NSNotFound && colonRange.location < hostLength) hostLength = colonRange.location;
+    NSRange questionRange = [authority rangeOfString:@"?"];
+    if (questionRange.location != NSNotFound && questionRange.location < hostLength) hostLength = questionRange.location;
+    if (hostLength == 0 || hostLength > [authority length]) return nil;
+    authority = [authority substringToIndex:hostLength];
+    // user:password@host — the host part follows the last @.
+    NSRange atSignRange = [authority rangeOfString:@"@" options:NSBackwardsSearch];
+    if (atSignRange.location != NSNotFound) authority = [authority substringFromIndex:atSignRange.location + 1];
+    if (![authority length]) return nil;
+    return authority;
+}
+
++(void)applySystemProxyToCurlHandle:(void *)curlHandle url:(NSString *)url {
+    CURL *handle = (CURL *)curlHandle;
+    if (!handle || ![url length]) return;
+    // curl URLs are plain strings here; NSURL-style accessors are not available.
+    NSString *scheme = [[self schemeOfURLString:url] lowercaseString];
+    if (![scheme length]) return;
+    // Discord hosts are HTTPS/WSS, but message media can be plain HTTP.
+    NSString *proxyURL = [self systemProxyInfoValue:([scheme isEqualToString:@"https"] || [scheme isEqualToString:@"wss"] ? @"httpsProxy" : @"httpProxy")];
+    if (![proxyURL length]) return;
+    NSString *host = [self hostOfURLString:url];
+    if (![self hostIsInSystemProxyBypassList:host]) {
+        curl_easy_setopt(handle, CURLOPT_PROXY, [proxyURL UTF8String]);
+        // HTTPS/WSS ride an HTTP CONNECT tunnel; plain HTTP traffic is sent
+        // in normal proxy form because MITM proxies serve only TLS CONNECT.
+        if ([scheme isEqualToString:@"https"] || [scheme isEqualToString:@"wss"]) {
+            curl_easy_setopt(handle, CURLOPT_HTTPPROXYTUNNEL, 1L);
+        }
+    }
+}
+
++(BOOL)systemProxyServesHost:(NSString *)host {
+    if ([[self systemProxyInfoValue:@"httpsProxy"] length]) {
+        return ![self hostIsInSystemProxyBypassList:host];
+    }
+    if ([[self systemProxyInfoValue:@"httpProxy"] length]) {
+        return ![self hostIsInSystemProxyBypassList:host];
+    }
+    return NO;
+}
+
++(NSString *)effectiveCAPath {
+    static NSString *cachedEffectiveCAPath = nil;
+    static pthread_mutex_t effectiveCAPathMutex = PTHREAD_MUTEX_INITIALIZER;
+    // The first caller builds the bundle with the mutex held; later callers
+    // receive its result. Concurrent first-calls block briefly at startup.
+    pthread_mutex_lock(&effectiveCAPathMutex);
+    if (cachedEffectiveCAPath) {
+        pthread_mutex_unlock(&effectiveCAPathMutex);
+        return [[cachedEffectiveCAPath retain] autorelease];
+    }
+
+    NSString *bundlePath = [self caBundlePath];
+    if (!bundlePath) {
+        pthread_mutex_unlock(&effectiveCAPathMutex);
+        return nil;
+    }
+    NSData *anchorData = [self keychainAnchorData];
+    if (![anchorData length]) {
+        pthread_mutex_unlock(&effectiveCAPathMutex);
+        return bundlePath;
+    }
+    NSMutableData *combinedData = [[NSMutableData alloc] initWithContentsOfFile:bundlePath];
+    if (![combinedData length]) {
+        pthread_mutex_unlock(&effectiveCAPathMutex);
+        [combinedData release];
+        return bundlePath;
+    }
+    [combinedData appendData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+    [combinedData appendData:anchorData];
+
+    NSArray *cacheDirectories = [[NSFileManager defaultManager] URLsForDirectory:NSCachesDirectory inDomains:NSUserDomainMask];
+    NSString *cacheDirectory = nil;
+    if ([cacheDirectories count] > 0 && [[cacheDirectories objectAtIndex:0] isKindOfClass:[NSURL class]]) {
+        cacheDirectory = [[cacheDirectories objectAtIndex:0] path];
+    }
+    if (![cacheDirectory length]) cacheDirectory = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches"];
+    NSString *combinedPath = [[cacheDirectory stringByAppendingPathComponent:@"LegacyDiscord-ca.pem"] retain];
+    BOOL wroteBundle = [combinedData writeToFile:combinedPath atomically:YES];
+    [combinedData release];
+    if (!wroteBundle) {
+        // A failed combined-bundle write must not break the login attempt.
+        pthread_mutex_unlock(&effectiveCAPathMutex);
+        [combinedPath release];
+        return bundlePath;
+    }
+
+    [cachedEffectiveCAPath release];
+    cachedEffectiveCAPath = combinedPath;
+    pthread_mutex_unlock(&effectiveCAPathMutex);
+    return [[cachedEffectiveCAPath retain] autorelease];
 }
 +(NSString *)URLPathEncodedString:(NSString *)string {
     CFStringRef escaped = CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,

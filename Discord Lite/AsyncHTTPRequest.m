@@ -49,13 +49,14 @@ size_t writeFileData(char *data, size_t size, size_t nmemb, void *ptr) {
         curl_easy_setopt(curlRequestHandle, CURLOPT_MAXREDIRS, 50L);
         curl_easy_setopt(curlRequestHandle, CURLOPT_TCP_KEEPALIVE, 1L);
         curl_easy_setopt(curlRequestHandle, CURLOPT_TIMEOUT, 120L);
-        NSString *caBundlePath = [DLUtil caBundlePath];
+        NSString *caBundlePath = [DLUtil effectiveCAPath];
         curl_easy_setopt(curlRequestHandle, CURLOPT_SSL_VERIFYPEER, 1L);
         curl_easy_setopt(curlRequestHandle, CURLOPT_SSL_VERIFYHOST, 2L);
         if (caBundlePath) {
             curl_easy_setopt(curlRequestHandle, CURLOPT_CAINFO, [caBundlePath fileSystemRepresentation]);
         }
         curl_easy_setopt(curlRequestHandle, CURLOPT_FAILONERROR, 0L);
+        [DLUtil applySystemProxyToCurlHandle:curlRequestHandle url:url];
         
         if (isFileDownload) {
             curl_easy_setopt(curlRequestHandle, CURLOPT_WRITEFUNCTION, writeFileData);

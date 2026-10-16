@@ -90,6 +90,7 @@ typedef enum {
     NSString *sessionID;
     NSTimer *heartbeatTimer;
     NSTimer *reachabilityTimer;
+    NSTimer *keepaliveTimer;
     int heartbeatInterval;
     id<DLWSControllerDelegate> delegate;
     BOOL heartbeatResponseReceived;
