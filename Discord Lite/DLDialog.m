@@ -482,7 +482,7 @@ static NSColor *DLDialogFooterColor(void) { return [DLUtil nativeSidebarColor]; 
 -(void)drawRect:(NSRect)dirtyRect {
     NSRect bounds = [self bounds];
     NSColor *fill = selected ? [DLUtil nativeSelectionColor]
-                  : (hovered ? [[DLUtil nativeSelectionColor] colorWithAlphaComponent:0.6] : [DLUtil nativeSidebarColor]);
+                  : (hovered ? [DLUtil nativeHoverColor] : [DLUtil nativeSidebarColor]);
     [fill setFill];
     [[NSBezierPath bezierPathWithRoundedRect:bounds xRadius:4.0 yRadius:4.0] fill];
     NSRect radio = NSMakeRect(12.0, floor(NSMidY(bounds) - 10.0), 20.0, 20.0);

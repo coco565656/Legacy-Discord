@@ -60,6 +60,7 @@
 +(NSColor *)nativeSecondaryTextColor;
 +(NSColor *)nativeSelectionColor;
 +(NSColor *)nativeSelectedTextColor;
++(NSColor *)nativeHoverColor;
 +(NSColor *)nativeMentionColor;
 +(NSColor *)nativeTagColor;
 +(NSColor *)nativeLinkColor;

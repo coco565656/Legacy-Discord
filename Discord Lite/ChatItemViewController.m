@@ -9,6 +9,7 @@
 #import "ChatItemViewController.h"
 #import "DLLocalization.h"
 #import "DLDarkMenu.h"
+#import "DLThemes.h"
 #import "DLDialog.h"
 #import "DLPreferencesHandler.h"
 #import "DLTwemojiRenderer.h"
@@ -193,6 +194,8 @@ const NSInteger ATTACHMENT_SPACING = 15;
     stickerViews = [[NSMutableArray alloc] init];
     stickersHeight = 0.0;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(cachedEmojiDidUpdate:) name:HTTPCacheDataDidUpdateNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeBackgroundsDidChange:) name:DLThemeGradientDidChangeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeBackgroundsDidChange:) name:DLAppearanceThemeDidChangeNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(serverMembersDidUpdate:) name:DLServerMembersDidUpdateNotification object:nil];
     viewHasLoaded = NO;
     isEditing = NO;
@@ -1856,6 +1859,16 @@ const NSInteger ATTACHMENT_SPACING = 15;
     if (!roles) roles = [[server memberWithUserID:[[representedObject author] userID]] roles];
     NSColor *roleColor = [DLUtil roleColorForRoleIDs:roles inServer:server];
     return roleColor ? roleColor : [DLUtil nativePrimaryTextColor];
+}
+
+// Theme or gradient size changed: plain message backgrounds follow at once
+// (text colors follow when the channel is rendered again).
+-(void)themeBackgroundsDidChange:(NSNotification *)notification {
+    if (!viewHasLoaded) return;
+    NSColor *background = [DLUtil nativeContentColor];
+    [(NSView_BGColor *)self.view setBackgroundColor:background];
+    [chatTextView setBackgroundColor:background];
+    [self.view setNeedsDisplay:YES];
 }
 
 -(void)serverMembersDidUpdate:(NSNotification *)notification {

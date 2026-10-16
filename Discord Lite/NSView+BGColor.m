@@ -12,7 +12,13 @@
 
 - (void)drawRect:(NSRect)dirtyRect {
     [super drawRect:dirtyRect];
-    if (gradientStartColor && gradientEndColor) {
+    // NSGradient needs component colors; a theme pattern fills as a color.
+    BOOL patterned = [[gradientStartColor colorSpaceName] isEqualToString:NSPatternColorSpace] ||
+                     [[gradientEndColor colorSpaceName] isEqualToString:NSPatternColorSpace];
+    if (gradientStartColor && gradientEndColor && patterned) {
+        [gradientStartColor set];
+        NSRectFillUsingOperation([self bounds], NSCompositeSourceOver);
+    } else if (gradientStartColor && gradientEndColor) {
         NSGradient *gradient = [[[NSGradient alloc] initWithStartingColor:gradientStartColor
                                                               endingColor:gradientEndColor] autorelease];
         [gradient drawInRect:[self bounds] angle:90.0];

@@ -15,6 +15,7 @@
 #import "DLTwemojiRenderer.h"
 #import "NSView+BGColor.h"
 #import "DLDialog.h"
+#import "DLThemes.h"
 #import "DLPreferencesHandler.h"
 
 static const CGFloat DLSettingsWindowWidth = 760.0;
@@ -74,7 +75,7 @@ enum {
         [[DLUtil nativeSelectionColor] setFill];
         [[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(bounds, 0.0, 2.0) xRadius:4.0 yRadius:4.0] fill];
     } else if ([[self cell] isHighlighted]) {
-        [[[DLUtil nativeSelectionColor] colorWithAlphaComponent:0.55] setFill];
+        [[DLUtil nativeHoverColor] setFill];
         [[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(bounds, 0.0, 2.0) xRadius:4.0 yRadius:4.0] fill];
     }
     NSColor *color = selected ? [DLUtil nativePrimaryTextColor] : [DLUtil nativeSecondaryTextColor];
@@ -109,9 +110,11 @@ enum {
 @interface DLThemeSwatchButton : NSButton {
     NSColor *swatchColor;
     NSColor *swatchAccentColor;
+    NSImage *swatchImage;
     BOOL selected;
 }
 -(void)setSwatchColor:(NSColor *)color accentColor:(NSColor *)accent;
+-(void)setSwatchImage:(NSImage *)image;
 -(void)setSelected:(BOOL)flag;
 @end
 
@@ -125,7 +128,23 @@ enum {
     selected = flag;
     [self setNeedsDisplay:YES];
 }
+-(void)setSwatchImage:(NSImage *)image {
+    [image retain]; [swatchImage release]; swatchImage = image;
+    [self setNeedsDisplay:YES];
+}
 -(void)drawRect:(NSRect)dirtyRect {
+    if (swatchImage) {
+        // Round Nitro preset with a blurple ring when selected.
+        NSRect circle = NSInsetRect([self bounds], 3.0, 3.0);
+        [swatchImage drawInRect:circle fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0 respectFlipped:YES hints:nil];
+        NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect([self bounds], 1.0, 1.0)];
+        [ring setLineWidth:(selected ? 2.0 : 0.0)];
+        if (selected) {
+            [[NSColor colorWithCalibratedRed:0.345 green:0.396 blue:0.949 alpha:1.0] setStroke];
+            [ring stroke];
+        }
+        return;
+    }
     NSRect bounds = NSInsetRect([self bounds], 3.0, 3.0);
     NSBezierPath *swatch = [NSBezierPath bezierPathWithRoundedRect:bounds xRadius:8.0 yRadius:8.0];
     if (swatchAccentColor) {
@@ -143,6 +162,7 @@ enum {
 -(void)dealloc {
     [swatchColor release];
     [swatchAccentColor release];
+    [swatchImage release];
     [super dealloc];
 }
 @end
@@ -165,6 +185,7 @@ enum {
 -(NSView *)buildLanguagePane;
 -(void)syncAccountControls;
 -(void)selectSection:(NSInteger)section;
+-(void)buildContent;
 -(void)refreshCacheUsage;
 -(void)syncThemeButtons;
 @end
@@ -188,7 +209,41 @@ enum {
     while (oldView = [oldViewEnumerator nextObject]) [oldView setHidden:YES];
     [oldViews release];
 
+    [self buildContent];
+    [self selectSection:DLSettingsSectionAppearance];
+    // Theme changes repaint the settings window too (colors are baked into
+    // its controls when they are built).
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appearanceThemeDidChange:)
+                                                 name:DLAppearanceThemeDidChangeNotification object:nil];
+}
+
+-(void)appearanceThemeDidChange:(NSNotification *)notification {
+    NSInteger section = selectedSection;
+    [contentBackground removeFromSuperview];
+    [contentBackground release];
+    contentBackground = nil;
+    [settingsPanes release]; settingsPanes = nil;
+    [settingsSidebarButtons release]; settingsSidebarButtons = nil;
+    [themeButtons release]; themeButtons = nil;
+    [displayScalePopup release]; displayScalePopup = nil;
+    [chatFontPopup release]; chatFontPopup = nil;
+    [contentHost release]; contentHost = nil;
+    [friendEveryoneToggle release]; friendEveryoneToggle = nil;
+    [friendsOfFriendsToggle release]; friendsOfFriendsToggle = nil;
+    [friendServerMembersToggle release]; friendServerMembersToggle = nil;
+    [explicitFilterRows release]; explicitFilterRows = nil;
+    [spoilerRows release]; spoilerRows = nil;
+    [languageRows release];
+    [contentBackground release];
+    [[NSNotificationCenter defaultCenter] removeObserver:self]; languageRows = nil;
+    [accountSettingsControls release]; accountSettingsControls = nil;
+    [self buildContent];
+    [self selectSection:section];
+}
+
+-(void)buildContent {
     NSView_BGColor *background = [[NSView_BGColor alloc] initWithFrame:[[self.window contentView] bounds]];
+    contentBackground = [background retain];
     [background setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [background setBackgroundColor:[DLUtil nativeContentColor]];
     [[self.window contentView] addSubview:background];
@@ -283,7 +338,6 @@ enum {
     }
 
     [self initPreferences];
-    [self selectSection:DLSettingsSectionAppearance];
     [background release];
     [sidebar release];
 }
@@ -659,7 +713,7 @@ enum {
         [swatch setAutoresizingMask:NSViewMinYMargin];
         [pane addSubview:swatch];
         [themeButtons addObject:swatch];
-        NSTextField *caption = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft + index * 76.0 - 4.0, top - 102.0, 68.0, 16.0)
+        NSTextField *caption = [self labelWithFrame:NSMakeRect(DLSettingsContentLeft + index * 76.0 - 8.0, top - 102.0, 76.0, 16.0)
                                                text:[themeTitles objectAtIndex:index]
                                                font:[NSFont systemFontOfSize:11.0]
                                               color:[DLUtil nativeSecondaryTextColor]];
@@ -669,7 +723,29 @@ enum {
     }
     [self addDividerToPane:pane y:top - 118.0];
 
-    CGFloat rowTop = top - 136.0;
+    // Nitro color themes, in the official order (light presets first).
+    [self sectionHeaderInPane:pane top:top - 136.0 text:DLLocalizedString(@"COLOR THEMES")];
+    NSArray *presets = [DLThemes presets];
+    for (NSUInteger index = 0; index < [presets count]; index++) {
+        NSDictionary *preset = [presets objectAtIndex:index];
+        NSInteger column = index % 9, row = index / 9;
+        DLThemeSwatchButton *swatch = [[[DLThemeSwatchButton alloc] initWithFrame:
+            NSMakeRect(DLSettingsContentLeft + column * 52.0, top - 200.0 - row * 50.0, 46.0, 46.0)] autorelease];
+        [swatch setSwatchImage:[DLThemes swatchImageForPresetID:[preset objectForKey:@"id"] size:40.0]];
+        [swatch setBordered:NO];
+        [swatch setTitle:@""];
+        [swatch setTag:100 + (NSInteger)index];
+        [swatch setToolTip:DLLocalizedString([preset objectForKey:@"name"])];
+        [swatch setTarget:self];
+        [swatch setAction:@selector(themeChanged:)];
+        [swatch setAutoresizingMask:NSViewMinYMargin];
+        [pane addSubview:swatch];
+        [themeButtons addObject:swatch];
+    }
+    CGFloat gridBottom = top - 200.0 - (([presets count] + 8) / 9 - 1) * 50.0;
+    [self addDividerToPane:pane y:gridBottom - 14.0];
+
+    CGFloat rowTop = gridBottom - 30.0;
     [self sectionHeaderInPane:pane top:rowTop text:DLLocalizedString(@"CHAT FONT SCALING")];
     chatFontPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(DLSettingsContentLeft - 2.0, rowTop - 50.0, 220.0, 30.0) pullsDown:NO];
     [chatFontPopup setCell:[[[DLDarkPopUpButtonCell alloc] initTextCell:@"" pullsDown:NO] autorelease]];
@@ -838,10 +914,20 @@ enum {
 }
 
 -(void)syncThemeButtons {
+    NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
     NSArray *themes = [NSArray arrayWithObjects:@"default", @"midnight", @"aurora", nil];
-    NSUInteger selectedIndex = [themes indexOfObject:[[DLPreferencesHandler sharedInstance] appearanceTheme]];
-    for (NSUInteger index = 0; index < [themeButtons count]; index++) {
-        [(DLThemeSwatchButton *)[themeButtons objectAtIndex:index] setSelected:(index == selectedIndex)];
+    NSArray *presets = [DLThemes presets];
+    NSEnumerator *enumerator = [themeButtons objectEnumerator];
+    DLThemeSwatchButton *button;
+    while (button = [enumerator nextObject]) {
+        NSInteger tag = [button tag];
+        NSString *key = nil;
+        if (tag >= 100 && tag - 100 < (NSInteger)[presets count]) {
+            key = [DLNitroThemePrefix stringByAppendingString:[[presets objectAtIndex:(NSUInteger)(tag - 100)] objectForKey:@"id"]];
+        } else if (tag >= 0 && tag < (NSInteger)[themes count]) {
+            key = [themes objectAtIndex:(NSUInteger)tag];
+        }
+        [button setSelected:[key isEqualToString:theme]];
     }
 }
 
@@ -923,11 +1009,16 @@ enum {
 
 - (IBAction)themeChanged:(id)sender {
     NSArray *themes = [NSArray arrayWithObjects:@"default", @"midnight", @"aurora", nil];
-    NSInteger index = [(NSButton *)sender tag];
-    if (index >= 0 && index < (NSInteger)[themes count]) {
-        [[DLPreferencesHandler sharedInstance] setAppearanceTheme:[themes objectAtIndex:index]];
+    NSArray *presets = [DLThemes presets];
+    NSInteger tag = [(NSButton *)sender tag];
+    NSString *theme = nil;
+    if (tag >= 100 && tag - 100 < (NSInteger)[presets count]) {
+        theme = [DLNitroThemePrefix stringByAppendingString:[[presets objectAtIndex:(NSUInteger)(tag - 100)] objectForKey:@"id"]];
+    } else if (tag >= 0 && tag < (NSInteger)[themes count]) {
+        theme = [themes objectAtIndex:(NSUInteger)tag];
     }
-    [self syncThemeButtons];
+    // The setter posts the theme notification, which rebuilds this window.
+    if (theme) [[DLPreferencesHandler sharedInstance] setAppearanceTheme:theme];
 }
 
 -(void)toggleChanged:(id)sender {

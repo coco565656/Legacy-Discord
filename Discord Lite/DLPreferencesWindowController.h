@@ -34,6 +34,7 @@
     NSArray *explicitFilterRows;
     NSArray *spoilerRows;
     NSArray *languageRows;
+    NSView *contentBackground;
     NSMutableArray *accountSettingsControls;
 }
 - (IBAction)useProxyToggled:(id)sender;

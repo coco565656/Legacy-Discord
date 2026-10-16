@@ -48,7 +48,7 @@ static DLPreferencesHandler* sharedObject = nil;
 }
 -(NSString *)appearanceTheme {
     NSString *theme = [[NSUserDefaults standardUserDefaults] stringForKey:@kAppearanceTheme];
-    if ([theme isEqualToString:@"midnight"] || [theme isEqualToString:@"aurora"]) {
+    if ([theme isEqualToString:@"midnight"] || [theme isEqualToString:@"aurora"] || [theme hasPrefix:@"nitro:"]) {
         return theme;
     }
     return @"default";
@@ -174,7 +174,7 @@ static DLPreferencesHandler* sharedObject = nil;
     [[NSNotificationCenter defaultCenter] postNotificationName:DLMessageDisplayScaleDidChangeNotification object:self];
 }
 -(void)setAppearanceTheme:(NSString *)theme {
-    if (![theme isEqualToString:@"midnight"] && ![theme isEqualToString:@"aurora"]) {
+    if (![theme isEqualToString:@"midnight"] && ![theme isEqualToString:@"aurora"] && ![theme hasPrefix:@"nitro:"]) {
         theme = @"default";
     }
     [[NSUserDefaults standardUserDefaults] setObject:theme forKey:@kAppearanceTheme];

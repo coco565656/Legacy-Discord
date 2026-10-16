@@ -1,6 +1,7 @@
 #import "DLDarkMenu.h"
 #import "DLMainWindowChromeControls.h"
 #import "DLUtil.h"
+#import "DLThemes.h"
 
 @implementation DLDarkSplitView
 -(void)drawDividerInRect:(NSRect)rect {
@@ -314,9 +315,16 @@
 -(void)drawRect:(NSRect)dirtyRect {
     NSRect bounds = NSInsetRect([self bounds], 0.5, 0.5);
     CGFloat alpha = [self isEnabled] ? 1.0 : 0.4;
-    NSColor *fill = [[self cell] isHighlighted] ? [[DLUtil nativeInputColor] blendedColorWithFraction:0.15 ofColor:[NSColor whiteColor]]
-                                                 : [DLUtil nativeInputColor];
-    [[fill colorWithAlphaComponent:alpha] setFill];
+    if ([DLThemes isGradientThemeActive]) {
+        // Over a gradient the official secondary button is a translucent tint.
+        CGFloat tint = ([[self cell] isHighlighted] ? 0.18 : 0.1) * alpha;
+        [([DLThemes isLightThemeActive] ? [NSColor colorWithCalibratedWhite:0.0 alpha:tint]
+                                        : [NSColor colorWithCalibratedWhite:1.0 alpha:tint]) setFill];
+    } else {
+        NSColor *fill = [[self cell] isHighlighted] ? [[DLUtil nativeInputColor] blendedColorWithFraction:0.15 ofColor:[NSColor whiteColor]]
+                                                     : [DLUtil nativeInputColor];
+        [[fill colorWithAlphaComponent:alpha] setFill];
+    }
     [[NSBezierPath bezierPathWithRoundedRect:bounds xRadius:4.0 yRadius:4.0] fill];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSFont boldSystemFontOfSize:12.0], NSFontAttributeName,

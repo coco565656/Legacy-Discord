@@ -28,6 +28,7 @@
 #import "DLMainHeaderController.h"
 #import "DLServerMenuController.h"
 #import "DLDarkMenu.h"
+#import "DLThemes.h"
 
 // Server shown by the channel-navigation replay fixture.
 static DLServer *replayServer = nil;
@@ -290,6 +291,14 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
 #endif
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageDisplayScaleDidChange:) name:DLMessageDisplayScaleDidChangeNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appearanceThemeDidChange:) name:DLAppearanceThemeDidChangeNotification object:nil];
+    // Nitro gradients are laid out for the window size, like CSS "cover".
+    [DLThemes setGradientSize:[self.window frame].size];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeGradientDidChange:)
+                                                 name:DLThemeGradientDidChangeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowSizeSettled:)
+                                                 name:NSWindowDidEndLiveResizeNotification object:self.window];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowSizeSettled:)
+                                                 name:NSWindowDidResizeNotification object:self.window];
     // Chat display settings re-render messages the same way a scale change does.
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(messageDisplayScaleDidChange:) name:DLChatDisplayPreferencesDidChangeNotification object:nil];
     // Dock badge: mention and DM counts, like the official client's unread badge.
@@ -549,6 +558,25 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [DLUIDiagnostics recordEvent:@"theme-changed" details:[NSDictionary dictionaryWithObject:[[DLPreferencesHandler sharedInstance] appearanceTheme] forKey:@"theme"]];
 #endif
     [self applyCurrentTheme];
+    // Message text colors are baked into the rendered messages.
+    if ([[DLController sharedInstance] selectedChannel]) [messagePresentationController reloadSelectedChannel];
+}
+
+-(void)themeGradientDidChange:(NSNotification *)notification {
+    [self applyCurrentTheme];
+}
+
+-(void)windowSizeSettled:(NSNotification *)notification {
+    if ([self.window inLiveResize]) return;
+    [DLThemes setGradientSize:[self.window frame].size];
+}
+
+// Marks every view for redrawing (pattern colors are drawn by many views).
+static void DLSetNeedsDisplayRecursively(NSView *view) {
+    [view setNeedsDisplay:YES];
+    NSEnumerator *enumerator = [[view subviews] objectEnumerator];
+    NSView *subview;
+    while (subview = [enumerator nextObject]) DLSetNeedsDisplayRecursively(subview);
 }
 
 -(void)applyCurrentTheme {
@@ -580,7 +608,7 @@ const CGFloat MY_USER_AVATAR_RADIUS = 18.0f;
     [messageComposerController applyCurrentTheme];
     [directMessageController applyCurrentTheme];
     [chatScrollView setNeedsDisplay:YES];
-    [[self.window contentView] setNeedsDisplay:YES];
+    DLSetNeedsDisplayRecursively([[self.window contentView] superview] ? [[self.window contentView] superview] : [self.window contentView]);
 }
 
 -(void)connectionStateDidChange:(DLWSConnectionState)state {

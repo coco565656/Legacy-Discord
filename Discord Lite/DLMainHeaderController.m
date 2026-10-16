@@ -293,6 +293,8 @@
 }
 
 -(void)setChannelTitle:(NSString *)title topic:(NSString *)topic {
+    if (title != channelTitle) { [channelTitle release]; channelTitle = [title copy]; }
+    if (topic != channelTopic) { [channelTopic release]; channelTopic = [topic copy]; }
     NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
     [style setLineBreakMode:NSLineBreakByTruncatingTail];
     NSMutableAttributedString *text = [[[NSMutableAttributedString alloc] initWithString:(title ? title : @"")
@@ -348,6 +350,8 @@
                      range:NSMakeRange(0, [text length])];
         [label setAttributedStringValue:text];
     }
+    if (channelTitle) [self setChannelTitle:channelTitle topic:channelTopic];
+    [serverMenuButton setNeedsDisplay:YES];
     DLDarkSearchFieldCell *searchCell = (DLDarkSearchFieldCell *)[messageSearchField cell];
     [searchCell setTextColor:[DLUtil nativePrimaryTextColor]];
     [messageSearchField setBackgroundColor:[DLUtil nativeInputColor]];
@@ -386,6 +390,8 @@
     [chatScrollView release];
     [chatHeaderLabel release];
     [serverLabel release];
+    [channelTitle release];
+    [channelTopic release];
     [chatHeaderView release];
     [channelHeaderView release];
     [super dealloc];

@@ -38,6 +38,8 @@
     DLMessageSearchController *messageSearchController;
     DLPinsController *pinsController;
     DLWSConnectionState connectionState;
+    NSString *channelTitle;
+    NSString *channelTopic;
 }
 
 -(id)initWithChannelHeaderView:(NSView *)channelHeaderView

@@ -265,7 +265,7 @@
         [[NSBezierPath bezierPathWithRoundedRect:selectionRect xRadius:5.0 yRadius:5.0] fill];
     } else if (!isCategory && hovered) {
         NSRect hoverRect = NSInsetRect(contentRect, 0.0, 2.0);
-        [[[DLUtil nativeSelectionColor] colorWithAlphaComponent:0.55] set];
+        [[DLUtil nativeHoverColor] set];
         [[NSBezierPath bezierPathWithRoundedRect:hoverRect xRadius:5.0 yRadius:5.0] fill];
     }
 

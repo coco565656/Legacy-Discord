@@ -255,6 +255,7 @@ pendingAttachmentScroller:(NSScroller_BGColor *)inPendingAttachmentScroller {
     [textScroller setBackgroundColor:[textView backgroundColor]];
     [tagSelectionScroller setBackgroundColor:[tagSelectionScrollView backgroundColor]];
     [pendingAttachmentScroller setBackgroundColor:[pendingAttachmentsScrollView backgroundColor]];
+    if ([textView respondsToSelector:@selector(refreshPlaceholderColors)]) [(id)textView refreshPlaceholderColors];
     [backgroundView setNeedsDisplay:YES];
     [containerView setNeedsDisplay:YES];
 }

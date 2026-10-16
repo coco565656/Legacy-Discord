@@ -10,6 +10,7 @@
 #import "ChatScrollView.h"
 #import "NSView+BGColor.h"
 #import "DLUtil.h"
+#import "DLThemes.h"
 #import "NSScroller+BGColor.h"
 #import "DLMainWindowChromeControls.h"
 #import "DLTwemojiRenderer.h"
@@ -99,7 +100,7 @@ static NSArray *DLAppliedTagNames(DLServerChannel *thread) {
     BOOL flipped = [controlView isFlipped];
     NSRect card = NSInsetRect(cellFrame, DLForumCardMargin, 4.0);
     NSColor *background = [DLUtil nativeSidebarColor];
-    if (hovered) background = [background blendedColorWithFraction:0.06 ofColor:[NSColor whiteColor]];
+    if (hovered) background = [DLThemes isGradientThemeActive] ? [DLUtil nativeHoverColor] : [background blendedColorWithFraction:0.06 ofColor:[NSColor whiteColor]];
     [background set];
     [[NSBezierPath bezierPathWithRoundedRect:card xRadius:8.0 yRadius:8.0] fill];
 

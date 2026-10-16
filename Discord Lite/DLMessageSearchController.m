@@ -14,6 +14,7 @@
 #import "ChatItemViewController.h"
 #import "NSView+BGColor.h"
 #import "DLUtil.h"
+#import "DLThemes.h"
 #import "NSScroller+BGColor.h"
 
 @interface DLSearchResultCell : NSCell {
@@ -46,7 +47,7 @@
     visibleFrame.size.height = NSHeight(cellFrame);
     NSRect cardRect = NSInsetRect(visibleFrame, 8.0, 4.0);
     NSColor *background = [DLUtil nativeContentColor];
-    if (hovered) background = [background blendedColorWithFraction:0.05 ofColor:[NSColor whiteColor]];
+    if (hovered) background = [DLThemes isGradientThemeActive] ? [DLUtil nativeHoverColor] : [background blendedColorWithFraction:0.05 ofColor:[NSColor whiteColor]];
     [background set];
     [[NSBezierPath bezierPathWithRoundedRect:cardRect xRadius:8.0 yRadius:8.0] fill];
 

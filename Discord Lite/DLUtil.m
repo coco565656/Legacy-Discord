@@ -10,6 +10,7 @@
 #import "DLLocalization.h"
 #import "DLServer.h"
 #import "DLPreferencesHandler.h"
+#import "DLThemes.h"
 
 @implementation DLUtil
 
@@ -157,18 +158,21 @@ static NSDictionary *superPropertiesDict;
 }
 
 +(NSColor *)nativeServerRailColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceLowest];
     NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.055 green:0.059 blue:0.075 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.075 green:0.094 blue:0.110 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.118 green:0.122 blue:0.133 alpha:1.0];
 }
 +(NSColor *)nativeSidebarColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceLower];
     NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.090 green:0.098 blue:0.125 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.105 green:0.145 blue:0.145 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.169 green:0.176 blue:0.192 alpha:1.0];
 }
 +(NSColor *)nativeContentColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceChat];
     return [self nativeContentColorForTheme:[[DLPreferencesHandler sharedInstance] appearanceTheme]];
 }
 +(NSColor *)nativeContentColorForTheme:(NSString *)theme {
@@ -180,18 +184,21 @@ static NSDictionary *superPropertiesDict;
     return [self nativeSidebarColor];
 }
 +(NSColor *)nativeInputColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceHigher];
     NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.145 green:0.153 blue:0.188 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.165 green:0.225 blue:0.205 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.220 green:0.227 blue:0.247 alpha:1.0];
 }
 +(NSColor *)nativeBorderColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceBorder];
     NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.045 green:0.047 blue:0.063 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.060 green:0.110 blue:0.105 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.125 green:0.129 blue:0.141 alpha:1.0];
 }
 +(NSColor *)nativeScrollerKnobColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceHighest];
     NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.035 green:0.038 blue:0.050 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.045 green:0.075 blue:0.072 alpha:1.0];
@@ -205,6 +212,7 @@ static NSDictionary *superPropertiesDict;
 }
 // The account panel under the channel list is one step darker than the sidebar.
 +(NSColor *)nativeUserPanelColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceLow];
     NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.072 green:0.078 blue:0.102 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.088 green:0.122 blue:0.122 alpha:1.0];
@@ -254,36 +262,52 @@ static NSDictionary *superPropertiesDict;
     return bestColor;
 }
 +(NSColor *)nativeHeaderTopColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceChat];
     if ([[[DLPreferencesHandler sharedInstance] appearanceTheme] isEqualToString:@"aurora"]) {
         return [NSColor colorWithCalibratedRed:0.105 green:0.175 blue:0.155 alpha:1.0];
     }
     return [self nativeContentColor];
 }
 +(NSColor *)nativeHeaderBottomColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceChat];
     if ([[[DLPreferencesHandler sharedInstance] appearanceTheme] isEqualToString:@"aurora"]) {
         return [NSColor colorWithCalibratedRed:0.145 green:0.170 blue:0.235 alpha:1.0];
     }
     return [self nativeContentColor];
 }
 +(NSColor *)nativePrimaryTextColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes primaryTextColor];
     return [NSColor colorWithCalibratedRed:0.949 green:0.953 blue:0.961 alpha:1.0];
 }
 +(NSColor *)nativeSecondaryTextColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes secondaryTextColor];
     return [NSColor colorWithCalibratedRed:0.710 green:0.729 blue:0.757 alpha:1.0];
 }
 +(NSColor *)nativeSelectionColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceSelected];
     NSString *theme = [[DLPreferencesHandler sharedInstance] appearanceTheme];
     if ([theme isEqualToString:@"midnight"]) return [NSColor colorWithCalibratedRed:0.200 green:0.210 blue:0.270 alpha:1.0];
     if ([theme isEqualToString:@"aurora"]) return [NSColor colorWithCalibratedRed:0.205 green:0.315 blue:0.285 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.251 green:0.259 blue:0.286 alpha:1.0];
 }
+// Row and card hover: a solid color (or the gradient pattern) a step lighter
+// than the list it is drawn on.
++(NSColor *)nativeHoverColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes colorForSurface:DLThemeSurfaceHover];
+    return [[self nativeSelectionColor] blendedColorWithFraction:0.45 ofColor:[self nativeSidebarColor]];
+}
 +(NSColor *)nativeSelectedTextColor {
+    if ([DLThemes isGradientThemeActive]) return [DLThemes primaryTextColor];
     return [NSColor colorWithCalibratedRed:0.949 green:0.953 blue:0.961 alpha:1.0];
 }
 +(NSColor *)nativeMentionColor {
+    // Light Nitro themes: the light-theme mention colors.
+    if ([DLThemes isLightThemeActive]) return [NSColor colorWithCalibratedRed:0.996 green:0.957 blue:0.851 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.250 green:0.257 blue:0.333 alpha:1.0];
 }
 +(NSColor *)nativeTagColor {
+    // Light Nitro themes: the light-theme mention colors.
+    if ([DLThemes isLightThemeActive]) return [NSColor colorWithCalibratedRed:0.851 green:0.871 blue:0.992 alpha:1.0];
     return [NSColor colorWithCalibratedRed:0.255 green:0.275 blue:0.459 alpha:1.0];
 }
 +(NSColor *)nativeLinkColor {

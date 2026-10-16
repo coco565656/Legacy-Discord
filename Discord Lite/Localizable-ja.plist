@@ -114,6 +114,8 @@ CONNECTIONS
 	<string>戻る</string>
 	<key>Blocked</key>
 	<string>ブロック中</string>
+	<key>Blurple Twilight</key>
+	<string>ブループルトワイライト</string>
 	<key>Bounce Dock Icon</key>
 	<string>Dockアイコンを弾ませる</string>
 	<key>Bounces the Dock icon once when you are mentioned or receive a direct message while Legacy Discord is in the background.</key>
@@ -122,6 +124,8 @@ CONNECTIONS
 	<string>すべてを手前に移動</string>
 	<key>CHAT FONT SCALING</key>
 	<string>チャットのフォントサイズ</string>
+	<key>COLOR THEMES</key>
+	<string>カラーテーマ</string>
 	<key>CONNECTIONS
 %@</key>
 	<string>接続
@@ -150,6 +154,10 @@ CONNECTIONS
 	<string>スペルと同時に文法をチェック</string>
 	<key>Check Spelling While Typing</key>
 	<string>入力中にスペルをチェック</string>
+	<key>Chroma Glow</key>
+	<string>クロマグロー</string>
+	<key>Citrus Sherbert</key>
+	<string>シトラスシャーベット</string>
 	<key>Clear Cache</key>
 	<string>キャッシュを削除</string>
 	<key>Close</key>
@@ -198,6 +206,8 @@ CONNECTIONS
 	<string>ユーザーIDをコピー</string>
 	<key>Correct Spelling Automatically</key>
 	<string>スペルを自動的に修正</string>
+	<key>Cotton Candy</key>
+	<string>コットンキャンディ</string>
 	<key>Could not connect to the Discord server. Please check your Internet connection and try again.</key>
 	<string>Discordのサーバーに接続できませんでした。インターネット接続を確認して、もう一度お試しください。</string>
 	<key>Could not load note.</key>
@@ -214,6 +224,8 @@ CONNECTIONS
 	<string>整理された話し合いの場を作りましょう</string>
 	<key>Creating an invite…</key>
 	<string>招待を作成中…</string>
+	<key>Crimson Moon</key>
+	<string>クリムゾンムーン</string>
 	<key>Cut</key>
 	<string>カット</string>
 	<key>DIRECT MESSAGES</key>
@@ -238,6 +250,8 @@ CONNECTIONS
 	<string>スレッドを削除</string>
 	<key>Delete without confirmation</key>
 	<string>確認なしで削除</string>
+	<key>Desert Khaki</key>
+	<string>デザートカーキ</string>
 	<key>Desktop notifications need OS X 10.8 or later.</key>
 	<string>デスクトップ通知にはOS X 10.8以降が必要です。</string>
 	<key>Developer Mode</key>
@@ -260,6 +274,8 @@ CONNECTIONS
 	<string>ダイレクトメッセージをスキャンしない。</string>
 	<key>Done</key>
 	<string>完了</string>
+	<key>Dusk</key>
+	<string>夕暮れ</string>
 	<key>EMAIL OR PHONE NUMBER</key>
 	<string>メールアドレスまたは電話番号</string>
 	<key>EXPLICIT IMAGE FILTER</key>
@@ -332,12 +348,16 @@ CONNECTIONS
 	<string>8時間</string>
 	<key>For example, when you type :-) Legacy Discord will convert it to the smiling face emoji.</key>
 	<string>例えば :-) と入力すると、Legacy Discordが笑顔の絵文字に変換します。</string>
+	<key>Forest</key>
+	<string>森</string>
 	<key>Forum</key>
 	<string>フォーラム</string>
 	<key>Friends</key>
 	<string>フレンド</string>
 	<key>Friends of Friends</key>
 	<string>フレンドのフレンド</string>
+	<key>Hanami</key>
+	<string>花見</string>
 	<key>Hang out together with voice, video, and screen share</key>
 	<string>音声、ビデオ、画面共有で一緒に過ごしましょう</string>
 	<key>Help</key>
@@ -416,6 +436,8 @@ CONNECTIONS
 	<string>プロフィールを読み込み中…</string>
 	<key>Loading selected message…</key>
 	<string>選択したメッセージを読み込み中…</string>
+	<key>Lofi Vibes</key>
+	<string>ローファイ</string>
 	<key>Log In</key>
 	<string>ログイン</string>
 	<key>Log Out</key>
@@ -436,6 +458,8 @@ CONNECTIONS
 	<string>既読にする</string>
 	<key>Mark as Spoiler</key>
 	<string>ネタバレとしてマーク</string>
+	<key>Mars</key>
+	<string>火星</string>
 	<key>Mention</key>
 	<string>メンション</string>
 	<key>Message</key>
@@ -446,8 +470,12 @@ CONNECTIONS
 	<string>@%@ へメッセージを送信</string>
 	<key>Midnight</key>
 	<string>ミッドナイト</string>
+	<key>Midnight Blurple</key>
+	<string>ミッドナイトブループル</string>
 	<key>Minimize</key>
 	<string>しまう</string>
+	<key>Mint Apple</key>
+	<string>ミントアップル</string>
 	<key>Mobile Push Notifications</key>
 	<string>モバイルプッシュ通知</string>
 	<key>Mute %@</key>
@@ -472,6 +500,8 @@ CONNECTIONS
 	<string>自然</string>
 	<key>NEW</key>
 	<string>新着</string>
+	<key>Neon Nights</key>
+	<string>ネオンナイト</string>
 	<key>New Category</key>
 	<string>新しいカテゴリー</string>
 	<key>New Post</key>
@@ -630,6 +660,10 @@ CONNECTIONS
 	<string>今すぐ再起動</string>
 	<key>Restart to change the language</key>
 	<string>言語を変更するには再起動が必要です</string>
+	<key>Retro Raincloud</key>
+	<string>レトロレインクラウド</string>
+	<key>Retro Storm</key>
+	<string>レトロストーム</string>
 	<key>Return</key>
 	<string>Return</string>
 	<key>SERVER EMOJI</key>
@@ -690,6 +724,8 @@ CONNECTIONS
 	<string>メッセージを送信しました</string>
 	<key>Sent an attachment</key>
 	<string>添付ファイルを送信しました</string>
+	<key>Sepia</key>
+	<string>セピア</string>
 	<key>Server Members</key>
 	<string>サーバーメンバー</string>
 	<key>Server Name</key>
@@ -756,8 +792,14 @@ CONNECTIONS
 	<string>読み上げを開始</string>
 	<key>Stop Speaking</key>
 	<string>読み上げを停止</string>
+	<key>Strawberry Lemonade</key>
+	<string>ストロベリーレモネード</string>
 	<key>Substitutions</key>
 	<string>自動置換</string>
+	<key>Sunrise</key>
+	<string>日の出</string>
+	<key>Sunset</key>
+	<string>夕焼け</string>
 	<key>Suppress @everyone and @here</key>
 	<string>@everyone と @here を抑制</string>
 	<key>Suppress All Role @mentions</key>
@@ -812,6 +854,8 @@ CONNECTIONS
 	<string>ユーザー名</string>
 	<key>Unable to load pinned messages</key>
 	<string>ピン留めされたメッセージを読み込めません</string>
+	<key>Under the Sea</key>
+	<string>海の底</string>
 	<key>Undo</key>
 	<string>取り消す</string>
 	<key>Unmute Category</key>

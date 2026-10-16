@@ -17,4 +17,6 @@
 // Drawn in the secondary text color while the view is empty.
 -(void)setPlaceholderString:(NSString *)placeholder;
 
+// Redraws the placeholder with the current theme colors.
+-(void)refreshPlaceholderColors;
 @end

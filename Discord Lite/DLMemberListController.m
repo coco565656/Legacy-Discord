@@ -74,7 +74,7 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
                             row == [(DLContextTableView *)controlView hoveredRow];
     if (selectedRow || hoveredMemberRow) {
         NSRect selectionRect = NSInsetRect(NSIntersectionRect(cellFrame, [controlView visibleRect]), 6.0, 2.0);
-        [(selectedRow ? [DLUtil nativeSelectionColor] : [[DLUtil nativeSelectionColor] colorWithAlphaComponent:0.55]) set];
+        [(selectedRow ? [DLUtil nativeSelectionColor] : [DLUtil nativeHoverColor]) set];
         [[NSBezierPath bezierPathWithRoundedRect:selectionRect xRadius:5.0 yRadius:5.0] fill];
     }
     cellFrame = NSIntersectionRect(cellFrame, [controlView visibleRect]);

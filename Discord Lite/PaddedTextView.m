@@ -42,6 +42,12 @@
     [placeholderDisplay drawInRect:rect];
 }
 
+-(void)refreshPlaceholderColors {
+    [placeholderDisplay release];
+    placeholderDisplay = nil;
+    [self setNeedsDisplay:YES];
+}
+
 -(void)setPlaceholderString:(NSString *)placeholder {
     if (placeholderString == placeholder || [placeholderString isEqualToString:placeholder]) return;
     [placeholderString release];
