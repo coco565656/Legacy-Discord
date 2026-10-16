@@ -10,6 +10,8 @@ REMOTE_DIR="Developer/legacy-discordClient-remote"
 CONFIGURATION="Debug"
 SYNC_SOURCE=1
 RUN_AFTER_BUILD=0
+# Voice is experimental and not part of releases yet.
+BUNDLE_VOICE=${BUNDLE_VOICE:-0}
 
 usage() {
     printf '%s\n' \
@@ -148,12 +150,13 @@ fi
 $SSH_RSH "$REMOTE_HOST" "
     APP=\"\$HOME/$REMOTE_DIR/build/$CONFIGURATION/Legacy Discord.app\"
     VOICE=\"\$HOME/Developer/voice-deps/out/libLegacyDiscordVoice.dylib\"
-    if [ -f \"\$VOICE\" ]; then
+    if [ \"$BUNDLE_VOICE\" = 1 ] && [ -f \"\$VOICE\" ]; then
         mkdir -p \"\$APP/Contents/Frameworks\"
         cp \"\$VOICE\" \"\$APP/Contents/Frameworks/\"
         echo 'Bundled the voice library.'
     else
-        echo 'Voice library not built; voice will be unavailable.'
+        rm -f \"\$APP/Contents/Frameworks/libLegacyDiscordVoice.dylib\"
+        echo 'Voice library not bundled (set BUNDLE_VOICE=1 to include it).'
     fi
     D=\"\$HOME/Library/LegacyDiscordSigning\"
     if [ -f \"\$D/signing.keychain\" ]; then

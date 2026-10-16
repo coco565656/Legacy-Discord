@@ -24,7 +24,11 @@ static DLVoiceManager *sharedVoiceManager = nil;
     return sharedVoiceManager;
 }
 
+// Voice is held back for the first release. It can be tried with
+//   defaults write org.legacydiscord.Discord-Lite ExperimentalVoice -bool YES
+// on OS X 10.8+ when the app bundles libLegacyDiscordVoice.dylib.
 +(BOOL)isAvailable {
+    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"ExperimentalVoice"]) return NO;
     return [DLVoiceLibrary api] != NULL;
 }
 
