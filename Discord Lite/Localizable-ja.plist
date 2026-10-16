@@ -270,6 +270,8 @@ CONNECTIONS
 	<string>切断されました</string>
 	<key>Display the reaction bar under messages that have reactions.</key>
 	<string>リアクションのあるメッセージの下にリアクションを表示します。</string>
+	<key>Do Not Disturb</key>
+	<string>取り込み中</string>
 	<key>Do not scan direct messages.</key>
 	<string>ダイレクトメッセージをスキャンしない。</string>
 	<key>Done</key>
@@ -374,6 +376,8 @@ CONNECTIONS
 	<string>ハイライトは、にぎやかなサーバーでフレンドが会話している時に、ときどきお知らせします。</string>
 	<key>I live on the edge</key>
 	<string>スリルを楽しむ</string>
+	<key>Idle</key>
+	<string>退席中</string>
 	<key>Image Cache</key>
 	<string>画像キャッシュ</string>
 	<key>Incoming Friend Request</key>

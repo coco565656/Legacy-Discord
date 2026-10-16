@@ -36,7 +36,7 @@ done
 
 if command -v xcrun >/dev/null 2>&1 && command -v clang >/dev/null 2>&1; then
     SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
-    find "$SOURCE_DIR" -name '*.m' -print0 | xargs -0 clang \
+    find "$SOURCE_DIR" -name '*.m' ! -name '* (1).m' -print0 | xargs -0 clang \
         -fsyntax-only \
         -fno-objc-arc \
         -Wno-deprecated-declarations \
@@ -45,7 +45,9 @@ if command -v xcrun >/dev/null 2>&1 && command -v clang >/dev/null 2>&1; then
         -isysroot "$SDK_PATH" \
         -mmacosx-version-min=10.6 \
         -arch x86_64 \
-        -I"$SOURCE_DIR"
+        -I"$SOURCE_DIR" \
+        -I"$PROJECT_DIR/Voice" \
+        -I"$PROJECT_DIR/Voice/include"
 fi
 
 echo "Source verification passed."

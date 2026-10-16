@@ -230,9 +230,9 @@ channelNavigationController:(DLChannelNavigationController *)inChannelNavigation
 }
 
 static NSString *DLStatusDescription(NSString *status) {
-    if ([status isEqualToString:@"online"]) return @"Online";
-    if ([status isEqualToString:@"idle"]) return @"Idle";
-    if ([status isEqualToString:@"dnd"]) return @"Do Not Disturb";
+    if ([status isEqualToString:@"online"]) return DLLocalizedString(@"Online");
+    if ([status isEqualToString:@"idle"]) return DLLocalizedString(@"Idle");
+    if ([status isEqualToString:@"dnd"]) return DLLocalizedString(@"Do Not Disturb");
     return DLLocalizedString(@"Offline");
 }
 
