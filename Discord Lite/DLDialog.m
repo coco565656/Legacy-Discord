@@ -6,6 +6,7 @@
 #import "DLDialog.h"
 #import "DLDarkMenu.h"
 #import "DLUtil.h"
+#import "NSScroller+BGColor.h"
 
 #define DLDialogPadding 16.0
 #define DLDialogFooterHeight 70.0
@@ -244,9 +245,33 @@ static NSColor *DLDialogFooterColor(void) { return [DLUtil nativeSidebarColor]; 
         y += messageHeight + 16.0;
     }
     if (contentView) {
-        [contentView setFrame:NSMakeRect(DLDialogPadding, y, inner, NSHeight([contentView frame]))];
-        [card addSubview:contentView];
-        y += NSHeight([contentView frame]) + 12.0;
+        CGFloat contentHeight = NSHeight([contentView frame]);
+        // Keep the whole card inside the window; taller content scrolls.
+        NSRect parentContent = [window contentRectForFrameRect:[window frame]];
+        CGFloat available = floor(NSHeight(parentContent) - 32.0 - y - 20.0 - DLDialogFooterHeight);
+        available = MAX(available, 160.0);
+        if (contentHeight > available) {
+            NSScrollView *scrollView = [[[NSScrollView alloc] initWithFrame:NSMakeRect(DLDialogPadding, y, inner + 12.0, available)] autorelease];
+            [scrollView setDrawsBackground:NO];
+            [scrollView setBorderType:NSNoBorder];
+            [scrollView setHasVerticalScroller:YES];
+            [scrollView setAutohidesScrollers:YES];
+            NSScroller_BGColor *scroller = [[[NSScroller_BGColor alloc] initWithFrame:NSMakeRect(0.0, 0.0, 11.0, available)] autorelease];
+            [scroller setBackgroundColor:DLDialogCardColor()];
+            [scrollView setVerticalScroller:scroller];
+            [[scrollView contentView] setDrawsBackground:NO];
+            [contentView setFrame:NSMakeRect(0.0, 0.0, inner, contentHeight)];
+            [scrollView setDocumentView:contentView];
+            // Start at the top of the (non-flipped) content.
+            [[scrollView contentView] scrollToPoint:NSMakePoint(0.0, contentHeight - available)];
+            [scrollView reflectScrolledClipView:[scrollView contentView]];
+            [card addSubview:scrollView];
+            contentHeight = available;
+        } else {
+            [contentView setFrame:NSMakeRect(DLDialogPadding, y, inner, contentHeight)];
+            [card addSubview:contentView];
+        }
+        y += contentHeight + 12.0;
     }
     errorLabel = [[DLDialog labelWithString:@"" frame:NSMakeRect(DLDialogPadding, y, inner, 18.0)] retain];
     [errorLabel setTextColor:[NSColor colorWithCalibratedRed:0.949 green:0.247 blue:0.259 alpha:1.0]];
