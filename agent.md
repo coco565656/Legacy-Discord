@@ -1,5 +1,11 @@
 # Legacy Discord — Agent Development Rules
 
+## 0-b. Language policy
+
+- Reply to the user in **Japanese** — explanations, questions, progress updates, final reports, handover memos. English replies are a defect, not style.
+- English is allowed (and preferred) for: code identifiers, code comments, commit messages, shell commands, log lines, and the field labels of `docs/KNOWN_ISSUES.md` templates (`Issue ID:` etc.). Entry body text may be Japanese.
+- If a section of this file conflicts with the language policy, the policy wins for user-facing text only; all technical rules keep their exact wording and intent.
+
 ## 0. Read this before touching the code
 
 This repository is a fork of Discord Lite and is being developed as a **native Cocoa/AppKit Discord client for legacy Intel Macs**.
