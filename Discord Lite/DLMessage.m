@@ -100,6 +100,9 @@
         [stickerItems release];
         stickerItems = [value copy];
     }
+    if ([[d objectForKey:@"pinned"] respondsToSelector:@selector(boolValue)]) {
+        pinned = [[d objectForKey:@"pinned"] boolValue];
+    }
     if ([d objectForKey:@"mention_everyone"]) {
         mentionedEveryone = [[d objectForKey:@"mention_everyone"] boolValue];
     }
@@ -265,6 +268,12 @@
 }
 -(NSArray *)mentionedRoleIDs {
     return mentionedRoleIDs;
+}
+-(BOOL)isPinned {
+    return pinned;
+}
+-(void)setPinned:(BOOL)inPinned {
+    pinned = inPinned;
 }
 -(BOOL)isForwarded {
     return forwarded;

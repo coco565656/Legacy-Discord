@@ -4,6 +4,7 @@
 //
 
 #import "DLMessagePresentationController.h"
+#import "DLDialog.h"
 #import "ChatScrollView.h"
 #import "DLController.h"
 #import "DLChannel.h"
@@ -20,12 +21,10 @@
 #import "DLPreferencesHandler.h"
 #import "DLTwemojiRenderer.h"
 
-static void *DLMessageDeleteConfirmationContext = &DLMessageDeleteConfirmationContext;
 
 @interface DLMessagePresentationController ()
 -(ChatItemViewController *)chatItemViewForMessage:(DLMessage *)message isMyContent:(BOOL)isMyContent;
 -(void)chatScrollViewBoundsDidChange:(NSNotification *)notification;
--(void)alertDidEnd:(NSAlert *)alert returnCode:(NSInteger)returnCode contextInfo:(void *)contextInfo;
 @end
 
 @implementation DLMessagePresentationController
@@ -424,24 +423,21 @@ userProfileController:(DLUserProfileController *)inUserProfileController {
 }
 
 -(void)chatViewMessageShouldBeDeleted:(ChatItemViewController *)chatView {
-    messagePendingDeletion = [chatView representedObject];
-    NSAlert *alert = [[NSAlert alloc] init];
-    [alert setMessageText:@"Delete Message"];
-    [alert setInformativeText:@"Are you sure you want to delete the selected message?"];
-    [alert addButtonWithTitle:@"No"];
-    [alert addButtonWithTitle:@"Yes"];
-    [alert beginSheetModalForWindow:hostWindow modalDelegate:self
-                     didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:)
-                        contextInfo:DLMessageDeleteConfirmationContext];
-}
-
--(void)alertDidEnd:(NSAlert *)alert returnCode:(NSInteger)returnCode contextInfo:(void *)contextInfo {
-    if (contextInfo == DLMessageDeleteConfirmationContext) {
-        if (returnCode == NSAlertSecondButtonReturn) {
-            [[DLController sharedInstance] deleteMessage:messagePendingDeletion];
-        }
-        messagePendingDeletion = nil;
+    DLMessage *message = [[[chatView representedObject] retain] autorelease];
+    // Holding Shift skips the confirmation, as in the official client.
+    if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) {
+        [[DLController sharedInstance] deleteMessage:message];
+        return;
     }
+    DLDialog *dialog = [DLDialog dialogWithTitle:@"Delete Message"
+                                         message:@"Are you sure you want to delete this message?"];
+    [dialog addButtonWithTitle:@"Delete" style:DLDialogButtonStyleDanger];
+    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
+        if (buttonIndex == 0) [[DLController sharedInstance] deleteMessage:message];
+        return YES;
+    }];
+    [dialog showInWindow:hostWindow];
 }
 
 -(void)chatViewMessageWasDeleted:(ChatItemViewController *)chatView {

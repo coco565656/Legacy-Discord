@@ -222,6 +222,9 @@ typedef void (^DLAPICompletion)(id json, NSInteger status);
 -(DLServerChannel *)defaultInviteChannelForServer:(DLServer *)server;
 // Forgets a server the user left and tells the delegate.
 -(void)removeServer:(DLServer *)server;
+// Forgets a deleted channel (and, for a category, nothing else: Discord
+// moves its channels out of it).
+-(void)removeChannelWithID:(NSString *)channelID;
 -(void)updateNotificationSettings:(NSDictionary *)changes forServerID:(NSString *)serverID;
 
 

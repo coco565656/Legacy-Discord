@@ -7,6 +7,7 @@
 //
 
 #import "DLAttachmentWindowController.h"
+#import "DLDarkMenu.h"
 
 @interface DLAttachmentWindowController ()
 
@@ -103,12 +104,12 @@
 
 -(void)mouseWasDepressedWithEvent:(NSEvent *)event {
     if ((event.modifierFlags & NSControlKeyMask) == NSControlKeyMask) {
-        [NSMenu popUpContextMenu:contextMenu withEvent:event forView:nil];
+        [DLDarkMenu popUpContextMenu:contextMenu withEvent:event forView:imgView];
     }
 }
 
 -(void)mouseRightButtonWasDepressedWithEvent:(NSEvent *)event {
-    [NSMenu popUpContextMenu:contextMenu withEvent:event forView:nil];
+    [DLDarkMenu popUpContextMenu:contextMenu withEvent:event forView:imgView];
 }
 
 @end

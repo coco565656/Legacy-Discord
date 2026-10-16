@@ -104,7 +104,8 @@ static NSString *DLIconForItem(NSMenuItem *item) {
             CGFloat titleWidth = [[item title] sizeWithAttributes:[NSDictionary dictionaryWithObject:font forKey:NSFontAttributeName]].width;
             BOOL accessory = [item hasSubmenu] || DLIconForItem(item) ||
                 DLStyleForItem(item) == DLDarkMenuItemStyleCheckbox || DLStyleForItem(item) == DLDarkMenuItemStyleRadio;
-            width = MAX(width, ceil(titleWidth) + 2.0 * DLMenuPadding + 16.0 + (accessory ? 32.0 : 0.0));
+            width = MAX(width, ceil(titleWidth) + 2.0 * DLMenuPadding + 16.0 + (accessory ? 32.0 : 0.0) +
+                               ([item image] ? 26.0 : 0.0));
         }
     }
     width = MIN(width, 320.0);
@@ -293,8 +294,15 @@ static NSString *DLIconForItem(NSMenuItem *item) {
                                     paragraph, NSParagraphStyleAttributeName, nil];
         NSString *icon = DLIconForItem(item);
         BOOL accessory = [item hasSubmenu] || icon || style == DLDarkMenuItemStyleCheckbox || style == DLDarkMenuItemStyleRadio;
-        NSRect titleRect = NSMakeRect(NSMinX(rect) + 8.0, NSMinY(rect) + 8.0,
-                                      NSWidth(rect) - 16.0 - (accessory ? 28.0 : 0.0), 18.0);
+        CGFloat titleX = NSMinX(rect) + 8.0;
+        if ([item image]) {
+            // Leading image (emoji in Add Reaction).
+            [[item image] drawInRect:NSMakeRect(titleX, NSMinY(rect) + 8.0, 16.0, 16.0) fromRect:NSZeroRect
+                           operation:NSCompositeSourceOver fraction:(enabled ? 1.0 : 0.5) respectFlipped:YES hints:nil];
+            titleX += 26.0;
+        }
+        NSRect titleRect = NSMakeRect(titleX, NSMinY(rect) + 8.0,
+                                      NSMaxX(rect) - 8.0 - titleX - (accessory ? 28.0 : 0.0), 18.0);
         [[item title] drawInRect:titleRect withAttributes:attributes];
         NSRect accessoryRect = NSMakeRect(NSMaxX(rect) - 8.0 - 18.0, NSMinY(rect) + 7.0, 18.0, 18.0);
         if (style == DLDarkMenuItemStyleCheckbox || style == DLDarkMenuItemStyleRadio) {

@@ -7,6 +7,8 @@
 //
 
 #import "ChatItemViewController.h"
+#import "DLDarkMenu.h"
+#import "DLDialog.h"
 #import "DLPreferencesHandler.h"
 #import "DLTwemojiRenderer.h"
 #import <WebKit/WebKit.h>
@@ -1636,41 +1638,169 @@ const NSInteger ATTACHMENT_SPACING = 15;
     return item;
 }
 
+-(DLChannel *)messageChannel {
+    DLController *controller = [DLController existingInstance];
+    DLChannel *channel = [representedObject channelID] ? [controller loadedChannelWithID:[[representedObject channelID] description]] : nil;
+    return channel ? channel : [controller selectedChannel];
+}
+
+// Own permission in the message's channel (threads use their parent's
+// overwrites). Always NO outside servers.
+-(BOOL)hasChannelPermission:(unsigned long long)permission {
+    DLChannel *channel = [self messageChannel];
+    if (![channel isKindOfClass:[DLServerChannel class]]) return NO;
+    DLServerChannel *serverChannel = (DLServerChannel *)channel;
+    if ([serverChannel isThread] && [[serverChannel parentID] isKindOfClass:[NSString class]]) {
+        DLChannel *parent = [[DLController existingInstance] loadedChannelWithID:[serverChannel parentID]];
+        if ([parent isKindOfClass:[DLServerChannel class]]) serverChannel = (DLServerChannel *)parent;
+    }
+    DLServer *server = [[DLController existingInstance] loadedServerWithID:[serverChannel serverID]];
+    return [server iHavePermission:permission withOverwrites:[serverChannel permissionOverwrites]];
+}
+
+-(NSMenuItem *)contextItemWithTitle:(NSString *)title action:(SEL)action icon:(NSString *)icon {
+    NSMenuItem *item = [self contextItemWithTitle:title action:action];
+    if (icon) [DLDarkMenu setIconName:icon forItem:item];
+    return item;
+}
+
 // Rebuilt before every display, in the official client's order. Developer
-// Mode (Settings > Advanced) adds the Copy ID items at the end.
+// Mode (Settings > Advanced) adds Copy Message ID at the end.
 -(void)rebuildContextMenu {
     [contextMenu removeAllItems];
+    [contextMenu setAutoenablesItems:NO];
+    DLChannel *channel = [self messageChannel];
+    BOOL inServer = [channel isKindOfClass:[DLServerChannel class]];
     NSMenuItem *reactionRootItem = [[[NSMenuItem alloc] initWithTitle:@"Add Reaction" action:NULL keyEquivalent:@""] autorelease];
     [reactionRootItem setSubmenu:reactionMenu];
     [contextMenu addItem:reactionRootItem];
-    // Forwarded messages cannot be edited, as in the official client.
-    if (isMyContent && ![representedObject isForwarded]) [contextMenu addItem:editItem];
-    [contextMenu addItem:[self contextItemWithTitle:@"Reply" action:@selector(addReply)]];
     [contextMenu addItem:[NSMenuItem separatorItem]];
-    if ([[representedObject content] length]) {
-        [contextMenu addItem:[self contextItemWithTitle:@"Copy Text" action:@selector(copyMessageText:)]];
+    // Forwarded messages cannot be edited, as in the official client.
+    if (isMyContent && ![representedObject isForwarded]) {
+        [DLDarkMenu setIconName:@"pencil" forItem:editItem];
+        [contextMenu addItem:editItem];
     }
-    [contextMenu addItem:[self contextItemWithTitle:@"Copy Message Link" action:@selector(copyMessageLink:)]];
-    if (isMyContent) {
+    [contextMenu addItem:[self contextItemWithTitle:@"Reply" action:@selector(addReply) icon:@"reply"]];
+    if (inServer && ![channel isThread] &&
+        ([channel type] == ChannelTypeStandard || [channel type] == ChannelTypeAnnouncements) &&
+        [self hasChannelPermission:DLPermissionCreatePublicThreads]) {
+        [contextMenu addItem:[self contextItemWithTitle:@"Create Thread" action:@selector(createThreadFromMessage:) icon:@"thread"]];
+    }
+    if ([[representedObject content] length]) {
+        [contextMenu addItem:[self contextItemWithTitle:@"Copy Text" action:@selector(copyMessageText:) icon:@"copy"]];
+    }
+    BOOL canPin = !inServer || [self hasChannelPermission:DLPermissionManageMessages] ||
+                  [self hasChannelPermission:DLPermissionPinMessages];
+    if (canPin) {
+        [contextMenu addItem:[self contextItemWithTitle:([representedObject isPinned] ? @"Unpin Message" : @"Pin Message")
+                                                 action:@selector(togglePinned:) icon:@"pin"]];
+    }
+    [contextMenu addItem:[self contextItemWithTitle:@"Copy Message Link" action:@selector(copyMessageLink:) icon:@"link"]];
+    if (isMyContent || (inServer && [self hasChannelPermission:DLPermissionManageMessages])) {
         [contextMenu addItem:[NSMenuItem separatorItem]];
+        [DLDarkMenu setStyle:DLDarkMenuItemStyleDanger forItem:deleteItem];
+        [DLDarkMenu setIconName:@"trash" forItem:deleteItem];
         [contextMenu addItem:deleteItem];
     }
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
         [contextMenu addItem:[NSMenuItem separatorItem]];
-        [contextMenu addItem:[self contextItemWithTitle:@"Copy Message ID" action:@selector(copyMessageID:)]];
-        [contextMenu addItem:[self contextItemWithTitle:@"Copy User ID" action:@selector(copyAuthorID:)]];
+        [contextMenu addItem:[self contextItemWithTitle:@"Copy Message ID" action:@selector(copyMessageID:) icon:@"id"]];
     }
+}
+
+-(NSString *)channelLabelForMessage {
+    DLChannel *channel = [self messageChannel];
+    if ([channel isKindOfClass:[DLServerChannel class]] && [channel name]) return [@"#" stringByAppendingString:[channel name]];
+    return @"this conversation";
+}
+
+-(void)togglePinned:(id)sender {
+    DLMessage *message = [[representedObject retain] autorelease];
+    BOOL pin = ![message isPinned];
+    DLDialog *dialog = [DLDialog dialogWithTitle:(pin ? @"Pin It. Pin It Good." : @"Unpin Message")
+        message:(pin ? [NSString stringWithFormat:@"Hey, just double checking that you want to pin this message to %@ for posterity and greatness?", [self channelLabelForMessage]]
+                     : @"You sure you want to remove this pinned message?")];
+    [dialog addButtonWithTitle:(pin ? @"Oh yeah. Pin it" : @"Remove it please!")
+                         style:(pin ? DLDialogButtonStylePrimary : DLDialogButtonStyleDanger)];
+    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    NSString *path = [NSString stringWithFormat:@"/channels/%@/pins/%@",
+                      [[[self messageChannel] channelID] description], [[message messageID] description]];
+    [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
+        if (buttonIndex != 0) return YES;
+        [shown setBusy:YES];
+        [shown retain];
+        [[DLController sharedInstance] sendAPIRequestWithMethod:(pin ? @"PUT" : @"DELETE") path:path body:nil
+            completion:^(id json, NSInteger status) {
+                if (status >= 200 && status < 300) {
+                    [message setPinned:pin];
+                    [shown close];
+                } else {
+                    [shown setBusy:NO];
+                    id error = [json isKindOfClass:[NSDictionary class]] ? [json objectForKey:@"message"] : nil;
+                    [shown setErrorMessage:([error isKindOfClass:[NSString class]] ? error
+                                            : [NSString stringWithFormat:@"Something went wrong (HTTP %ld).", (long)status])];
+                }
+                [shown release];
+            }];
+        return NO;
+    }];
+    [dialog showInWindow:[[self view] window]];
+}
+
+-(void)createThreadFromMessage:(id)sender {
+    DLMessage *message = representedObject;
+    NSString *suggested = [[[message content] componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]] objectAtIndex:0];
+    if ([suggested length] > 40) suggested = [suggested substringToIndex:40];
+    if (![suggested length]) suggested = @"New Thread";
+    CGFloat inner = 440.0 - 32.0;
+    NSView *content = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, 64.0)] autorelease];
+    [content addSubview:[DLDialog sectionLabelWithString:@"Thread Name" frame:NSMakeRect(0.0, 48.0, inner, 16.0)]];
+    NSTextField *field = [DLDialog textFieldWithFrame:NSMakeRect(0.0, 0.0, inner, 40.0) placeholder:@"New Thread"];
+    [field setStringValue:suggested];
+    [content addSubview:field];
+    DLDialog *dialog = [DLDialog dialogWithTitle:@"Create Thread" message:[NSString stringWithFormat:@"in %@", [self channelLabelForMessage]]];
+    [dialog setContentView:content];
+    [dialog addButtonWithTitle:@"Create Thread" style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    NSString *path = [NSString stringWithFormat:@"/channels/%@/messages/%@/threads",
+                      [[[self messageChannel] channelID] description], [[message messageID] description]];
+    [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
+        if (buttonIndex != 0) return YES;
+        NSString *name = [[field stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (![name length]) {
+            [shown setErrorMessage:@"Enter a thread name."];
+            return NO;
+        }
+        [shown setBusy:YES];
+        [shown retain];
+        [[DLController sharedInstance] sendAPIRequestWithMethod:@"POST" path:path
+            body:[NSDictionary dictionaryWithObjectsAndKeys:name, @"name",
+                  [NSNumber numberWithInteger:4320], @"auto_archive_duration", nil]
+            completion:^(id json, NSInteger status) {
+                if (status >= 200 && status < 300) {
+                    [shown close];
+                } else {
+                    [shown setBusy:NO];
+                    id error = [json isKindOfClass:[NSDictionary class]] ? [json objectForKey:@"message"] : nil;
+                    [shown setErrorMessage:([error isKindOfClass:[NSString class]] ? error
+                                            : [NSString stringWithFormat:@"Something went wrong (HTTP %ld).", (long)status])];
+                }
+                [shown release];
+            }];
+        return NO;
+    }];
+    [dialog showInWindow:[[self view] window]];
 }
 
 -(void)mouseWasDepressedWithEvent:(NSEvent *)event {
     if ((event.modifierFlags & NSControlKeyMask) == NSControlKeyMask) {
         [self rebuildContextMenu];
-        [NSMenu popUpContextMenu:contextMenu withEvent:event forView:nil];
+        [DLDarkMenu popUpContextMenu:contextMenu withEvent:event forView:insetView];
     }
 }
 -(void)mouseRightButtonWasDepressedWithEvent:(NSEvent *)event {
     [self rebuildContextMenu];
-    [NSMenu popUpContextMenu:contextMenu withEvent:event forView:nil];
+    [DLDarkMenu popUpContextMenu:contextMenu withEvent:event forView:insetView];
 }
 -(void)mouseEnteredView:(NSView *)hoveredView {
     if (hoveredView == insetView) {

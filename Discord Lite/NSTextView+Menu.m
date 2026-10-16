@@ -7,6 +7,7 @@
 //
 
 #import "NSTextView+Menu.h"
+#import "DLDarkMenu.h"
 
 @implementation NSTextView_Menu
 
@@ -50,20 +51,17 @@
         }
         return menu;
     }
-    // Read-only message text shows only the message menu, like the official
-    // client, instead of AppKit's Spotlight/Font/Speech items. A selection
-    // adds Copy at the top.
-    NSMenu *menu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    // Read-only message text shows the Discord-style message menu instead of
+    // AppKit's Spotlight/Font/Speech items. A selection adds Copy at the top.
     if ([self selectedRange].length > 0) {
         NSMenuItem *copyItem = [[[NSMenuItem alloc] initWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@""] autorelease];
         [copyItem setTarget:self];
-        [menu addItem:copyItem];
-        [menu addItem:[NSMenuItem separatorItem]];
+        [DLDarkMenu setIconName:@"copy" forItem:copyItem];
+        [ownerMenu insertItem:[NSMenuItem separatorItem] atIndex:0];
+        [ownerMenu insertItem:copyItem atIndex:0];
     }
-    NSEnumerator *e = [[ownerMenu itemArray] objectEnumerator];
-    NSMenuItem *item;
-    while (item = [e nextObject]) [menu addItem:[[item copy] autorelease]];
-    return menu;
+    [DLDarkMenu popUpContextMenu:ownerMenu withEvent:event forView:self];
+    return nil;
 }
 -(void)setShouldShowBorder:(BOOL)isBordered {
     bordered = isBordered;

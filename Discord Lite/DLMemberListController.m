@@ -6,6 +6,8 @@
 #import "DLMemberListController.h"
 #import "ChatScrollView.h"
 #import "DLController.h"
+#import "DLDarkMenu.h"
+#import "DLServerMenuController.h"
 #import "DLServer.h"
 #import "DLServerChannel.h"
 #import "DLServerMember.h"
@@ -487,17 +489,37 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
 // Official user menu order, limited to actions this client performs.
 -(void)menuNeedsUpdate:(NSMenu *)menu {
     [menu removeAllItems];
+    [menu setAutoenablesItems:NO];
     DLServerMember *member = [self memberAtRow:[(DLContextTableView *)tableView menuRow]];
     if (!member) return;
+    DLController *controller = [DLController sharedInstance];
+    BOOL isMe = [[[[member user] userID] description] isEqualToString:[[[controller myUser] userID] description]];
     [menu addItem:[self memberMenuItem:@"Profile" action:@selector(showMemberProfile:) member:member]];
     if ([delegate respondsToSelector:@selector(memberListController:requestsMentionOfUser:)]) {
         [menu addItem:[self memberMenuItem:@"Mention" action:@selector(mentionMember:) member:member]];
     }
-    [menu addItem:[NSMenuItem separatorItem]];
-    [menu addItem:[self memberMenuItem:@"Copy Username" action:@selector(copyMemberUsername:) member:member]];
-    if ([[DLPreferencesHandler sharedInstance] developerMode]) {
-        [menu addItem:[self memberMenuItem:@"Copy User ID" action:@selector(copyMemberID:) member:member]];
+    if (!isMe) [menu addItem:[self memberMenuItem:@"Message" action:@selector(messageMember:) member:member]];
+    if (isMe) {
+        DLServer *server = [controller selectedServer];
+        [menu addItem:[NSMenuItem separatorItem]];
+        NSMenuItem *nickname = [self memberMenuItem:@"Edit Per-server Profile" action:@selector(editOwnServerProfile:) member:member];
+        [nickname setEnabled:(server != nil)];
+        [menu addItem:nickname];
     }
+    if ([[DLPreferencesHandler sharedInstance] developerMode]) {
+        [menu addItem:[NSMenuItem separatorItem]];
+        NSMenuItem *copyID = [self memberMenuItem:@"Copy User ID" action:@selector(copyMemberID:) member:member];
+        [DLDarkMenu setIconName:@"id" forItem:copyID];
+        [menu addItem:copyID];
+    }
+}
+
+-(void)messageMember:(NSMenuItem *)sender {
+    [[DLController sharedInstance] openDirectMessageWithUser:[(DLServerMember *)[sender representedObject] user] draft:nil];
+}
+
+-(void)editOwnServerProfile:(NSMenuItem *)sender {
+    [[DLServerMenuController sharedController] showServerProfileDialogForServer:[[DLController sharedInstance] selectedServer]];
 }
 
 -(void)showMemberProfile:(NSMenuItem *)sender {
@@ -510,10 +532,6 @@ static const CGFloat DLMemberGroupRowHeight = 30.0;
 
 -(void)mentionMember:(NSMenuItem *)sender {
     [delegate memberListController:self requestsMentionOfUser:[(DLServerMember *)[sender representedObject] user]];
-}
-
--(void)copyMemberUsername:(NSMenuItem *)sender {
-    [DLUtil copyStringToPasteboard:[[(DLServerMember *)[sender representedObject] user] username]];
 }
 
 -(void)copyMemberID:(NSMenuItem *)sender {

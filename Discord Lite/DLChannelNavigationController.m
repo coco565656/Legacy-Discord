@@ -6,6 +6,7 @@
 #import "DLDarkMenu.h"
 #import "DLChannelNavigationController.h"
 #import "DLController.h"
+#import "DLServerMenuController.h"
 #import "DLVoiceManager.h"
 #import "DLUtil.h"
 #import "DLPreferencesHandler.h"
@@ -564,27 +565,38 @@
     return NO;
 }
 
-// Menus follow the official client's order for text channels, categories and
+// Menus follow the official client's order for channels, categories and
 // direct messages, limited to actions this client performs.
 -(void)menuNeedsUpdate:(NSMenu *)menu {
     [menu removeAllItems];
+    [menu setAutoenablesItems:NO];
     NSInteger row = [(DLChannelOutlineView *)outlineView menuRow];
     DLChannel *channel = row >= 0 ? [outlineView itemAtRow:row] : nil;
     if (!channel) return;
+    DLServerMenuController *serverMenu = [DLServerMenuController sharedController];
     BOOL isCategory = [channel type] == ChannelTypeHeader;
+    BOOL inServer = [channel isKindOfClass:[DLServerChannel class]];
+    BOOL isVoice = [channel type] == ChannelTypeVoice || [channel type] == ChannelTypeStageVoice;
+    BOOL canManage = inServer && [serverMenu hasPermission:DLPermissionManageChannels inChannel:channel];
+
     NSMenuItem *markRead = [self channelMenuItem:@"Mark As Read" action:@selector(markChannelAsRead:) channel:channel];
     [markRead setEnabled:[self channelOrChildrenHaveUnread:channel]];
     [menu addItem:markRead];
     [menu addItem:[NSMenuItem separatorItem]];
     if (isCategory) {
-        BOOL expanded = [outlineView isItemExpanded:channel];
-        [menu addItem:[self channelMenuItem:(expanded ? @"Collapse Category" : @"Expand Category")
-                                     action:@selector(toggleCategory:) channel:channel]];
+        NSMenuItem *collapse = [self channelMenuItem:@"Collapse Category" action:@selector(toggleCategory:) channel:channel];
+        [collapse setState:([outlineView isItemExpanded:channel] ? NSOffState : NSOnState)];
+        [DLDarkMenu setStyle:DLDarkMenuItemStyleCheckbox forItem:collapse];
+        [menu addItem:collapse];
         [menu addItem:[self channelMenuItem:@"Collapse All Categories" action:@selector(collapseAllCategories:) channel:channel]];
     } else {
+        if (inServer && [serverMenu hasPermission:DLPermissionCreateInvite inChannel:channel]) {
+            NSMenuItem *invite = [self channelMenuItem:@"Invite People" action:@selector(invitePeople:) channel:channel];
+            [DLDarkMenu setStyle:DLDarkMenuItemStyleBrand forItem:invite];
+            [menu addItem:invite];
+        }
         [menu addItem:[self channelMenuItem:@"Copy Link" action:@selector(copyChannelLink:) channel:channel]];
     }
-    BOOL isVoice = [channel type] == ChannelTypeVoice || [channel type] == ChannelTypeStageVoice;
     if (isVoice && [DLVoiceManager isAvailable]) {
         DLVoiceManager *voice = [DLVoiceManager sharedManager];
         BOOL here = [voice state] != DLVoiceStateIdle && [[voice channel] isEqual:channel];
@@ -594,11 +606,46 @@
     }
     [menu addItem:[NSMenuItem separatorItem]];
     [self addMuteItemForChannel:channel toMenu:menu];
+    if (inServer) [menu addItem:[serverMenu notificationItemForChannel:channel]];
+    if (canManage) {
+        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:[self channelMenuItem:(isCategory ? @"Edit Category" : @"Edit Channel")
+                                     action:@selector(editChannel:) channel:channel]];
+        if (isCategory) {
+            [menu addItem:[self channelMenuItem:@"Create Channel" action:@selector(createChannelInCategory:) channel:channel]];
+        }
+        NSMenuItem *deleteItem = [self channelMenuItem:(isCategory ? @"Delete Category" : @"Delete Channel")
+                                                action:@selector(deleteChannel:) channel:channel];
+        [DLDarkMenu setStyle:DLDarkMenuItemStyleDanger forItem:deleteItem];
+        [menu addItem:deleteItem];
+    }
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
         [menu addItem:[NSMenuItem separatorItem]];
-        [menu addItem:[self channelMenuItem:(isCategory ? @"Copy Category ID" : @"Copy Channel ID")
-                                     action:@selector(copyChannelID:) channel:channel]];
+        NSMenuItem *copyID = [self channelMenuItem:(isCategory ? @"Copy Category ID" : @"Copy Channel ID")
+                                            action:@selector(copyChannelID:) channel:channel];
+        [DLDarkMenu setIconName:@"id" forItem:copyID];
+        [menu addItem:copyID];
     }
+}
+
+-(void)invitePeople:(NSMenuItem *)sender {
+    DLServerChannel *channel = [sender representedObject];
+    [[DLServerMenuController sharedController] showInviteDialogForServer:[[DLController sharedInstance] loadedServerWithID:[channel serverID]]
+                                                                 channel:channel];
+}
+
+-(void)editChannel:(NSMenuItem *)sender {
+    [[DLServerMenuController sharedController] showEditChannelDialogForChannel:[sender representedObject]];
+}
+
+-(void)deleteChannel:(NSMenuItem *)sender {
+    [[DLServerMenuController sharedController] showDeleteChannelDialogForChannel:[sender representedObject]];
+}
+
+-(void)createChannelInCategory:(NSMenuItem *)sender {
+    DLServerChannel *category = [sender representedObject];
+    [[DLServerMenuController sharedController] showCreateChannelDialogForServer:[[DLController sharedInstance] loadedServerWithID:[category serverID]]
+                                                                       category:NO parentID:[[category channelID] description]];
 }
 
 // "Mute Channel" opens the official duration submenu; a muted channel offers

@@ -33,6 +33,7 @@
     NSArray *outgoingStickerIDs;
     BOOL mentionedEveryone;
     BOOL forwarded;
+    BOOL pinned;
     NSArray *mentionedRoleIDs;
     DLMessage *referencedMessage;
     id<DLMessageDelegate> delegate;
@@ -65,6 +66,8 @@
 // A forwarded message carries the original in message_snapshots; its content,
 // attachments, embeds and stickers are shown in place of the (empty) wrapper.
 -(BOOL)isForwarded;
+-(BOOL)isPinned;
+-(void)setPinned:(BOOL)pinned;
 -(NSArray *)mentionedRoleIDs;
 
 -(void)setDelegate:(id<DLMessageDelegate>)inDelegate;

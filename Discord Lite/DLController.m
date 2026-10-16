@@ -1711,6 +1711,24 @@ static BOOL DLMuteEntryIsActive(NSDictionary *entry) {
     return best;
 }
 
+-(void)removeChannelWithID:(NSString *)channelID {
+    if (!channelID) return;
+    NSEnumerator *enumerator = [loadedChannels objectEnumerator];
+    DLChannel *channel;
+    while (channel = [enumerator nextObject]) {
+        // Channels of a deleted category become uncategorized.
+        if ([channel isKindOfClass:[DLServerChannel class]] &&
+            [[[(DLServerChannel *)channel parentID] description] isEqualToString:channelID]) {
+            [(DLServerChannel *)channel updateWithDict:[NSDictionary dictionaryWithObject:[NSNull null] forKey:@"parent_id"]];
+        }
+    }
+    if ([[[selectedChannel channelID] description] isEqualToString:channelID]) {
+        [selectedChannel release];
+        selectedChannel = nil;
+    }
+    [loadedChannels removeObjectForKey:channelID];
+}
+
 -(void)removeServer:(DLServer *)server {
     if (!server || [server isEqual:[self myServerItem]]) return;
     [[server retain] autorelease];

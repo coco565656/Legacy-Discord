@@ -17,6 +17,11 @@
 #define DLPermissionManageChannels (1ULL << 4)
 #define DLPermissionManageGuild (1ULL << 5)
 #define DLPermissionChangeNickname (1ULL << 26)
+#define DLPermissionAdministrator (1ULL << 3)
+#define DLPermissionViewChannel (1ULL << 10)
+#define DLPermissionManageMessages (1ULL << 13)
+#define DLPermissionCreatePublicThreads (1ULL << 35)
+#define DLPermissionPinMessages (1ULL << 51)
 
 // Posted whenever a server's mention count changes (drives the Dock badge).
 #define DLServerMentionCountDidChangeNotification @"DLServerMentionCountDidChangeNotification"
@@ -68,6 +73,9 @@
 // Guild-level permission check for the current user (owner and administrator
 // have every permission). Unknown roles answer NO.
 -(BOOL)iHavePermission:(unsigned long long)permission;
+// The same with a channel's permission overwrites applied.
+-(BOOL)iHavePermission:(unsigned long long)permission withOverwrites:(NSArray *)overwrites;
+-(unsigned long long)myPermissionsWithOverwrites:(NSArray *)overwrites;
 -(NSArray *)myRoleIDs;
 -(NSString *)ownerID;
 -(void)setMyRoleIDs:(NSArray *)roleIDs;

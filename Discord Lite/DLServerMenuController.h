@@ -11,6 +11,7 @@
 #import <Cocoa/Cocoa.h>
 
 @class DLServer;
+@class DLChannel;
 
 @interface DLServerMenuController : NSObject {
     NSWindow *window;
@@ -31,5 +32,14 @@
 -(void)showServerProfileDialogForServer:(DLServer *)server;
 -(void)showServerOverviewForServer:(DLServer *)server;
 -(void)showLeaveDialogForServer:(DLServer *)server;
+
+// Channel and category menu pieces (used by the channel list).
+-(void)showInviteDialogForServer:(DLServer *)server channel:(DLChannel *)channel;
+-(void)showEditChannelDialogForChannel:(DLChannel *)channel;
+-(void)showDeleteChannelDialogForChannel:(DLChannel *)channel;
+// "Notification Settings" submenu with the channel's override.
+-(NSMenuItem *)notificationItemForChannel:(DLChannel *)channel;
+// Own permission in a channel (categories and channels use their overwrites).
+-(BOOL)hasPermission:(unsigned long long)permission inChannel:(DLChannel *)channel;
 
 @end

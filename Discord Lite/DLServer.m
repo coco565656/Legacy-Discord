@@ -235,25 +235,13 @@ static unsigned long long DLPermissionValue(id value) {
     return 0;
 }
 
--(BOOL)iHavePermission:(unsigned long long)permission {
+// Own permission bits in a channel with these overwrites (nil: the server
+// level). Owner and administrator have every bit.
+-(unsigned long long)myPermissionsWithOverwrites:(NSArray *)overwrites {
+    static const unsigned long long DLPermissionAll = ~0ULL;
     NSString *me = [[[[DLController existingInstance] myUser] userID] description];
-    if (ownerID && me && [[ownerID description] isEqualToString:me]) return YES;
-    if (!myRoleIDs) return NO;
-    unsigned long long permissions = DLPermissionValue([[self roleWithID:[serverID description]] objectForKey:@"permissions"]);
-    NSEnumerator *roleEnumerator = [myRoleIDs objectEnumerator];
-    id roleID;
-    while (roleID = [roleEnumerator nextObject]) {
-        permissions |= DLPermissionValue([[self roleWithID:[roleID description]] objectForKey:@"permissions"]);
-    }
-    if (permissions & (1ULL << 3)) return YES;
-    return (permissions & permission) == permission;
-}
-
--(BOOL)canUserWithID:(NSString *)userID viewChannelWithOverwrites:(NSArray *)overwrites {
-    static const unsigned long long DLPermissionAdministrator = 1ULL << 3;
-    static const unsigned long long DLPermissionViewChannel = 1ULL << 10;
-    if (!myRoleIDs || !userID) return YES;
-    if (ownerID && [[ownerID description] isEqualToString:[userID description]]) return YES;
+    if (ownerID && me && [[ownerID description] isEqualToString:me]) return DLPermissionAll;
+    if (!myRoleIDs) return 0;
     NSString *guildID = [serverID description];
     unsigned long long permissions = DLPermissionValue([[self roleWithID:guildID] objectForKey:@"permissions"]);
     NSEnumerator *roleEnumerator = [myRoleIDs objectEnumerator];
@@ -261,7 +249,7 @@ static unsigned long long DLPermissionValue(id value) {
     while (roleID = [roleEnumerator nextObject]) {
         permissions |= DLPermissionValue([[self roleWithID:[roleID description]] objectForKey:@"permissions"]);
     }
-    if (permissions & DLPermissionAdministrator) return YES;
+    if (permissions & DLPermissionAdministrator) return DLPermissionAll;
     unsigned long long roleAllow = 0, roleDeny = 0;
     NSDictionary *everyoneOverwrite = nil, *memberOverwrite = nil;
     NSEnumerator *overwriteEnumerator = [overwrites objectEnumerator];
@@ -271,7 +259,7 @@ static unsigned long long DLPermissionValue(id value) {
         NSString *targetID = [[overwrite objectForKey:@"id"] description];
         int type = [[overwrite objectForKey:@"type"] intValue];
         if (type == 0 && [targetID isEqualToString:guildID]) { everyoneOverwrite = overwrite; continue; }
-        if (type == 1) { if ([targetID isEqualToString:[userID description]]) memberOverwrite = overwrite; continue; }
+        if (type == 1) { if (me && [targetID isEqualToString:me]) memberOverwrite = overwrite; continue; }
         NSEnumerator *mine = [myRoleIDs objectEnumerator];
         id myRole;
         while (myRole = [mine nextObject]) {
@@ -292,7 +280,22 @@ static unsigned long long DLPermissionValue(id value) {
         permissions &= ~DLPermissionValue([memberOverwrite objectForKey:@"deny"]);
         permissions |= DLPermissionValue([memberOverwrite objectForKey:@"allow"]);
     }
-    return (permissions & DLPermissionViewChannel) != 0;
+    return permissions;
+}
+
+-(BOOL)iHavePermission:(unsigned long long)permission {
+    return ([self myPermissionsWithOverwrites:nil] & permission) == permission;
+}
+
+-(BOOL)iHavePermission:(unsigned long long)permission withOverwrites:(NSArray *)overwrites {
+    return ([self myPermissionsWithOverwrites:overwrites] & permission) == permission;
+}
+
+-(BOOL)canUserWithID:(NSString *)userID viewChannelWithOverwrites:(NSArray *)overwrites {
+    // Channel visibility is only decided for the signed-in user; unknown
+    // roles show everything rather than hide channels by mistake.
+    if (!myRoleIDs || !userID) return YES;
+    return ([self myPermissionsWithOverwrites:overwrites] & DLPermissionViewChannel) != 0;
 }
 
 -(void)dealloc {

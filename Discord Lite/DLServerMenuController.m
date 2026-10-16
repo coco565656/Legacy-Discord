@@ -304,9 +304,13 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
 #pragma mark Invite
 
 -(void)showInviteDialogForServer:(DLServer *)server {
-    DLServerChannel *channel = [[DLController sharedInstance] defaultInviteChannelForServer:server];
+    [self showInviteDialogForServer:server channel:nil];
+}
+
+-(void)showInviteDialogForServer:(DLServer *)server channel:(DLChannel *)inviteChannel {
+    DLChannel *channel = inviteChannel ? inviteChannel : (DLChannel *)[[DLController sharedInstance] defaultInviteChannelForServer:server];
     DLDialog *dialog = [DLDialog dialogWithTitle:[NSString stringWithFormat:@"Invite friends to %@", [server name]]
-                                         message:nil];
+                                         message:(inviteChannel ? [@"Recipients will land in #" stringByAppendingString:[inviteChannel name]] : nil)];
     CGFloat inner = 440.0 - 32.0;
     NSView *content = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, 92.0)] autorelease];
     NSTextField *section = [DLDialog sectionLabelWithString:@"Send a server invite link to a friend"
@@ -673,6 +677,147 @@ static BOOL DLStatusIsSuccess(NSInteger status) {
                     DLServer *updated = [[DLController sharedInstance] loadedServerWithID:serverID];
                     [updated setName:name];
                     [[DLController sharedInstance] notifyChannelsChangedForServer:updated];
+                    [shown close];
+                } else {
+                    [shown setBusy:NO];
+                    [shown setErrorMessage:DLErrorMessageFromResponse(json, status)];
+                }
+                [shown release];
+            }];
+        return NO;
+    }];
+    [dialog showInWindow:[self dialogWindow]];
+}
+
+#pragma mark Channels
+
+-(DLServer *)serverForChannel:(DLChannel *)channel {
+    if (![channel isKindOfClass:[DLServerChannel class]]) return nil;
+    return [[DLController sharedInstance] loadedServerWithID:[(DLServerChannel *)channel serverID]];
+}
+
+-(BOOL)hasPermission:(unsigned long long)permission inChannel:(DLChannel *)channel {
+    DLServer *server = [self serverForChannel:channel];
+    return server && [server iHavePermission:permission withOverwrites:[(DLServerChannel *)channel permissionOverwrites]];
+}
+
+-(NSDictionary *)overrideForChannel:(DLChannel *)channel {
+    id overrides = [[self settingsForServer:[self serverForChannel:channel]] objectForKey:@"channel_overrides"];
+    NSString *channelID = [[channel channelID] description];
+    if ([overrides isKindOfClass:[NSDictionary class]]) return [overrides objectForKey:channelID];
+    NSEnumerator *enumerator = [overrides objectEnumerator];
+    NSDictionary *override;
+    while (override = [enumerator nextObject]) {
+        if ([override isKindOfClass:[NSDictionary class]] &&
+            [[[override objectForKey:@"channel_id"] description] isEqualToString:channelID]) return override;
+    }
+    return nil;
+}
+
+-(NSMenuItem *)notificationItemForChannel:(DLChannel *)channel {
+    NSMenuItem *notifications = [[[NSMenuItem alloc] initWithTitle:@"Notification Settings" action:NULL keyEquivalent:@""] autorelease];
+    NSMenu *submenu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
+    id value = [[self overrideForChannel:channel] objectForKey:@"message_notifications"];
+    NSInteger level = [value respondsToSelector:@selector(integerValue)] ? [value integerValue] : DLNotifyServerDefault;
+    BOOL inCategory = [channel isKindOfClass:[DLServerChannel class]] &&
+                      [[(DLServerChannel *)channel parentID] isKindOfClass:[NSString class]] && [channel type] != ChannelTypeHeader;
+    NSArray *titles = [NSArray arrayWithObjects:(inCategory ? @"Use Category Default" : @"Use Server Default"),
+                       @"All Messages", @"Only @mentions", @"Nothing", nil];
+    NSInteger values[] = { DLNotifyServerDefault, DLNotifyAllMessages, DLNotifyOnlyMentions, DLNotifyNothing };
+    NSUInteger index;
+    for (index = 0; index < [titles count]; index++) {
+        NSMenuItem *item = [[[NSMenuItem alloc] initWithTitle:[titles objectAtIndex:index]
+                                                       action:@selector(setChannelNotificationLevel:) keyEquivalent:@""] autorelease];
+        [item setTarget:self];
+        [item setRepresentedObject:channel];
+        [item setTag:values[index]];
+        [item setState:(level == values[index] ? NSOnState : NSOffState)];
+        [DLDarkMenu setStyle:DLDarkMenuItemStyleRadio forItem:item];
+        [submenu addItem:item];
+        if (index == 0) [submenu addItem:[NSMenuItem separatorItem]];
+    }
+    [notifications setSubmenu:submenu];
+    return notifications;
+}
+
+-(void)setChannelNotificationLevel:(NSMenuItem *)sender {
+    DLChannel *channel = [sender representedObject];
+    NSDictionary *change = [NSDictionary dictionaryWithObject:[NSNumber numberWithInteger:[sender tag]] forKey:@"message_notifications"];
+    [self updateSettings:[NSDictionary dictionaryWithObject:[NSDictionary dictionaryWithObject:change forKey:[[channel channelID] description]]
+                                                     forKey:@"channel_overrides"]
+               forServer:[self serverForChannel:channel]];
+}
+
+-(void)showEditChannelDialogForChannel:(DLChannel *)channel {
+    BOOL category = [channel type] == ChannelTypeHeader;
+    CGFloat inner = 440.0 - 32.0;
+    NSView *content = [[[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, inner, category ? 64.0 : 148.0)] autorelease];
+    CGFloat top = NSHeight([content frame]);
+    [content addSubview:[DLDialog sectionLabelWithString:(category ? @"Category Name" : @"Channel Name")
+                                                   frame:NSMakeRect(0.0, top - 16.0, inner, 16.0)]];
+    NSTextField *nameField = [DLDialog textFieldWithFrame:NSMakeRect(0.0, top - 64.0, inner, 40.0) placeholder:nil];
+    [nameField setStringValue:([channel name] ? [channel name] : @"")];
+    [content addSubview:nameField];
+    NSTextField *topicField = nil;
+    if (!category) {
+        [content addSubview:[DLDialog sectionLabelWithString:@"Channel Topic" frame:NSMakeRect(0.0, 64.0, inner, 16.0)]];
+        topicField = [DLDialog textFieldWithFrame:NSMakeRect(0.0, 16.0, inner, 40.0) placeholder:@"Let everyone know how to use this channel!"];
+        NSString *topic = [channel respondsToSelector:@selector(topic)] ? [(DLServerChannel *)channel topic] : nil;
+        [topicField setStringValue:([topic isKindOfClass:[NSString class]] ? topic : @"")];
+        [content addSubview:topicField];
+    }
+    DLDialog *dialog = [DLDialog dialogWithTitle:(category ? @"Edit Category" : @"Edit Channel") message:nil];
+    [dialog setContentView:content];
+    [dialog addButtonWithTitle:@"Save Changes" style:DLDialogButtonStylePrimary];
+    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    NSString *channelID = [[channel channelID] description];
+    [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
+        if (buttonIndex != 0) return YES;
+        NSString *name = [[nameField stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (![name length]) {
+            [shown setErrorMessage:@"Enter a name."];
+            return NO;
+        }
+        NSMutableDictionary *body = [NSMutableDictionary dictionaryWithObject:name forKey:@"name"];
+        if (topicField) [body setObject:[topicField stringValue] forKey:@"topic"];
+        [shown setBusy:YES];
+        [shown retain];
+        [[DLController sharedInstance] sendAPIRequestWithMethod:@"PATCH" path:[NSString stringWithFormat:@"/channels/%@", channelID]
+            body:body completion:^(id json, NSInteger status) {
+                if (DLStatusIsSuccess(status) && [json isKindOfClass:[NSDictionary class]]) {
+                    DLChannel *updated = [[DLController sharedInstance] loadedChannelWithID:channelID];
+                    [updated updateWithDict:json];
+                    [[DLController sharedInstance] notifyChannelsChangedForServer:[self serverForChannel:updated]];
+                    [shown close];
+                } else {
+                    [shown setBusy:NO];
+                    [shown setErrorMessage:DLErrorMessageFromResponse(json, status)];
+                }
+                [shown release];
+            }];
+        return NO;
+    }];
+    [dialog showInWindow:[self dialogWindow]];
+}
+
+-(void)showDeleteChannelDialogForChannel:(DLChannel *)channel {
+    BOOL category = [channel type] == ChannelTypeHeader;
+    DLDialog *dialog = [DLDialog dialogWithTitle:(category ? @"Delete Category" : @"Delete Channel")
+        message:[NSString stringWithFormat:@"Are you sure you want to delete %@%@? This cannot be undone.",
+                 (category ? @"" : @"#"), [channel name]]];
+    [dialog addButtonWithTitle:(category ? @"Delete Category" : @"Delete Channel") style:DLDialogButtonStyleDanger];
+    [dialog addButtonWithTitle:@"Cancel" style:DLDialogButtonStyleLink];
+    NSString *channelID = [[channel channelID] description];
+    DLServer *server = [self serverForChannel:channel];
+    [dialog setHandler:^BOOL(DLDialog *shown, NSInteger buttonIndex) {
+        if (buttonIndex != 0) return YES;
+        [shown setBusy:YES];
+        [shown retain];
+        [[DLController sharedInstance] sendAPIRequestWithMethod:@"DELETE" path:[NSString stringWithFormat:@"/channels/%@", channelID]
+            body:nil completion:^(id json, NSInteger status) {
+                if (DLStatusIsSuccess(status)) {
+                    [[DLController sharedInstance] removeChannelWithID:channelID];
+                    [[DLController sharedInstance] notifyChannelsChangedForServer:server];
                     [shown close];
                 } else {
                     [shown setBusy:NO];

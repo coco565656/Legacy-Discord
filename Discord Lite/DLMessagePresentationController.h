@@ -37,7 +37,6 @@
     DLUserProfileController *userProfileController;
     DLMessage *lastMessage;
     DLMessage *firstMessage;
-    DLMessage *messagePendingDeletion;
     BOOL isLoadingMessages;
     BOOL isLoadingNewerMessages;
     BOOL searchHistoryWindowActive;
