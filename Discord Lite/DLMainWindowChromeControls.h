@@ -38,6 +38,9 @@ enum {
 
 // Table that shows its menu without AppKit's blue "clicked row" outline.
 // menuRow is the row under the right-click, for the menu delegate.
+// Posted (object: the table) when the row under the mouse changes.
+#define DLContextTableViewHoveredRowDidChangeNotification @"DLContextTableViewHoveredRowDidChangeNotification"
+
 @interface DLContextTableView : NSTableView {
     NSInteger menuRow;
     NSInteger hoveredRow;

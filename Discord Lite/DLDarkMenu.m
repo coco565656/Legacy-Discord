@@ -501,6 +501,7 @@ static NSString *DLIconForItem(NSMenuItem *item) {
 
 +(void)popUpMenu:(NSMenu *)menu belowRect:(NSRect)rect ofView:(NSView *)view width:(CGFloat)width {
     [self dismiss];
+    [DLTooltip hide];
     if (!menu || ![view window]) return;
     [self updateMenu:menu];
     rootMenu = [menu retain];
@@ -518,6 +519,7 @@ static NSString *DLIconForItem(NSMenuItem *item) {
 
 +(void)popUpContextMenu:(NSMenu *)menu withEvent:(NSEvent *)event forView:(NSView *)view {
     [self dismiss];
+    [DLTooltip hide];
     if (!menu || ![view window]) return;
     [self updateMenu:menu];
     rootMenu = [menu retain];
@@ -753,6 +755,92 @@ static NSString *DLIconForItem(NSMenuItem *item) {
         [path stroke];
     }
     [context restoreGraphicsState];
+}
+
+@end
+
+#pragma mark Tooltip
+
+#define DLTooltipArrow 5.0
+
+@interface DLTooltipView : NSView {
+    NSString *text;
+}
+-(void)setText:(NSString *)text;
++(NSDictionary *)textAttributes;
+@end
+
+@implementation DLTooltipView
++(NSDictionary *)textAttributes {
+    return [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSFont boldSystemFontOfSize:13.0], NSFontAttributeName,
+            DLMenuTextColor(), NSForegroundColorAttributeName, nil];
+}
+-(void)dealloc {
+    [text release];
+    [super dealloc];
+}
+-(void)setText:(NSString *)inText {
+    [text release];
+    text = [inText copy];
+    [self setNeedsDisplay:YES];
+}
+-(NSView *)hitTest:(NSPoint)point { return nil; }
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bubble = NSMakeRect(DLTooltipArrow, 0.0, NSWidth([self bounds]) - DLTooltipArrow, NSHeight([self bounds]));
+    NSBezierPath *path = [NSBezierPath bezierPathWithRoundedRect:bubble xRadius:5.0 yRadius:5.0];
+    [path moveToPoint:NSMakePoint(DLTooltipArrow + 0.5, NSMidY(bubble) - DLTooltipArrow)];
+    [path lineToPoint:NSMakePoint(0.0, NSMidY(bubble))];
+    [path lineToPoint:NSMakePoint(DLTooltipArrow + 0.5, NSMidY(bubble) + DLTooltipArrow)];
+    [path closePath];
+    [DLMenuBackgroundColor() setFill];
+    [path fill];
+    NSSize size = [text sizeWithAttributes:[DLTooltipView textAttributes]];
+    [text drawAtPoint:NSMakePoint(NSMinX(bubble) + 12.0, floor(NSMidY(bubble) - size.height / 2.0))
+       withAttributes:[DLTooltipView textAttributes]];
+}
+@end
+
+static NSPanel *tooltipPanel = nil;
+
+@implementation DLTooltip
+
++(void)showText:(NSString *)text rightOfRect:(NSRect)rect inView:(NSView *)view {
+    NSWindow *window = [view window];
+    if (![text length] || !window) {
+        [self hide];
+        return;
+    }
+    if (!tooltipPanel) {
+        tooltipPanel = [[DLDarkMenuPanel alloc] initWithContentRect:NSMakeRect(0.0, 0.0, 10.0, 10.0)
+                                                          styleMask:(NSBorderlessWindowMask | NSNonactivatingPanelMask)
+                                                            backing:NSBackingStoreBuffered defer:NO];
+        [tooltipPanel setOpaque:NO];
+        [tooltipPanel setBackgroundColor:[NSColor clearColor]];
+        [tooltipPanel setHasShadow:YES];
+        [tooltipPanel setIgnoresMouseEvents:YES];
+        [tooltipPanel setLevel:NSPopUpMenuWindowLevel];
+        [tooltipPanel setHidesOnDeactivate:YES];
+        [tooltipPanel setContentView:[[[DLTooltipView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 10.0, 10.0)] autorelease]];
+    }
+    NSSize textSize = [text sizeWithAttributes:[DLTooltipView textAttributes]];
+    CGFloat width = MIN(ceil(textSize.width) + 24.0, 280.0) + DLTooltipArrow;
+    CGFloat height = MAX(ceil(textSize.height) + 16.0, 32.0);
+    NSRect inWindow = [view convertRect:rect toView:nil];
+    NSPoint anchor = [window convertBaseToScreen:NSMakePoint(NSMaxX(inWindow) + 8.0, NSMidY(inWindow))];
+    [(DLTooltipView *)[tooltipPanel contentView] setText:text];
+    [tooltipPanel setFrame:NSMakeRect(anchor.x, floor(anchor.y - height / 2.0), width, height) display:YES];
+    if ([tooltipPanel parentWindow] != window) {
+        [[tooltipPanel parentWindow] removeChildWindow:tooltipPanel];
+        [window addChildWindow:tooltipPanel ordered:NSWindowAbove];
+    }
+    [tooltipPanel orderFront:nil];
+}
+
++(void)hide {
+    if (!tooltipPanel) return;
+    [[tooltipPanel parentWindow] removeChildWindow:tooltipPanel];
+    [tooltipPanel orderOut:nil];
 }
 
 @end

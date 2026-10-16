@@ -268,6 +268,7 @@
     if (hoveredRow >= 0 && hoveredRow < [self numberOfRows]) [self setNeedsDisplayInRect:[self rectOfRow:hoveredRow]];
     hoveredRow = row;
     if (hoveredRow >= 0 && hoveredRow < [self numberOfRows]) [self setNeedsDisplayInRect:[self rectOfRow:hoveredRow]];
+    [[NSNotificationCenter defaultCenter] postNotificationName:DLContextTableViewHoveredRowDidChangeNotification object:self];
 }
 -(void)mouseMoved:(NSEvent *)event {
     [self setHoveredRow:[self rowAtPoint:[self convertPoint:[event locationInWindow] fromView:nil]]];

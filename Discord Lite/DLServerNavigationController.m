@@ -4,6 +4,7 @@
 //
 
 #import "DLServerMenuController.h"
+#import "DLDarkMenu.h"
 #import "DLServerNavigationController.h"
 #import "DLController.h"
 #import "DLUtil.h"
@@ -115,6 +116,13 @@
         [self installTableView];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(notificationSettingsDidChange:)
                                                      name:DLNotificationSettingsDidChangeNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(hoveredRowDidChange:)
+                                                     name:DLContextTableViewHoveredRowDidChangeNotification object:tableView];
+        [[scrollView contentView] setPostsBoundsChangedNotifications:YES];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(railScrolled:)
+                                                     name:NSViewBoundsDidChangeNotification object:[scrollView contentView]];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(railScrolled:)
+                                                     name:DLDarkMenuDidCloseNotification object:nil];
     }
     return self;
 }
@@ -234,11 +242,22 @@
     }
 }
 
--(NSString *)tableView:(NSTableView *)inTableView toolTipForCell:(NSCell *)cell rect:(NSRectPointer)rect tableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row mouseLocation:(NSPoint)mouseLocation {
-    if (row >= 0 && row < (NSInteger)[serverItems count]) {
-        return [[serverItems objectAtIndex:row] name];
+// Official server name bubble beside the hovered icon.
+-(void)hoveredRowDidChange:(NSNotification *)notification {
+    NSInteger row = [(DLContextTableView *)tableView hoveredRow];
+    if (row < 0 || row >= (NSInteger)[serverItems count] || [DLDarkMenu isShown]) {
+        [DLTooltip hide];
+        return;
     }
-    return nil;
+    DLServer *server = [serverItems objectAtIndex:row];
+    NSString *name = [server isEqual:[[DLController sharedInstance] myServerItem]] ? @"Direct Messages" : [server name];
+    NSRect rowRect = [tableView rectOfRow:row];
+    NSRect iconRect = NSMakeRect(NSMidX(rowRect) - 22.0, NSMidY(rowRect) - 22.0, 44.0, 44.0);
+    [DLTooltip showText:name rightOfRect:iconRect inView:tableView];
+}
+
+-(void)railScrolled:(NSNotification *)notification {
+    [DLTooltip hide];
 }
 
 -(void)tableViewSelectionDidChange:(NSNotification *)notification {

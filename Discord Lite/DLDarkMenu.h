@@ -41,3 +41,11 @@ typedef enum {
 +(void)drawIconNamed:(NSString *)name inRect:(NSRect)rect color:(NSColor *)color;
 
 @end
+
+// Official hover tooltip: a dark bubble with an arrow pointing at the
+// hovered element (server icons, icon buttons). One is shown at a time.
+@interface DLTooltip : NSObject
+// Shows text to the right of rect (in view coordinates), vertically centered.
++(void)showText:(NSString *)text rightOfRect:(NSRect)rect inView:(NSView *)view;
++(void)hide;
+@end
