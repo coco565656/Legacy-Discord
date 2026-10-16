@@ -107,6 +107,10 @@
 		E00000000000000000000001 /* DLDirectMessageController.m in Sources */ = {isa = PBXBuildFile; fileRef = E00000000000000000000003 /* DLDirectMessageController.m */; };
 		E10000000000000000000001 /* DLMessagePresentationController.m in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000003 /* DLMessagePresentationController.m */; };
 		E20000000000000000000001 /* DLMainHeaderController.m in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000003 /* DLMainHeaderController.m */; };
+		E30000000000000000000011 /* DLVoiceLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000013 /* DLVoiceLibrary.m */; };
+		E30000000000000000000021 /* DLVoiceConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000023 /* DLVoiceConnection.m */; };
+		E30000000000000000000031 /* DLVoiceManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000033 /* DLVoiceManager.m */; };
+		E30000000000000000000041 /* ldv_protocol.c in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000043 /* ldv_protocol.c */; };
 		E30000000000000000000001 /* DLUserPanelController.m in Sources */ = {isa = PBXBuildFile; fileRef = E30000000000000000000003 /* DLUserPanelController.m */; };
 		F10000000000000000000001 /* DLTwemojiRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* DLTwemojiRenderer.m */; };
 		F10000000000000000000004 /* Twemoji72 in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* Twemoji72 */; };
@@ -342,6 +346,13 @@
 		E10000000000000000000003 /* DLMessagePresentationController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMessagePresentationController.m; sourceTree = "<group>"; };
 		E20000000000000000000002 /* DLMainHeaderController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLMainHeaderController.h; sourceTree = "<group>"; };
 		E20000000000000000000003 /* DLMainHeaderController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLMainHeaderController.m; sourceTree = "<group>"; };
+		E30000000000000000000012 /* DLVoiceLibrary.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLVoiceLibrary.h; sourceTree = "<group>"; };
+		E30000000000000000000013 /* DLVoiceLibrary.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLVoiceLibrary.m; sourceTree = "<group>"; };
+		E30000000000000000000022 /* DLVoiceConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLVoiceConnection.h; sourceTree = "<group>"; };
+		E30000000000000000000023 /* DLVoiceConnection.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLVoiceConnection.m; sourceTree = "<group>"; };
+		E30000000000000000000032 /* DLVoiceManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLVoiceManager.h; sourceTree = "<group>"; };
+		E30000000000000000000033 /* DLVoiceManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLVoiceManager.m; sourceTree = "<group>"; };
+		E30000000000000000000043 /* ldv_protocol.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = ldv_protocol.c; path = Voice/ldv_protocol.c; sourceTree = SOURCE_ROOT; };
 		E30000000000000000000002 /* DLUserPanelController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLUserPanelController.h; sourceTree = "<group>"; };
 		E30000000000000000000003 /* DLUserPanelController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DLUserPanelController.m; sourceTree = "<group>"; };
 		87C11C952728DB7B000046F2 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -534,6 +545,13 @@
 				E10000000000000000000003 /* DLMessagePresentationController.m */,
 				E20000000000000000000002 /* DLMainHeaderController.h */,
 				E20000000000000000000003 /* DLMainHeaderController.m */,
+				E30000000000000000000012 /* DLVoiceLibrary.h */,
+				E30000000000000000000013 /* DLVoiceLibrary.m */,
+				E30000000000000000000022 /* DLVoiceConnection.h */,
+				E30000000000000000000023 /* DLVoiceConnection.m */,
+				E30000000000000000000032 /* DLVoiceManager.h */,
+				E30000000000000000000033 /* DLVoiceManager.m */,
+				E30000000000000000000043 /* ldv_protocol.c */,
 				E30000000000000000000002 /* DLUserPanelController.h */,
 				E30000000000000000000003 /* DLUserPanelController.m */,
 				D30000000000000000000002 /* DLMessageComposerControls.h */,
@@ -966,6 +984,10 @@
 				E00000000000000000000001 /* DLDirectMessageController.m in Sources */,
 				E10000000000000000000001 /* DLMessagePresentationController.m in Sources */,
 				E20000000000000000000001 /* DLMainHeaderController.m in Sources */,
+				E30000000000000000000011 /* DLVoiceLibrary.m in Sources */,
+				E30000000000000000000021 /* DLVoiceConnection.m in Sources */,
+				E30000000000000000000031 /* DLVoiceManager.m in Sources */,
+				E30000000000000000000041 /* ldv_protocol.c in Sources */,
 				E30000000000000000000001 /* DLUserPanelController.m in Sources */,
 				87A38DE327337386002385EE /* DLDirectMessageChannel.m in Sources */,
 				87A38DD9273330C0002385EE /* AttachmentPreviewViewController.m in Sources */,
@@ -1205,6 +1227,7 @@
 					"$(DEVELOPER_DIR)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks",
 				);
 				INFOPLIST_FILE = "Discord Lite/Info.plist";
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Voice $(PROJECT_DIR)/Voice/include";
 				LD_DEPENDENCY_INFO_FILE = "$(OBJECT_FILE_DIR_$(CURRENT_VARIANT))/$(CURRENT_ARCH)/$(PRODUCT_NAME)_dependency_info.dat";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
 				LIBRARY_SEARCH_PATHS = (
@@ -1242,6 +1265,7 @@
 					"$(SDKROOT)/System/Library/Frameworks",
 				);
 				INFOPLIST_FILE = "Discord Lite/Info.plist";
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Voice $(PROJECT_DIR)/Voice/include";
 				LD_DEPENDENCY_INFO_FILE = "$(OBJECT_FILE_DIR_$(CURRENT_VARIANT))/$(CURRENT_ARCH)/$(PRODUCT_NAME)_dependency_info.dat";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
 				LIBRARY_SEARCH_PATHS = (
@@ -1278,6 +1302,7 @@
 				CLANG_MODULES_AUTOLINK = NO;
 				CODE_SIGN_IDENTITY = "";
 				INFOPLIST_FILE = "Discord Lite/Info.plist";
+				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Voice $(PROJECT_DIR)/Voice/include";
 				OTHER_LDFLAGS = ("-framework", Security, "-framework", SystemConfiguration);
 				SDKROOT = macosx;
 			};

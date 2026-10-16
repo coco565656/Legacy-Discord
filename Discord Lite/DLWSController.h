@@ -24,10 +24,15 @@
 #define kWSSequence "s"
 #define kWSType "t"
 
+// Voice events, posted on the main thread with the event data as userInfo.
+#define DLVoiceStateUpdateNotification @"DLVoiceStateUpdateNotification"
+#define DLVoiceServerUpdateNotification @"DLVoiceServerUpdateNotification"
+
 typedef enum {
     OPCodeGeneral = 0,
     OPCodeHeartbeat = 1,
     OPCodeIdentify = 2,
+    OPCodeVoiceStateUpdate = 4,
     OPCodeResume = 6,
     OPCodeReconnect = 7,
     OPCodeQueryServerMembers = 8,
@@ -104,6 +109,10 @@ typedef enum {
 -(void)updateWSForDirectMessageChannel:(DLChannel *)c;
 -(void)updateWSForChannel:(DLChannel *)c inServer:(DLServer *)s;
 
+// Gateway opcode 4: join (channelID set) or leave (nil) a voice channel.
+// guildID is nil for DM and group calls.
+-(void)sendVoiceStateUpdateForGuildID:(NSString *)guildID channelID:(NSString *)channelID
+                             selfMute:(BOOL)selfMute selfDeaf:(BOOL)selfDeaf;
 -(void)queryServer:(DLServer *)s forMembersContainingUsername:(NSString *)username;
 -(void)requestMembersForChannel:(DLChannel *)c inServer:(DLServer *)s from:(NSInteger)start to:(NSInteger)end;
 

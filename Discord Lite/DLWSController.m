@@ -321,6 +321,19 @@ static DLWSController* sharedObject = nil;
     [self sendWSTextData:str];
 }
 
+-(void)sendVoiceStateUpdateForGuildID:(NSString *)guildID channelID:(NSString *)channelID
+                             selfMute:(BOOL)selfMute selfDeaf:(BOOL)selfDeaf {
+    NSDictionary *data = [NSDictionary dictionaryWithObjectsAndKeys:
+                          (guildID ? (id)guildID : (id)[NSNull null]), @"guild_id",
+                          (channelID ? (id)channelID : (id)[NSNull null]), @"channel_id",
+                          [NSNumber numberWithBool:selfMute], @"self_mute",
+                          [NSNumber numberWithBool:selfDeaf], @"self_deaf",
+                          [NSNumber numberWithBool:NO], @"self_video", nil];
+    NSDictionary *payload = [NSDictionary dictionaryWithObjectsAndKeys:
+                             [NSNumber numberWithInt:OPCodeVoiceStateUpdate], @kWSOperation, data, @kWSData, nil];
+    [self sendWSTextData:[[CJSONSerializer serializer] serializeDictionary:payload error:nil]];
+}
+
 -(void)queryServer:(DLServer *)s forMembersContainingUsername:(NSString *)username {
     NSMutableDictionary *data = [[NSMutableDictionary alloc] init];
     [data setObject:[NSArray arrayWithObject:[s serverID]] forKey:@"guild_id"];
@@ -467,6 +480,14 @@ static DLWSController* sharedObject = nil;
             } else if ([type isEqualToString:@"USER_GUILD_SETTINGS_UPDATE"]) {
                 if ([delegate respondsToSelector:@selector(wsDidReceiveUserGuildSettings:replacingAll:)]) {
                     [delegate wsDidReceiveUserGuildSettings:[res objectForKey:@kWSData] replacingAll:NO];
+                }
+            } else if ([type isEqualToString:@"VOICE_STATE_UPDATE"] || [type isEqualToString:@"VOICE_SERVER_UPDATE"]) {
+                NSDictionary *wsData = [res objectForKey:@kWSData];
+                if ([wsData isKindOfClass:[NSDictionary class]]) {
+                    [[NSNotificationCenter defaultCenter] postNotificationName:([type isEqualToString:@"VOICE_STATE_UPDATE"]
+                                                                               ? DLVoiceStateUpdateNotification
+                                                                               : DLVoiceServerUpdateNotification)
+                                                                        object:self userInfo:wsData];
                 }
             } else if ([type isEqualToString:@"PRESENCE_UPDATE"]) {
                 // Friend presences arrive without a guild_id.

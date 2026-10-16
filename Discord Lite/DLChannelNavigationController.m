@@ -5,6 +5,7 @@
 
 #import "DLChannelNavigationController.h"
 #import "DLController.h"
+#import "DLVoiceManager.h"
 #import "DLUtil.h"
 #import "DLPreferencesHandler.h"
 #import "DLTwemojiRenderer.h"
@@ -580,6 +581,14 @@
     } else {
         [menu addItem:[self channelMenuItem:@"Copy Link" action:@selector(copyChannelLink:) channel:channel]];
     }
+    BOOL isVoice = [channel type] == ChannelTypeVoice || [channel type] == ChannelTypeStageVoice;
+    if (isVoice && [DLVoiceManager isAvailable]) {
+        DLVoiceManager *voice = [DLVoiceManager sharedManager];
+        BOOL here = [voice state] != DLVoiceStateIdle && [[voice channel] isEqual:channel];
+        [menu addItem:[NSMenuItem separatorItem]];
+        [menu addItem:[self channelMenuItem:(here ? @"Disconnect" : @"Join Voice")
+                                     action:(here ? @selector(leaveVoice:) : @selector(joinVoice:)) channel:channel]];
+    }
     [menu addItem:[NSMenuItem separatorItem]];
     [self addMuteItemForChannel:channel toMenu:menu];
     if ([[DLPreferencesHandler sharedInstance] developerMode]) {
@@ -617,6 +626,14 @@
     }
     [mute setSubmenu:durations];
     [menu addItem:mute];
+}
+
+-(void)joinVoice:(NSMenuItem *)sender {
+    [[DLVoiceManager sharedManager] joinChannel:[sender representedObject]];
+}
+
+-(void)leaveVoice:(NSMenuItem *)sender {
+    [[DLVoiceManager sharedManager] disconnect];
 }
 
 -(void)muteChannel:(NSMenuItem *)sender {

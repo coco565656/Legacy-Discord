@@ -3,7 +3,7 @@
  * DAVE session + key package, Opus encode/decode round trip, and the
  * transport seal/open round trip (including tamper detection).
  *
- * cc -mmacosx-version-min=10.8 -I out/include voice_selftest.c \
+ * cc -mmacosx-version-min=10.8 -I out/include voice_selftest.c ldv_protocol.c \
  *    -L out -lLegacyDiscordVoice -Wl,-rpath,@executable_path -o voice_selftest
  */
 
@@ -13,6 +13,7 @@
 #include <dave/dave.h>
 #include <opus/opus.h>
 #include "ldv_transport.h"
+#include "ldv_protocol.h"
 
 static int failures = 0;
 #define CHECK(cond, what) do { if (cond) printf("ok   %s\n", what); else { printf("FAIL %s\n", what); failures++; } } while (0)
@@ -72,6 +73,40 @@ int main(void) {
     packet[sizeof(header) + 1] ^= 1;
     CHECK(ldv_transport_open(key, packet, packetLength, sizeof(header), payload, sizeof(payload)) == 0,
           "transport rejects tampering");
+
+    /* Protocol helpers */
+    uint8_t discovery[LDV_DISCOVERY_LENGTH];
+    ldv_discovery_request(0x01020304, discovery);
+    CHECK(discovery[1] == 1 && discovery[3] == 70 && discovery[7] == 4, "discovery request");
+    discovery[1] = 2;
+    strcpy((char *)discovery + 8, "203.0.113.7");
+    discovery[72] = 0xC3; discovery[73] = 0x50;
+    char address[65];
+    uint16_t port = 0;
+    CHECK(ldv_discovery_parse(discovery, sizeof(discovery), address, &port) &&
+          strcmp(address, "203.0.113.7") == 0 && port == 50000, "discovery response");
+    uint8_t rtp[12];
+    ldv_rtp_write(513, 0x0A0B0C0D, 0x11223344, rtp);
+    uint8_t received[64] = {0};
+    memcpy(received, rtp, 12);
+    ldv_rtp_header parsed;
+    CHECK(ldv_rtp_parse(received, 40, &parsed) && parsed.sequence == 513 && parsed.ssrc == 0x11223344 &&
+          parsed.aadLength == 12 && parsed.extensionBodyLength == 0, "RTP header");
+    received[0] = 0x90;                 /* with a one-word extension (0xBEDE, length 1) */
+    received[12] = 0xBE; received[13] = 0xDE; received[14] = 0; received[15] = 1;
+    CHECK(ldv_rtp_parse(received, 44, &parsed) && parsed.aadLength == 16 && parsed.extensionBodyLength == 4,
+          "RTP header with extension");
+    received[1] = 201;
+    CHECK(!ldv_rtp_parse(received, 44, &parsed), "RTCP ignored");
+    uint8_t binary[] = {0x00, 0x07, 29, 0x00, 0x05, 0xAA, 0xBB};
+    uint16_t sequence = 0, transition = 0;
+    uint8_t opcode = 0;
+    const uint8_t *body = NULL, *inner = NULL;
+    size_t bodyLength = 0, innerLength = 0;
+    CHECK(ldv_binary_parse(binary, sizeof(binary), &sequence, &opcode, &body, &bodyLength) &&
+          sequence == 7 && opcode == 29 && bodyLength == 4, "binary frame");
+    CHECK(ldv_transition_payload(body, bodyLength, &transition, &inner, &innerLength) &&
+          transition == 5 && innerLength == 2 && inner[0] == 0xAA, "transition payload");
 
     printf(failures ? "SELFTEST FAILED (%d)\n" : "SELFTEST PASSED\n", failures);
     return failures ? 1 : 0;

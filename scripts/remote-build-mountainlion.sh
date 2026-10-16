@@ -142,6 +142,27 @@ if [ "$BUILD_STATUS" -ne 0 ]; then
     exit "$BUILD_STATUS"
 fi
 
+# Voice (10.8+): bundle libLegacyDiscordVoice.dylib built by
+# scripts/build-voice-deps.sh, then sign with the stable self-signed identity
+# when it exists so Keychain approvals survive rebuilds.
+$SSH_RSH "$REMOTE_HOST" "
+    APP=\"\$HOME/$REMOTE_DIR/build/$CONFIGURATION/Legacy Discord.app\"
+    VOICE=\"\$HOME/Developer/voice-deps/out/libLegacyDiscordVoice.dylib\"
+    if [ -f \"\$VOICE\" ]; then
+        mkdir -p \"\$APP/Contents/Frameworks\"
+        cp \"\$VOICE\" \"\$APP/Contents/Frameworks/\"
+        echo 'Bundled the voice library.'
+    else
+        echo 'Voice library not built; voice will be unavailable.'
+    fi
+    D=\"\$HOME/Library/LegacyDiscordSigning\"
+    if [ -f \"\$D/signing.keychain\" ]; then
+        security unlock-keychain -p \"\$(cat \"\$D/pass\")\" \"\$D/signing.keychain\"
+        [ -f \"\$APP/Contents/Frameworks/libLegacyDiscordVoice.dylib\" ] && codesign -f -s 'Legacy Discord Dev' --keychain \"\$D/signing.keychain\" \"\$APP/Contents/Frameworks/libLegacyDiscordVoice.dylib\"
+        codesign -f -s 'Legacy Discord Dev' --keychain \"\$D/signing.keychain\" \"\$APP\" && echo 'Signed with Legacy Discord Dev.'
+    fi
+"
+
 printf 'Downloading build products...\n'
 rsync \
     -az \
