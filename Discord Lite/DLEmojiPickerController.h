@@ -33,6 +33,7 @@
 -(void)setEnabled:(BOOL)enabled;
 -(void)showReactionPickerForChatView:(ChatItemViewController *)chatView relativeToView:(NSView *)anchorView;
 -(void)close;
++(void)prefetchEmojiImages:(NSArray *)emojiList;
 #if LEGACY_DISCORD_LOCAL_DEV
 -(void)showOfflineReplayPicker;
 -(BOOL)offlineReplayIsShown;

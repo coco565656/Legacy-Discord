@@ -180,7 +180,42 @@ static const NSInteger DLEmojiColumns = 7;
 }
 @end
 
+// Fetches picker-size emoji images ahead of the first picker open so the
+// cells do not sit on "…" placeholders while the CDN request burst completes.
+@interface DLEmojiPrefetchHandler : NSObject <AsyncHTTPRequestDelegate>
+@end
+
+static DLEmojiPrefetchHandler *DLEmojiPrefetchHandlerShared = nil;
+
+@implementation DLEmojiPrefetchHandler
+-(void)requestDidFinishLoading:(AsyncHTTPRequest *)request {
+    if ([request result] != HTTPResultOK) {
+        [[HTTPCache sharedInstance] endLoadingURL:[request url]];
+    }
+    [request release];
+}
+@end
+
 @implementation DLEmojiPickerController
+
++(void)prefetchEmojiImages:(NSArray *)emojiList {
+    if (!DLEmojiPrefetchHandlerShared) {
+        DLEmojiPrefetchHandlerShared = [[DLEmojiPrefetchHandler alloc] init];
+    }
+    for (NSDictionary *emoji in emojiList) {
+        NSString *emojiID = [emoji objectForKey:@"id"];
+        if (!emojiID) continue; // standard emoji come from the bundled Twemoji set.
+        NSString *url = [NSString stringWithFormat:@"https://cdn.discordapp.com/emojis/%@.%@?size=32&quality=lossless",
+            emojiID, [[emoji objectForKey:@"animated"] boolValue] ? @"gif" : @"png"];
+        if ([[HTTPCache sharedInstance] cachedDataForURL:url]) continue;
+        if (![[HTTPCache sharedInstance] beginLoadingURL:url]) continue;
+        AsyncHTTPGetRequest *request = [[AsyncHTTPGetRequest alloc] init];
+        [request setDelegate:DLEmojiPrefetchHandlerShared];
+        [request setUrl:url];
+        [request setCached:YES];
+        [request start];
+    }
+}
 
 -(id)initWithButton:(NSButton *)inButton {
     self = [super init];

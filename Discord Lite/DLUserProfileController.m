@@ -473,6 +473,7 @@
     [formatter setFormatterBehavior:NSDateFormatterBehavior10_4];
     [formatter setDateStyle:NSDateFormatterMediumStyle];
     [formatter setTimeStyle:NSDateFormatterNoStyle];
+    [formatter setLocale:[DLLocalization localeForAppLanguage]];
     if (created) [since addObject:[NSString stringWithFormat:@"Discord %@", [formatter stringFromDate:created]]];
     NSString *joinedAt = [guildMember objectForKey:@"joined_at"];
     NSDate *joinedDate = [joinedAt isKindOfClass:[NSString class]] ? [DLUtil dateFromTimestampString:joinedAt] : nil;

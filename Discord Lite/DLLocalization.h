@@ -25,6 +25,9 @@ NSString *DLPluralSuffix(NSInteger count);
 // The language in use for this run: "en" or "ja".
 +(NSString *)activeLanguage;
 +(BOOL)isJapanese;
+// Locale matching the app language for date and number formatting, so that
+// setting 日本語 on an English system renders dates the Japanese way.
++(NSLocale *)localeForAppLanguage;
 // Translates nib text in place: window titles, labels, buttons, placeholders,
 // tool tips and menus, for windows and views loaded from xib files.
 +(void)localizeView:(NSView *)view;

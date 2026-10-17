@@ -37,6 +37,11 @@ static NSString *activeLanguage = nil;
     return [[self activeLanguage] isEqualToString:@"ja"];
 }
 
++(NSLocale *)localeForAppLanguage {
+    NSString *identifier = [self isJapanese] ? @"ja_JP" : @"en_US";
+    return [[[NSLocale alloc] initWithLocaleIdentifier:identifier] autorelease];
+}
+
 +(NSDictionary *)table {
     if (translationTable) return translationTable;
     if ([self isJapanese]) {

@@ -13,6 +13,15 @@
 #import <WebKit/WebKit.h>
 #import "DLUtil.h"
 
+// Image attachments have no menu of their own, so a right-click follows the
+// official client and opens the containing message row's context menu instead
+// of being swallowed (the 10.6 base class does nothing when unhandled).
+static void DLForwardRightMouseDownToMessageRow(NSView *view, NSEvent *event) {
+    NSView *ancestor = [view superview];
+    while (ancestor && ![ancestor isKindOfClass:[NSView_Events class]]) ancestor = [ancestor superview];
+    if (ancestor) [ancestor rightMouseDown:event];
+}
+
 // Black "SPOILER" pill centred over a hidden image, like the official client.
 @interface DLSpoilerLabelView : NSView
 @end
@@ -57,6 +66,22 @@ static NSImage *DLSpoilerImage(NSData *data) {
     return blurred;
 }
 
+// Attachments show rounded corners like the official client. 10.6 has no
+// layer-based clipping, so the image view clips its own drawing.
+@interface DLRoundedAttachmentImageView : NSImageView
+@end
+
+@implementation DLRoundedAttachmentImageView
+-(void)drawRect:(NSRect)dirtyRect {
+    NSRect bounds = [self bounds];
+    [NSGraphicsContext saveGraphicsState];
+    CGFloat radius = MIN(8.0, MIN(NSWidth(bounds) / 2.0, NSHeight(bounds) / 2.0));
+    [[NSBezierPath bezierPathWithRoundedRect:bounds xRadius:radius yRadius:radius] addClip];
+    [super drawRect:dirtyRect];
+    [NSGraphicsContext restoreGraphicsState];
+}
+@end
+
 @implementation AttachmentPreviewViewController
 
 -(NSView *)attachmentView {
@@ -72,7 +97,7 @@ static NSImage *DLSpoilerImage(NSData *data) {
     NSRect frame = NSMakeRect(0, 0, [representedObject scaledWidth], [representedObject scaledHeight]);
     
     if ([representedObject type] == AttachmentTypeImage) {
-        imageView = [[NSImageView alloc] initWithFrame:frame];
+        imageView = [[DLRoundedAttachmentImageView alloc] initWithFrame:frame];
         attachmentView = imageView;
         
         //Add invisible overlay to handle mouse events
@@ -97,7 +122,7 @@ static NSImage *DLSpoilerImage(NSData *data) {
         attachmentView = videoView;
         NSString *videoURL = [representedObject proxyURL] ? [representedObject proxyURL] : [representedObject url];
         NSString *escapedURL = [[videoURL stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"] stringByReplacingOccurrencesOfString:@"\"" withString:@"&quot;"];
-        NSString *html = [NSString stringWithFormat:@"<html><body style='margin:0;background:#111;overflow:hidden'><video src=\"%@\" controls preload='metadata' style='width:100%%;height:100%%'></video></body></html>", escapedURL];
+        NSString *html = [NSString stringWithFormat:@"<html><body style='margin:0;background:#111;overflow:hidden'><video src=\"%@\" controls preload='metadata' style='width:100%%;height:100%%;border-radius:8px'></video></body></html>", escapedURL];
         [[videoView mainFrame] loadHTMLString:html baseURL:nil];
     } else {
         attachmentView = nonImageAttachmentView;
@@ -203,6 +228,10 @@ static NSImage *DLSpoilerImage(NSData *data) {
 -(void)viewerWindowDidClose {
     [attachmentViewerWindow release];
     attachmentViewerWindow = nil;
+}
+
+-(void)mouseRightButtonWasDepressedWithEvent:(NSEvent *)event {
+    DLForwardRightMouseDownToMessageRow(eventHandlerView, event);
 }
 
 

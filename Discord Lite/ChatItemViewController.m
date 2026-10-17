@@ -18,6 +18,42 @@
 #import "DLUIDiagnostics.h"
 #endif
 
+// Embed cards and their contents have no menu of their own, so a right-click
+// anywhere on the row follows the official client and opens that message's
+// context menu, which the row's background view (NSView_Events) owns.
+static void DLForwardRightMouseDownToMessageRow(NSView *view, NSEvent *event) {
+    NSView *ancestor = [view superview];
+    while (ancestor && ![ancestor isKindOfClass:[NSView_Events class]]) ancestor = [ancestor superview];
+    if (ancestor) [ancestor rightMouseDown:event];
+}
+
+@interface DLEmbedForwardingBox : NSBox
+@end
+
+@implementation DLEmbedForwardingBox
+-(void)rightMouseDown:(NSEvent *)event {
+    DLForwardRightMouseDownToMessageRow(self, event);
+}
+@end
+
+@interface DLEmbedForwardingTextField : NSTextField
+@end
+
+@implementation DLEmbedForwardingTextField
+-(void)rightMouseDown:(NSEvent *)event {
+    DLForwardRightMouseDownToMessageRow(self, event);
+}
+@end
+
+@interface DLEmbedForwardingImageView : NSImageView
+@end
+
+@implementation DLEmbedForwardingImageView
+-(void)rightMouseDown:(NSEvent *)event {
+    DLForwardRightMouseDownToMessageRow(self, event);
+}
+@end
+
 NSString * const DLMessageActionBarDidShowNotification = @"DLMessageActionBarDidShowNotification";
 NSString * const DLMessageActionBarDidHideNotification = @"DLMessageActionBarDidHideNotification";
 
@@ -898,7 +934,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
 }
 
 -(NSTextField *)embedTextFieldWithFrame:(NSRect)frame text:(NSString *)text font:(NSFont *)font color:(NSColor *)color {
-    NSTextField *field = [[[NSTextField alloc] initWithFrame:frame] autorelease];
+    DLEmbedForwardingTextField *field = [[[DLEmbedForwardingTextField alloc] initWithFrame:frame] autorelease];
     [field setBordered:NO];
     [field setDrawsBackground:NO];
     [field setEditable:NO];
@@ -994,7 +1030,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
         NSView *container = [[NSView alloc] initWithFrame:NSMakeRect(74.0 + index * (stickerSide + spacing), 0.0, stickerSide, stickerSide)];
         NSString *stickerURL = DLStickerURL(sticker);
         if (stickerURL) {
-            NSImageView *imageView = [[NSImageView alloc] initWithFrame:[container bounds]];
+            DLEmbedForwardingImageView *imageView = [[DLEmbedForwardingImageView alloc] initWithFrame:[container bounds]];
             [imageView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
             [imageView setImageScaling:NSImageScaleProportionallyUpOrDown];
             [imageView setAnimates:(formatType == 2 || formatType == 4)];
@@ -1096,7 +1132,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
 
         // Official embed: dark rounded card with a coloured bar on the left
         // (the embed's colour, grey when it has none).
-        NSBox *card = [[NSBox alloc] initWithFrame:NSMakeRect(74.0, 0.0, cardWidth, cardHeight)];
+        NSBox *card = [[DLEmbedForwardingBox alloc] initWithFrame:NSMakeRect(74.0, 0.0, cardWidth, cardHeight)];
         [card setBoxType:NSBoxCustom];
         [card setBorderType:NSNoBorder];
         [card setCornerRadius:4.0];
@@ -1124,7 +1160,7 @@ const NSInteger ATTACHMENT_SPACING = 15;
                 [[videoView mainFrame] loadHTMLString:html baseURL:nil];
                 [cardContent addSubview:videoView];
             } else {
-                NSImageView *imageView = [[[NSImageView alloc] initWithFrame:mediaFrame] autorelease];
+                DLEmbedForwardingImageView *imageView = [[[DLEmbedForwardingImageView alloc] initWithFrame:mediaFrame] autorelease];
                 [imageView setImageScaling:NSImageScaleProportionallyUpOrDown];
                 NSData *cachedData = [[HTTPCache sharedInstance] cachedDataForURL:mediaURL];
                 if (cachedData) {
@@ -1216,7 +1252,10 @@ const NSInteger ATTACHMENT_SPACING = 15;
     if ([representedObject referencedMessage]) {
         NSRect referencedFrame = referencedMessageView.frame;
         referencedFrame.origin.y = NSHeight([insetView bounds]) - referencedFrame.size.height;
-        referencedFrame.size.width = NSWidth([insetView bounds]) - 5;
+        // Stay inside the message text column: the text view keeps a 16pt right
+        // margin, and 8pt of the reply text field's internal margin is reserved
+        // with it, so the truncation mark does not ride the window edge.
+        referencedFrame.size.width = NSWidth([insetView bounds]) - 24;
         [referencedMessageView setFrame:referencedFrame];
     }
 }
@@ -1481,6 +1520,8 @@ const NSInteger ATTACHMENT_SPACING = 15;
         NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
         [formatter setDateStyle:NSDateFormatterLongStyle];
         [formatter setTimeStyle:NSDateFormatterNoStyle];
+        // The divider follows the app language, not the Mac's system locale.
+        [formatter setLocale:[DLLocalization localeForAppLanguage]];
         [(DLDateDividerView *)dateDividerView setTitle:[formatter stringFromDate:date]];
     }
     [self layoutForCurrentViewFrame];

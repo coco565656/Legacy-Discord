@@ -125,6 +125,8 @@ static NSAttributedString *DLRenderTimestamp(NSArray *captures, NSDictionary *ba
         else if ([style isEqualToString:@"F"]) { dateStyle = NSDateFormatterFullStyle; }
         [formatter setDateStyle:dateStyle];
         [formatter setTimeStyle:timeStyle];
+        // Message timestamps follow the app language, not the system locale.
+        [formatter setLocale:[DLLocalization localeForAppLanguage]];
         string = [formatter stringFromDate:date];
     }
     NSMutableDictionary *attributes = [NSMutableDictionary dictionaryWithDictionary:baseAttributes];
@@ -132,6 +134,7 @@ static NSAttributedString *DLRenderTimestamp(NSArray *captures, NSDictionary *ba
     NSDateFormatter *full = [[[NSDateFormatter alloc] init] autorelease];
     [full setDateStyle:NSDateFormatterFullStyle];
     [full setTimeStyle:NSDateFormatterShortStyle];
+    [full setLocale:[DLLocalization localeForAppLanguage]];
     [attributes setObject:[full stringFromDate:date] forKey:NSToolTipAttributeName];
     return [[[NSAttributedString alloc] initWithString:(string ? string : @"") attributes:attributes] autorelease];
 }

@@ -236,8 +236,9 @@ ssh MacBook 'curl -kvx http://127.0.0.1:6531 https://discord.com 2>&1 | grep -iE
 
 ### 4. 検証後の文書反映 — 実施済み
 
-- `docs/KNOWN_ISSUES.md` に LD-2026-003 を追加済み
-  (検証結果・証拠・スクリーンショット付き)。
+- `docs/KNOWN_ISSUES.md` に LD-2026-025 を追加済み
+  (初回作成時は LD-2026-003 だったが、既存の LD-2026-003 と重複したため
+  リナンバーした。検証結果・証拠・スクリーンショット付き)。
 - `docs/release-notes/0.1.0-beta1.md` の既知の制限の行は、出荷済み
   beta1 の正確な記述なので触らない。次回リリースのノートで
   「AquaProxy 対応済み」と明記すること。

@@ -158,6 +158,10 @@ static const CGFloat DLPopoutScreenMargin = 8.0;
         if (origin.y + height > NSMaxY(content)) origin.y = NSMaxY(content) - height;
         if (origin.y < NSMinY(content)) origin.y = NSMinY(content);
     }
+    if (width <= NSWidth(content)) {
+        if (origin.x + width > NSMaxX(content)) origin.x = NSMaxX(content) - width;
+        if (origin.x < NSMinX(content)) origin.x = NSMinX(content);
+    }
     NSScreen *screen = [[view window] screen] ? [[view window] screen] : [NSScreen mainScreen];
     if (screen) {
         NSRect visible = NSInsetRect([screen visibleFrame], DLPopoutScreenMargin, DLPopoutScreenMargin);

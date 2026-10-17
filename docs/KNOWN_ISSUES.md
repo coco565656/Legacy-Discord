@@ -5,9 +5,136 @@ problems without evidence.
 
 ## Reproduced issues
 
-No unresolved confirmed issues are recorded for this profile pass. Other screens and untested operations are not certified bug-free.
+```text
+Issue ID: LD-2026-032
+Found: 2026-10-17
+Priority: P3 (harness-only rendering artifact)
+Screen: DevLocal member pane (member-* and channel-* fixtures with a member list)
+Reproduction steps: Run capture-ui-dev.sh on a fixture that renders the member pane and inspect the right edge of the pane.
+Reproduction rate: Visible in DevLocal fixtures at 720x520, 960x640 and 1280x800 before today's pass.
+Expected result: A clean dark pane edge.
+Actual result: A short stray vertical stub line near the top of the member pane.
+Screenshot: artifacts/local-dev/screenshots/ (member pane fixtures; see regression runs)
+Log: not required (no crash; rendering only)
+Crash report: none
+sample result: not required; the fixture exits normally.
+Cause: not yet identified; the same pane is clean on real devices, so the artifact is limited to the DevLocal replay harness.
+Fix commit: not scheduled
+Regression test: none (harness-only)
+Legacy OS status: NOT APPLICABLE (absent on Snow Leopard 10.6.8 rd-08 and Mountain Lion 10.8.5 real-device captures)
+```
+
+Other screens and untested operations are not certified bug-free.
 
 ## Resolved with regression evidence
+
+```text
+Issue ID: LD-2026-026
+Found: 2026-10-17
+Priority: P1 (emoji picker popup extends past the window edge and is clipped)
+Screen: Emoji picker popup opened from the composer on Mac OS X 10.6.8 / 10.8.5
+Reproduction steps: In a channel, click the composer emoji button so the popup opens toward the window's right edge.
+Reproduction rate: 2/2 real-device captures before the fix (rd-11..rd-14); DevLocal composer-emoji-picker fixture shows the same overflow.
+Expected result: The popup is fully inside the main window.
+Actual result: The popup's right edge ran roughly 150 points past the window edge and the last grid columns were unreachable.
+Before screenshot: artifacts/snow-leopard/screenshots/rd-14-emoji-down.png
+Crash report: none
+Cause: DLCompatibilityPopover clamped the panel's Y into the parent window content rect but clamped X only against the screen.
+Fix: Clamp X into the parent window content rect (8-point inset) in fallbackOriginForRect:view:edge:, mirroring the existing Y clamp.
+Regression test: Rebuilt and relaunched on both real devices: Snow Leopard rd-23-picker.png shows the popup at x 663-1003 inside the window (right edge 1011); Mountain Lion rd-m-03-picker.png shows the right edge at about 972 inside the window. Full local screenshot regression passed (60 captures).
+Fixed screenshots: artifacts/snow-leopard/screenshots/rd-23-picker.png, artifacts/mountain-lion/screenshots/rd-m-03-picker.png
+Legacy OS status: PASS on Snow Leopard 10.6.8 and Mountain Lion 10.8.5 real devices.
+```
+
+```text
+Issue ID: LD-2026-027
+Found: 2026-10-17
+Priority: P1 (custom emoji grid mostly blank placeholder rows right after switching servers)
+Screen: Emoji picker popup, custom emoji section
+Reproduction steps: Switch to another server, then immediately open the emoji picker and inspect the custom emoji rows.
+Reproduction rate: Seen in rd-11, rd-13 and rd-14 before the fix; every first open after a server switch.
+Expected result: Emoji images are visible immediately, as in the official client.
+Actual result: Many cells stayed at the "…" placeholder and only filled after repeated opens or scrolling.
+Before screenshot: artifacts/snow-leopard/screenshots/rd-14-emoji-down.png
+Crash report: none
+Cause: Custom emoji images were downloaded one by one only when the picker displayed them; nothing warmed the HTTP cache when a server's channel list loaded.
+Fix: Added +(void)prefetchEmojiImages: on DLEmojiPickerController (DLEmojiPrefetchHandler issues cached AsyncHTTPGetRequest downloads in the background) and call it from DLController channelsForServer: right after selectedServer is set.
+Regression test: Rebuilt and relaunched on both real devices: Snow Leopard rd-23-picker.png shows the grid mostly populated on first open; Mountain Lion rd-m-03-picker.png shows the grid fully populated on first open with no placeholders. Full local screenshot regression passed (60 captures).
+Fixed screenshots: artifacts/snow-leopard/screenshots/rd-23-picker.png, artifacts/mountain-lion/screenshots/rd-m-03-picker.png
+Legacy OS status: PASS on Snow Leopard 10.6.8 and Mountain Lion 10.8.5 real devices. Very large emoji sets may still briefly show a few "…" cells while downloads finish; they fill via cacheDidUpdate.
+```
+
+```text
+Issue ID: LD-2026-028
+Found: 2026-10-17
+Priority: P2 (right-click on embed cards and stickers shows no context menu)
+Screen: Chat embed cards (title/description/media image) and sticker images in message rows
+Reproduction steps: Right-click an embed image or embed title inside any channel.
+Reproduction rate: 2/2 (rd-15 and rd-22); rd-22 re-confirmed on the live Snow Leopard device.
+Expected result: The message context menu (reactions, reply, copy message link, delete, ...) opens.
+Actual result: Only the hover action bar appeared; no menu opened at all.
+Before screenshots: artifacts/snow-leopard/screenshots/rd-15-contextmenu.png, artifacts/snow-leopard/screenshots/rd-22-rclick-embedimg.png
+Crash report: none
+Cause: NSView_Events.rightMouseDown: forwards the event only to its own delegate; embed containers were plain NSBox, selectable NSTextField and NSImageView, which swallow right mouse down instead of forwarding it up to the message row that owns the menu.
+Fix: Added DLForwardRightMouseDownToMessageRow() plus DLEmbedForwardingBox/TextField/ImageView in ChatItemViewController.m and applied them to embed cards, embed text fields, embed media images and sticker images; added the same forwarding on AttachmentPreviewViewController's eventHandlerView.
+Regression test: Rebuilt and relaunched on both real devices: right-click on the earthquake embed map now opens the full message context menu (rd-25-embed-menu.png on Snow Leopard, rd-m-05-embedmenu.png on Mountain Lion).
+Fixed screenshots: artifacts/snow-leopard/screenshots/rd-25-embed-menu.png, artifacts/mountain-lion/screenshots/rd-m-05-embedmenu.png
+Legacy OS status: PASS on Snow Leopard 10.6.8 and Mountain Lion 10.8.5 real devices.
+```
+
+```text
+Issue ID: LD-2026-029
+Found: 2026-10-17
+Priority: P2 (dates and timestamps ignore the in-app language setting)
+Screen: Date dividers, <t:...> message timestamps and their tooltips, profile member-since metadata
+Reproduction steps: Set the app language opposite to the system locale, then open a channel containing a date divider or a <t:...> timestamp.
+Reproduction rate: Found by code inspection (all formatters used [NSLocale currentLocale]); the mismatch combination was replayed in DevLocal.
+Expected result: Dates follow the app's language selection, consistent with all other UI strings.
+Actual result: Formatters followed the system locale, so app language and date formats could disagree.
+Before screenshot: none (found by code inspection of the three formatter call sites)
+Crash report: none
+Cause: The divider, timestamp and member-since formatters used the system currentLocale instead of the app language.
+Fix: Added +(NSLocale *)localeForAppLanguage to DLLocalization (ja_JP or en_US from activeLanguage) and applied it to ChatItemViewController setDateDividerDate:, DLTextParser's <t:...> and tooltip formatters, and DLUserProfileController's member-since formatter.
+Regression test: DevLocal replay with AppLanguage=ja shows the divider as 「2024 年 6 月 11 日」 (fix-locale-states.png); after restoring the default language the full local screenshot regression passed (60 captures). Mountain Lion real device shows Japanese dividers natively.
+Fixed screenshots: artifacts/local-dev/screenshots/fix-locale-states.png, artifacts/mountain-lion/screenshots/rd-m-02-emoji.png
+Legacy OS status: PASS on Mountain Lion 10.8.5 real device; the en-system/ja-app mismatch combination was verified in DevLocal replay only.
+```
+
+```text
+Issue ID: LD-2026-030
+Found: 2026-10-17
+Priority: P3 (reply preview text overlaps the chat text column's right margin)
+Screen: Message rows with a reply preview
+Reproduction steps: Open a channel with replies and compare the reply preview text edge with the message text edge.
+Reproduction rate: Visible in local baseline captures before the fix.
+Expected result: The reply preview ends where the message text column ends.
+Actual result: The reply preview extended about 19 points past the message text's right margin.
+Before screenshot: artifacts/local-dev/regression/20261017-132011/screenshots/composer-reply-960x640.png
+Crash report: none
+Cause: The referenced-message frame used NSWidth(insetView bounds) - 5 while message text reserves a 16-point right margin.
+Fix: Reserved 24 points instead of 5 when computing the referenced frame in ChatItemViewController.m.
+Regression test: Full local screenshot regression passed (60 captures); the recaptured composer-reply-960x640 keeps the reply preview inside the message text column.
+Fixed screenshots: artifacts/local-dev/regression/20261017-155834/screenshots/composer-reply-960x640.png, artifacts/local-dev/screenshots/fix-locale-states.png
+Legacy OS status: PASS in DevLocal replay; real-device spot check rd-m-02-emoji.png shows no overlap.
+```
+
+```text
+Issue ID: LD-2026-031
+Found: 2026-10-17
+Priority: P3 (image and video attachment previews have square corners)
+Screen: Attachment previews in message rows
+Reproduction steps: View a message with an image or video attachment.
+Reproduction rate: Visible in every attachment capture before the fix.
+Expected result: Corners match the official client's rounded attachment mask (about 8 points).
+Actual result: Square corners over the message background.
+Before screenshot: artifacts/local-dev/regression/20261017-132011/screenshots/channel-layout-attachment-960x640.png
+Crash report: none
+Cause: Attachment previews used plain NSImageView/WebView without a corner mask.
+Fix: Added DLRoundedAttachmentImageView (rounded clip path, radius 8) for image previews and border-radius:8px for the video WebView.
+Regression test: Build passed and the full local screenshot regression passed (60 captures). The local fixture image has a transparent background so the corners cannot be judged there; the radius change is code-verified only.
+Fixed screenshots: artifacts/local-dev/screenshots/fix-attachment.png (background removed; corners not visually verifiable in DevLocal)
+Legacy OS status: NOT VERIFIED (no image attachment available in the real-device test channels; behavior unchanged for non-attachment rows)
+```
 
 ```text
 Issue ID: LD-2026-023
@@ -426,7 +553,7 @@ Legacy OS status: NOT APPLICABLE (DevLocal-only script)
 ```
 
 ```text
-Issue ID: LD-2026-003
+Issue ID: LD-2026-025
 Found: 2026-10-16
 Priority: P0 (no connectivity at all on AquaProxy networks)
 Screen: any network operation (REST, Gateway, voice signaling)
