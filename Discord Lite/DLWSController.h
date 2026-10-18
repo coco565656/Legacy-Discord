@@ -99,6 +99,15 @@ typedef enum {
     BOOL didReconnect;
     BOOL didResume;
     BOOL reconnectScheduled;
+    // Main-thread only. True while a WebSocket thread exists (connecting or
+    // connected); the reachability watchdog relies on it to know when no
+    // attempt is in flight. Cleared only by the thread whose generation is
+    // still current, so a superseded thread cannot clear a newer attempt.
+    BOOL connectionAttemptActive;
+    // Main-thread only. Seconds until the next reconnect attempt after a
+    // failure; doubles on each failure (capped) and resets when the gateway
+    // accepts the connection (Hello).
+    double reconnectDelay;
     DLWSConnectionState connectionState;
 }
 

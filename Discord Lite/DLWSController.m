@@ -56,8 +56,18 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
 }
 
 -(void)checkNetworkReachability:(NSTimer *)timer {
-    if (connectionState != DLWSConnectionStateDisconnected && ![self isDiscordNetworkReachable]) {
+    if (connectionState != DLWSConnectionStateConnected && ![self isDiscordNetworkReachable]) {
         [self notifyConnectionState:DLWSConnectionStateReconnecting];
+        return;
+    }
+    if (connectionState == DLWSConnectionStateConnected) return;
+    // The network is usable but nothing is connecting and nothing is
+    // scheduled: the retry loop died through one of the superseded-thread
+    // paths (stale generation) and nobody would ever start again. Re-arm it.
+    // This is what turns "one Websocket Closed and then silence" back into a
+    // working login once the network settles.
+    if (!reconnectScheduled && !connectionAttemptActive) {
+        [self scheduleReconnectCanResume:(sessionID != nil)];
     }
 }
 
@@ -76,6 +86,12 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     [self checkNetworkReachability:reachabilityTimer];
 }
 
+-(void)wsThreadDidEndWithGeneration:(NSNumber *)generationNumber {
+    if ((int32_t)[generationNumber intValue] == connectionGeneration) {
+        connectionAttemptActive = NO;
+    }
+}
+
 -(id)init {
     self = [super init];
     heartbeatResponseReceived = NO;
@@ -83,6 +99,8 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     didReconnect = NO;
     didResume = NO;
     reconnectScheduled = NO;
+    connectionAttemptActive = NO;
+    reconnectDelay = 2.0;
     sequenceNumber = 0;
     connectionState = DLWSConnectionStateDisconnected;
     outgoingFrames = [[NSMutableArray alloc] init];
@@ -147,6 +165,11 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     [connectionLock lock];
     if (generation != connectionGeneration) {
         [connectionLock unlock];
+        // Superseded before we started: report the end so the reachability
+        // watchdog knows no attempt from THIS thread is in flight.
+        [self performSelectorOnMainThread:@selector(wsThreadDidEndWithGeneration:)
+                               withObject:[NSNumber numberWithInt:generation]
+                            waitUntilDone:NO];
         [pool release];
         return;
     }
@@ -259,6 +282,13 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         [self notifyConnectionState:DLWSConnectionStateReconnecting];
         [self performSelectorOnMainThread:@selector(reconnectAfterUnexpectedClose) withObject:nil waitUntilDone:NO];
     }
+    // Re-read the generation now: if a successor was scheduled above, its
+    // abort bumped it and it owns the attempt flag from here on. When we are
+    // still current and nobody was scheduled, clear the flag so the
+    // reachability watchdog can schedule a fresh attempt within 2 seconds.
+    [self performSelectorOnMainThread:@selector(wsThreadDidEndWithGeneration:)
+                           withObject:[NSNumber numberWithInt:connectionGeneration]
+                        waitUntilDone:NO];
     NSLog(@"Websocket Closed");
 }
 
@@ -325,6 +355,9 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     } else {
         shouldResume = YES;
         didResume = NO;
+        // A retry is already pending 1 second out; mark it so the reachability
+        // watchdog does not schedule a second overlapping attempt meanwhile.
+        reconnectScheduled = YES;
         [self abortCurrentConnection];
         [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:1];
     }
@@ -334,6 +367,7 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     shouldResume = NO;
     if (!didResume) {
         didReconnect = YES;
+        reconnectScheduled = YES;
         [self abortCurrentConnection];
         [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:1];
     }
@@ -359,7 +393,10 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         didReconnect = YES;
     }
     [self abortCurrentConnection];
-    [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:2.0];
+    // Back off between failed attempts; the delay resets to 2 seconds in the
+    // Hello handler once the gateway accepts a connection again.
+    [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:reconnectDelay];
+    reconnectDelay = MIN(reconnectDelay * 2.0, 60.0);
 }
 
 -(void)updateWSForDirectMessageChannel:(DLChannel *)c {
@@ -620,6 +657,9 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         }
         case OPCodeHello: {
             heartbeatResponseReceived = YES;
+            // The gateway accepted the connection: clear the reconnect
+            // backoff for any future failure.
+            reconnectDelay = 2.0;
             if (shouldResume) {
                 NSMutableDictionary *d = [[NSMutableDictionary alloc] init];
                 [d setObject:[NSNumber numberWithInt:OPCodeResume] forKey:@kWSOperation];
