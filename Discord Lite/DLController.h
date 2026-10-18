@@ -122,6 +122,11 @@ typedef enum {
     NSMutableDictionary *loadedChannels;
     NSMutableArray *loadedMessages;
     NSString *authFingerprint;
+    // Set when the main window has been filled with initial data. When the
+    // first launch spends its first connections failing (unstable network),
+    // the WS layer reports READY with its per-session reconnect flag set,
+    // which must not make the client skip building the initial UI.
+    BOOL initialContentLoaded;
 }
 
 -(DLServer *)selectedServer;

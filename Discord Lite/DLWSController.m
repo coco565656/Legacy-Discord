@@ -67,6 +67,7 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     // This is what turns "one Websocket Closed and then silence" back into a
     // working login once the network settles.
     if (!reconnectScheduled && !connectionAttemptActive) {
+        NSLog(@"[WS] Watchdog: reconnect loop was lost; re-arming (gen %d, resume=%d).", connectionGeneration, sessionID != nil);
         [self scheduleReconnectCanResume:(sessionID != nil)];
     }
 }
@@ -84,12 +85,6 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
                                                            repeats:YES];
     }
     [self checkNetworkReachability:reachabilityTimer];
-}
-
--(void)wsThreadDidEndWithGeneration:(NSNumber *)generationNumber {
-    if ((int32_t)[generationNumber intValue] == connectionGeneration) {
-        connectionAttemptActive = NO;
-    }
 }
 
 -(id)init {
@@ -162,9 +157,11 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
 -(void)startWebSocketThread {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     int32_t generation = connectionGeneration;
+    NSLog(@"[WS] Thread enter gen=%d.", generation);
     [connectionLock lock];
     if (generation != connectionGeneration) {
         [connectionLock unlock];
+        NSLog(@"[WS] Thread stale-exit gen=%d (current %d).", generation, connectionGeneration);
         // Superseded before we started: report the end so the reachability
         // watchdog knows no attempt from THIS thread is in flight.
         [self performSelectorOnMainThread:@selector(wsThreadDidEndWithGeneration:)
@@ -275,7 +272,9 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     [connectionLock unlock];
     [pool release];
 
-    if (generation == connectionGeneration && connectionState != DLWSConnectionStateDisconnected) {
+    int32_t endGeneration = connectionGeneration;
+    NSLog(@"[WS] Thread end gen=%d state=%d.", endGeneration, connectionState);
+    if (endGeneration == connectionGeneration && connectionState != DLWSConnectionStateDisconnected) {
         // The connection ended without us asking (stall, server close or
         // network error): reconnect instead of waiting for a heartbeat that
         // may never have been scheduled.
@@ -287,20 +286,38 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     // still current and nobody was scheduled, clear the flag so the
     // reachability watchdog can schedule a fresh attempt within 2 seconds.
     [self performSelectorOnMainThread:@selector(wsThreadDidEndWithGeneration:)
-                           withObject:[NSNumber numberWithInt:connectionGeneration]
+                           withObject:[NSNumber numberWithInt:endGeneration]
                         waitUntilDone:NO];
     NSLog(@"Websocket Closed");
 }
 
 -(void)startWithAuthToken:(NSString *)inToken {
     reconnectScheduled = NO;
+    // A retry attempt belongs to a new connection: the previous session's
+    // heartbeat timer must not keep firing around the new one (each Hello
+    // creates a fresh timer).
+    if (heartbeatTimer) {
+        [heartbeatTimer invalidate];
+        heartbeatTimer = nil;
+    }
     [self notifyConnectionState:(didReconnect || shouldResume) ? DLWSConnectionStateReconnecting : DLWSConnectionStateConnecting];
     [token release];
     [inToken retain];
     token = inToken;
     [self startReachabilityMonitoring];
     [self abortCurrentConnection];
+    // The thread is spawning: mark the attempt live so the reachability
+    // watchdog stays out of the way until this thread's end notice arrives.
+    connectionAttemptActive = YES;
+    NSLog(@"[WS] Start attempt gen=%d resume=%d.", connectionGeneration, shouldResume);
     [NSThread detachNewThreadSelector:@selector(startWebSocketThread) toTarget:self withObject:nil];
+}
+-(void)wsThreadDidEndWithGeneration:(NSNumber *)generationNumber {
+    if ((int32_t)[generationNumber intValue] == connectionGeneration) {
+        connectionAttemptActive = NO;
+    }
+    NSLog(@"[WS] Thread-end notice gen=%d (current %d, active=%d, scheduled=%d).",
+          (int)[generationNumber intValue], connectionGeneration, connectionAttemptActive, reconnectScheduled);
 }
 -(void)stop {
     [self invalidateGatewayKeepalive];
@@ -353,28 +370,81 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         NSData *toSend = [[CJSONSerializer serializer] serializeDictionary:response error:nil];
         [self sendWSTextData:toSend];
     } else {
+        // Heartbeats time out only in a live session: a tick landing while an
+        // attempt is still connecting belongs to an older connection and must
+        // not abort the newer one.
+        if (connectionState != DLWSConnectionStateConnected) {
+            NSLog(@"[WS] Heartbeat tick while state=%d ignored (gen %d).", connectionState, connectionGeneration);
+            return;
+        }
         shouldResume = YES;
         didResume = NO;
         // A retry is already pending 1 second out; mark it so the reachability
         // watchdog does not schedule a second overlapping attempt meanwhile.
         reconnectScheduled = YES;
+        NSLog(@"[WS] No heartbeat response (gen %d): reconnecting.", connectionGeneration);
+        if (heartbeatTimer) {
+            [heartbeatTimer invalidate];
+            heartbeatTimer = nil;
+        }
         [self abortCurrentConnection];
-        [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:1];
+        [self performSelector:@selector(performReconnectIfCurrent:)
+                   withObject:[NSNumber numberWithInt:connectionGeneration]
+                   afterDelay:1.0];
     }
 }
 
--(void)handleResumeStatus {
-    shouldResume = NO;
-    if (!didResume) {
-        didReconnect = YES;
-        reconnectScheduled = YES;
-        [self abortCurrentConnection];
-        [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:1];
+// Deferred retries carry the generation number current when they were
+// scheduled. abortCurrentConnection bumps the generation, which quietly
+// expires every retry scheduled before it — without this, stale one-second
+// retries from an earlier failure keep aborting whatever connection the
+// newer attempts manage to establish (observed as a rapid connect loop).
+-(void)performReconnectIfCurrent:(NSNumber *)generationNumber {
+    if ((int32_t)[generationNumber intValue] != connectionGeneration) {
+        NSLog(@"[WS] Retry dropped: generation moved (%d -> %d).", [generationNumber intValue], connectionGeneration);
+        // A superseded retry is no longer pending anything: release the flag
+        // so the reachability watchdog can re-arm instead of seeing a
+        // schedule that will never fire.
+        reconnectScheduled = NO;
+        return;
     }
+    NSLog(@"[WS] Retry firing (gen %d).", connectionGeneration);
+    [self startWithAuthToken:token];
+}
+
+// Gives a resumed session two seconds to be confirmed before falling back to
+// a fresh identify. The callback validates the generation of the connection
+// whose resume it guards: if that connection died meanwhile — or was replaced
+// by a newer attempt — this must not touch the successor's live connection.
+-(void)validateResumeForGeneration:(NSNumber *)generationNumber {
+    if ((int32_t)[generationNumber intValue] != connectionGeneration) {
+        NSLog(@"[WS] Stale resume check dropped (gen %d, current %d).", [generationNumber intValue], connectionGeneration);
+        return;
+    }
+    if (didResume) return;
+    NSLog(@"[WS] Resume unconfirmed after 2s (gen %d): reconnecting.", connectionGeneration);
+    didReconnect = YES;
+    reconnectScheduled = YES;
+    [self abortCurrentConnection];
+    [self performSelector:@selector(performReconnectIfCurrent:)
+               withObject:[NSNumber numberWithInt:connectionGeneration]
+               afterDelay:1.0];
 }
 
 -(void)reconnectAfterUnexpectedClose {
     if (connectionState == DLWSConnectionStateDisconnected) return;
+    // A resume request that never received RESUMED means the gateway dropped
+    // the session (TTL exceeded or sequence mismatch). Fall back to a fresh
+    // identify instead of trying to resume the same dead session forever.
+    if (shouldResume && !didResume) {
+        NSLog(@"[WS] Discarding unresumed session; next attempt will identify.");
+        [sessionID release];
+        sessionID = nil;
+        sequenceNumber = 0;
+        didResume = NO;
+        shouldResume = NO;
+        didReconnect = YES;
+    }
     [self scheduleReconnectCanResume:(sessionID != nil)];
 }
 
@@ -383,6 +453,7 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         return;
     }
     reconnectScheduled = YES;
+    NSLog(@"[WS] Scheduling reconnect gen=%d delay=%.0fs resume=%d.", connectionGeneration, reconnectDelay, canResume);
     [self notifyConnectionState:DLWSConnectionStateReconnecting];
     shouldResume = canResume;
     didResume = NO;
@@ -394,8 +465,12 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     }
     [self abortCurrentConnection];
     // Back off between failed attempts; the delay resets to 2 seconds in the
-    // Hello handler once the gateway accepts a connection again.
-    [self performSelector:@selector(startWithAuthToken:) withObject:token afterDelay:reconnectDelay];
+    // Hello handler once the gateway accepts a connection again. The retry
+    // validates its generation: if something superseded this schedule the
+    // delayed start quietly expires instead of stacking another attempt.
+    [self performSelector:@selector(performReconnectIfCurrent:)
+               withObject:[NSNumber numberWithInt:connectionGeneration]
+               afterDelay:reconnectDelay];
     reconnectDelay = MIN(reconnectDelay * 2.0, 60.0);
 }
 
@@ -522,6 +597,14 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     }
     //NSLog(@"Res: %@", res);
     OPCode c = [[res objectForKey:@kWSOperation] intValue];
+    if (c != OPCodeGeneral) {
+        NSLog(@"[WS] Received op=%d (gen %d).", c, connectionGeneration);
+    } else {
+        NSString *type = [res objectForKey:@kWSType];
+        if ([type isEqualToString:@"READY"] || [type isEqualToString:@"RESUMED"]) {
+            NSLog(@"[WS] Received %@ (gen %d).", type, connectionGeneration);
+        }
+    }
     switch (c) {
         case OPCodeGeneral: {
             [self notifyConnectionState:DLWSConnectionStateConnected];
@@ -666,12 +749,15 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
                 NSDictionary *data = [[NSDictionary alloc] initWithObjects:[NSArray arrayWithObjects:token, sessionID, [NSNumber numberWithInt:sequenceNumber], nil] forKeys:[NSArray arrayWithObjects:@"token", @"session_id", @"seq", nil]];
                 [d setObject:data forKey:@kWSData];
                 NSData *str = [[CJSONSerializer serializer] serializeDictionary:d error:nil];
+                NSLog(@"[WS] Sending resume (gen %d session=%@ seq=%d).", connectionGeneration, sessionID, sequenceNumber);
                 [self sendWSTextData:str];
                 if (heartbeatTimer) {
                     [heartbeatTimer invalidate];
                 }
                 heartbeatTimer = [NSTimer scheduledTimerWithTimeInterval:heartbeatInterval/1000.0 target:self selector:@selector(sendWSHeartbeat) userInfo:nil repeats:YES];
-                [self performSelector:@selector(handleResumeStatus) withObject:nil afterDelay:2];
+                [self performSelector:@selector(validateResumeForGeneration:)
+                           withObject:[NSNumber numberWithInt:connectionGeneration]
+                           afterDelay:2];
             } else {
                 NSDictionary *wsData = [res objectForKey:@kWSData];
                 heartbeatInterval = [[wsData objectForKey:@"heartbeat_interval"] intValue];
@@ -682,6 +768,7 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
                 
                 NSMutableDictionary *d = [[NSMutableDictionary alloc] init];
                 [d setObject:[NSNumber numberWithInt:OPCodeIdentify] forKey:@kWSOperation];
+                NSLog(@"[WS] Sending identify (gen %d).", connectionGeneration);
                 [d setObject:[NSNumber numberWithBool:NO] forKey:@"compress"];
                 NSMutableDictionary *data = [[NSMutableDictionary alloc] init];
                 [data setObject:[NSString stringWithString:token] forKey:@"token"];

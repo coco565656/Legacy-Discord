@@ -1902,6 +1902,12 @@ static BOOL DLMuteEntryIsActive(NSDictionary *entry) {
 }
 
 -(void)wsDidLoadAllDataAfterReconnection:(BOOL)didReconnect {
+    // A reconnect flag from the WS layer only reflects that session's
+    // history; on the first launch of an unstable network the READY still
+    // comes after failed attempts and must populate the initial UI.
+    if (didReconnect && !initialContentLoaded) {
+        didReconnect = NO;
+    }
     if (didReconnect) {
         if (selectedServer && selectedChannel) {
             if ([selectedServer isEqual:myServerItem]) {
@@ -1910,8 +1916,10 @@ static BOOL DLMuteEntryIsActive(NSDictionary *entry) {
                 [[DLWSController sharedInstance] updateWSForChannel:selectedChannel inServer:selectedServer];
             }
         }
+        initialContentLoaded = YES;
     } else {
         [delegate initialDataWasReceived];
+        initialContentLoaded = YES;
     }
 }
 
