@@ -298,7 +298,8 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
 -(void)scheduleGatewayKeepalive {
     if (connectionState == DLWSConnectionStateDisconnected) return;
     if (keepaliveTimer) return;
-    keepaliveTimer = [NSTimer timerWithTimeInterval:15.0 target:self selector:@selector(gatewayKeepaliveTick:) userInfo:nil repeats:YES];
+    // Retained here and released in invalidateGatewayKeepalive.
+    keepaliveTimer = [[NSTimer timerWithTimeInterval:15.0 target:self selector:@selector(gatewayKeepaliveTick:) userInfo:nil repeats:YES] retain];
     [[NSRunLoop currentRunLoop] addTimer:keepaliveTimer forMode:NSRunLoopCommonModes];
 }
 -(void)gatewayKeepaliveTick:(NSTimer *)timer {

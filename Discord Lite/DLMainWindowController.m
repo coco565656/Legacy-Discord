@@ -29,6 +29,7 @@
 #import "DLServerMenuController.h"
 #import "DLDarkMenu.h"
 #import "DLThemes.h"
+#import "DLEmojiPickerController.h"
 
 // Server shown by the channel-navigation replay fixture.
 static DLServer *replayServer = nil;
@@ -806,6 +807,8 @@ static void DLSetNeedsDisplayRecursively(NSView *view) {
     } else {
         [[DLController sharedInstance] loadActiveThreadsForServer:server];
         [NSThread detachNewThreadSelector:@selector(loadChannelsForServer:) toTarget:self withObject:server];
+        // Warm the emoji picker cache once the server's own requests are out.
+        [DLEmojiPickerController prefetchEmojiImages:[server emojis]];
     }
 }
 

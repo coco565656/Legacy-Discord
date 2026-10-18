@@ -198,15 +198,41 @@ static DLEmojiPrefetchHandler *DLEmojiPrefetchHandlerShared = nil;
 
 @implementation DLEmojiPickerController
 
+// Picker emoji are fetched a few at a time on the main thread, after the
+// server's messages had their turn: the shared request queue is first come,
+// first served and its bookkeeping is main-thread only.
+static NSMutableArray *DLEmojiPrefetchQueue = nil;
+static const NSUInteger DLEmojiPrefetchLimit = 60;
+static const NSUInteger DLEmojiPrefetchBatch = 4;
+
 +(void)prefetchEmojiImages:(NSArray *)emojiList {
-    if (!DLEmojiPrefetchHandlerShared) {
-        DLEmojiPrefetchHandlerShared = [[DLEmojiPrefetchHandler alloc] init];
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:@selector(prefetchEmojiImages:) withObject:emojiList waitUntilDone:NO];
+        return;
     }
+    if (!DLEmojiPrefetchHandlerShared) DLEmojiPrefetchHandlerShared = [[DLEmojiPrefetchHandler alloc] init];
+    if (!DLEmojiPrefetchQueue) DLEmojiPrefetchQueue = [[NSMutableArray alloc] init];
+    // A newly opened server replaces what is still waiting for the last one.
+    [DLEmojiPrefetchQueue removeAllObjects];
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(prefetchNextEmojiBatch) object:nil];
     for (NSDictionary *emoji in emojiList) {
-        NSString *emojiID = [emoji objectForKey:@"id"];
-        if (!emojiID) continue; // standard emoji come from the bundled Twemoji set.
+        if ([DLEmojiPrefetchQueue count] >= DLEmojiPrefetchLimit) break;
+        if (![emoji isKindOfClass:[NSDictionary class]]) continue;
+        id emojiID = [emoji objectForKey:@"id"];
+        if (![emojiID isKindOfClass:[NSString class]]) continue; // standard emoji come from the bundled Twemoji set.
         NSString *url = [NSString stringWithFormat:@"https://cdn.discordapp.com/emojis/%@.%@?size=32&quality=lossless",
             emojiID, [[emoji objectForKey:@"animated"] boolValue] ? @"gif" : @"png"];
+        if ([[HTTPCache sharedInstance] cachedDataForURL:url]) continue;
+        [DLEmojiPrefetchQueue addObject:url];
+    }
+    if ([DLEmojiPrefetchQueue count]) [self performSelector:@selector(prefetchNextEmojiBatch) withObject:nil afterDelay:3.0];
+}
+
++(void)prefetchNextEmojiBatch {
+    NSUInteger started = 0;
+    while (started < DLEmojiPrefetchBatch && [DLEmojiPrefetchQueue count]) {
+        NSString *url = [[[DLEmojiPrefetchQueue objectAtIndex:0] retain] autorelease];
+        [DLEmojiPrefetchQueue removeObjectAtIndex:0];
         if ([[HTTPCache sharedInstance] cachedDataForURL:url]) continue;
         if (![[HTTPCache sharedInstance] beginLoadingURL:url]) continue;
         AsyncHTTPGetRequest *request = [[AsyncHTTPGetRequest alloc] init];
@@ -214,7 +240,9 @@ static DLEmojiPrefetchHandler *DLEmojiPrefetchHandlerShared = nil;
         [request setUrl:url];
         [request setCached:YES];
         [request start];
+        started++;
     }
+    if ([DLEmojiPrefetchQueue count]) [self performSelector:@selector(prefetchNextEmojiBatch) withObject:nil afterDelay:0.75];
 }
 
 -(id)initWithButton:(NSButton *)inButton {

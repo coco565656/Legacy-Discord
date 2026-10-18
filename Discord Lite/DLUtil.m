@@ -171,6 +171,32 @@ static NSDictionary *superPropertiesDict;
     return [wrapped autorelease];
 }
 
+// YES when a certificate's trust settings in this domain make it a trusted
+// root. An empty settings array means "always trust"; an entry whose result
+// is Deny (the user chose "Never Trust") excludes the certificate.
+static BOOL DLCertificateIsTrustedRoot(SecCertificateRef certificate, SecTrustSettingsDomain domain) {
+    CFArrayRef settings = NULL;
+    if (SecTrustSettingsCopyTrustSettings(certificate, domain, &settings) != errSecSuccess) return NO;
+    BOOL trusted = NO;
+    BOOL denied = NO;
+    CFIndex count = settings ? CFArrayGetCount(settings) : 0;
+    if (count == 0) trusted = YES;
+    CFIndex index;
+    for (index = 0; index < count; index++) {
+        CFDictionaryRef entry = (CFDictionaryRef)CFArrayGetValueAtIndex(settings, index);
+        if (!entry || CFGetTypeID(entry) != CFDictionaryGetTypeID()) continue;
+        SInt32 result = kSecTrustSettingsResultTrustRoot;
+        CFNumberRef resultNumber = (CFNumberRef)CFDictionaryGetValue(entry, kSecTrustSettingsResult);
+        if (resultNumber && CFGetTypeID(resultNumber) == CFNumberGetTypeID()) {
+            CFNumberGetValue(resultNumber, kCFNumberSInt32Type, &result);
+        }
+        if (result == kSecTrustSettingsResultDeny) denied = YES;
+        else if (result == kSecTrustSettingsResultTrustRoot || result == kSecTrustSettingsResultTrustAsRoot) trusted = YES;
+    }
+    if (settings) CFRelease(settings);
+    return trusted && !denied;
+}
+
 +(NSData *)keychainAnchorData {
     // PEM for the certificates that macOS trust settings treat as anchors:
     // the System and user keychain trust domains. When AquaProxy and similar
@@ -180,7 +206,9 @@ static NSDictionary *superPropertiesDict;
     NSData *beginMarker = [@"-----BEGIN CERTIFICATE-----\n" dataUsingEncoding:NSUTF8StringEncoding];
     NSData *endMarker = [@"-----END CERTIFICATE-----\n" dataUsingEncoding:NSUTF8StringEncoding];
     NSMutableData *pemData = [[NSMutableData alloc] init];
-    SecTrustSettingsDomain domains[] = {kSecTrustSettingsDomainSystem, kSecTrustSettingsDomainUser};
+    // Admin is where installers (and "Always Trust" by an administrator) put
+    // their roots; User is the per-user Keychain Access choice.
+    SecTrustSettingsDomain domains[] = {kSecTrustSettingsDomainSystem, kSecTrustSettingsDomainAdmin, kSecTrustSettingsDomainUser};
     NSMutableArray *seenCerts = [[NSMutableArray alloc] init];
     unsigned int domainIndex;
     for (domainIndex = 0; domainIndex < sizeof(domains) / sizeof(domains[0]); domainIndex++) {
@@ -195,7 +223,8 @@ static NSDictionary *superPropertiesDict;
         for (anchorIndex = 0; anchorIndex < anchorCount; anchorIndex++) {
             SecCertificateRef certificate = (SecCertificateRef)CFArrayGetValueAtIndex(anchors, anchorIndex);
             if (!certificate || CFGetTypeID(certificate) != SecCertificateGetTypeID()) continue;
-            if ([seenCerts containsObject:((SecCertificateRef)certificate)]) continue;
+            if ([seenCerts containsObject:(id)certificate]) continue;
+            if (!DLCertificateIsTrustedRoot(certificate, domains[domainIndex])) continue;
             CFDataRef certificateData = SecCertificateCopyData(certificate);
             if (!certificateData) continue;
             NSString *base64Body = [NSString encodeBase64WithData:(NSData *)certificateData];
@@ -203,7 +232,7 @@ static NSDictionary *superPropertiesDict;
             if (![base64Body length]) continue;
             // A certificate trusted in both domains appears once in the
             // combined bundle (the anchor list is deduplicated by instance).
-            [seenCerts addObject:certificate];
+            [seenCerts addObject:(id)certificate];
             [pemData appendData:beginMarker];
             [pemData appendData:[[self wrappedPEMBodyOfBase64String:base64Body] dataUsingEncoding:NSUTF8StringEncoding]];
             [pemData appendData:endMarker];
@@ -287,7 +316,7 @@ static NSDictionary *superPropertiesDict;
 +(BOOL)hostIsInSystemProxyBypassList:(NSString *)host {
     if (![host length]) return NO;
     NSString *lowerHost = [host lowercaseString];
-    for (NSString *entry in [DLUtil systemProxyInfoValue:@"bypass"]) {
+    for (NSString *entry in (NSArray *)[DLUtil systemProxyInfoValue:@"bypass"]) {
         if (![entry length]) continue;
         if ([entry hasPrefix:@"."]) {
             // macOS exception lists commonly use ".example.com" for whole

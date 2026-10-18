@@ -8,7 +8,6 @@
 
 #import "DLController.h"
 #import "DLLocalization.h"
-#import "DLEmojiPickerController.h"
 #import "DLServer.h"
 #import <Security/Security.h>
 
@@ -814,8 +813,6 @@ static DLController* sharedObject = nil;
     [selectedServer release];
     [s retain];
     selectedServer = s;
-    // Warm the emoji picker cache so the first open has images ready.
-    [DLEmojiPickerController prefetchEmojiImages:[s emojis]];
     NSMutableArray *channels = [[NSMutableArray alloc] init];
     BOOL hideMuted = [self hidesMutedChannelsInServer:s];
     
