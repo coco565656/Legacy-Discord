@@ -8,7 +8,7 @@ VC はユーザーの指示があってから再開します（`docs/VOICE_PLAN.
 
 - 1 タスクごとに: 実装 → ローカルビルド（`scripts/local-build-dev.sh`）→ 実機ビルド（ML: `scripts/remote-build-mountainlion.sh --host MBP2012 --release`、
   SL: `scripts/remote-build-snow-leopard.sh --run`）→ 実機で目視確認 → コミット → **push**（`agent/mavericks-remote-build` と `main` の両方。force push 禁止）。
-  前回の 3 コミットは push されていませんでした。コミットしたら必ず push してください。
+  （2026-10-19 時点で両ブランチは 0fbe064 で一致済み）
 - SL のビルドスクリプトは git 管理下のファイルだけを転送します。新しいファイルは先に `git add` してください。
 - ML でアプリを起動するときは ssh の `open` ではなく Finder 経由で起動します（Keychain が -25308 になるため）。手順は `docs/REAL_DEVICE_TESTING.md`。
 - 実際に Discord へ書き込む操作（送信、ピン留め、スレッド作成、招待作成、チャンネル作成・編集・削除、ニックネーム変更、サーバー脱退、アカウント設定の変更）は、
@@ -24,11 +24,21 @@ VC はユーザーの指示があってから再開します（`docs/VOICE_PLAN.
 
 ## タスク（優先順）
 
-### 1. P0: 起動直後に Gateway へ接続できなかった場合に再接続しない
+### 1. P0: 起動直後に Gateway へ接続できなかった場合に再接続しない【完了 2026-10-19】
 - 症状（ML で観測）: 起動直後にネットワークが不安定だと「Websocket Closed」が 1 回出たきり、2 分以上ログインしないまま待ち続けることがありました。
   サンプルでは `DLWSController checkNetworkReachability:` のタイマーだけが動いていました。
-- 期待: 最初の接続に失敗しても、バックオフしながら自動で再接続し、接続できた時点でログイン状態になること。
-- 確認: ML/SL でネットワークを一時的に切ってから起動し、ネットワークを戻すと自動でつながること。
+- 対応: reachability タイマーをウォッチドッグ化（接続中もスケジュール済みもないときに scheduleReconnect を再装填）、
+  再試行の指数バックオフ（2〜60 秒、Hello 受信でリセット）、世代トークンで失効した遅延再試行と
+  旧セッションのハートビット/レジューム確認を無効化、未確認レジュームのセッションを破棄して
+  identify し直すようにしました。さらに `DLController.wsDidLoadAllDataAfterReconnection:` で
+  初回データ未取得の場合は再接続フラグ付き READY でも initial UI を構築します
+  （起動時に失敗を重ねたあと UI が空のまま残る既存不具合の修正）。
+- 実機確認: ML(MBP2012 10.8.5) / SL(MacBook 10.6.8) ともに AquaProxy を一時停止して起動 →
+  失敗が 2→4→8→16→32→60 秒バックオフで続く → プロキシ復旧後の自動再接続で identify → READY →
+  サーバー/DM/フレンドが表示されること、および通常起動での非回帰なし。全回帰 PASS。
+- 残作業（P5 相当・改善候補）: 2 秒ティックの境界でウォッチドッグの再装填が進行中の遅延再試行と
+  競合し、まれに 1 回多く即時試行が出ます（収束はするため動作に影響なし。ログ上は
+  「Watchdog: reconnect loop was lost」と「Retry dropped/firing」の組み合わせで観測）。
 
 ### 2. P1: 表示中のチャンネルを削除した後の画面
 - `DLServerMenuController showDeleteChannelDialogForChannel:` で表示中のチャンネルを削除すると、チャット欄に削除済みのチャンネルが残ります。
