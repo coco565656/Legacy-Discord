@@ -41,7 +41,9 @@ typedef enum {
     OPCodeHello = 10,
     OPCodeHeartbeatAck = 11,
     OPCodeDMParticipantOp = 13,
-    OPCodeServerMemberOp = 14
+    OPCodeServerMemberOp = 14,
+    // What the web client sends today instead of op 14.
+    OPCodeGuildSubscriptionsBulk = 37
 } OPCode;
 
 typedef enum {
@@ -126,6 +128,11 @@ typedef enum {
 -(void)sendVoiceStateUpdateForGuildID:(NSString *)guildID channelID:(NSString *)channelID
                              selfMute:(BOOL)selfMute selfDeaf:(BOOL)selfDeaf;
 -(void)queryServer:(DLServer *)s forMembersContainingUsername:(NSString *)username;
+// GUILD_SUBSCRIPTIONS_BULK for one server (typing, activities and threads,
+// plus member list ranges for a channel when given), like the web client.
+-(void)subscribeToGuildWithID:(NSString *)guildID channelID:(NSString *)channelID ranges:(NSArray *)ranges;
+// REQUEST_GUILD_MEMBERS for the signed-in user only (own roles and nick).
+-(void)requestOwnMemberInGuildWithID:(NSString *)guildID userID:(NSString *)userID;
 -(void)requestMembersForChannel:(DLChannel *)c inServer:(DLServer *)s from:(NSInteger)start to:(NSInteger)end;
 
 

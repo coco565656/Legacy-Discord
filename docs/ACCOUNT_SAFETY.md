@@ -21,6 +21,13 @@
      AquaProxy はヘッダーを書き換える設定（`/Library/AquaProxy/headers.txt`）も持つ。
      その場合 Discord から見える通信は、名乗りと合わない別物になる。
 
+4. **公式アプリが使わない通信（自動化ツールに見える）**（2026-10-21 追加調査）
+   - サーバーを開くたびに、Bot 専用の `GET /guilds/{id}/threads/active` を呼び、毎回拒否されていた
+     （ログの「Unable to load active threads」）。ユーザーのアカウントから Bot 専用 API を繰り返し呼ぶのは、セルフ Bot の典型的な特徴。
+   - 自分のロール取得に、OAuth2 アプリ用の `GET /users/@me/guilds/{id}/member` を使っていた。
+   - メンション候補の検索で、空の検索語のときにメンバーを 100 件・オンライン状態付きで要求する経路があった（メンバー一覧の吸い出しに似る）。
+   - サーバー購読に、Web 版がもう使っていない op 14 を送っていた（Web 版は op 37 GUILD_SUBSCRIPTIONS_BULK）。
+
 ## 入れた対策（2026-10-21）
 
 - **名乗りの統一**: ログイン、REST（GET を含む全 API リクエスト）、Gateway の IDENTIFY、WebSocket の接続ヘッダーが、
@@ -31,6 +38,9 @@
   - API は Web 版と同じ v9 を使う。指紋取得は Web 版と同じ `GET /experiments` に変更。
 - **新しいセッションの上限**: IDENTIFY は 10 分間に 3 回、1 時間に 8 回まで。超えたら待ってから再試行する。
   レジュームの確認は 20 秒待つ。バックオフは READY / RESUMED を受けたときにだけリセットする。
+- **公式アプリと同じ通信だけにする**: スレッドは Gateway の購読（op 37、THREAD_LIST_SYNC）で受け取り、
+  自分のロールは Gateway の op 8（user_ids 指定）で取得する。メンション検索は入力した文字があるときだけ 10 件で、
+  オンライン状態は要求しない。メンバー一覧は Web 版と同じく最初の 100 件と表示中の範囲を購読する。
 - **プロキシの書き換えを拒否**: Discord のホストへの接続は、同梱の Mozilla 証明書だけで検証する。
   MITM するプロキシは接続に失敗し（ログに案内を出す）、中継だけするプロキシ（CONNECT パススルー）は使える。
   AquaProxy を使う場合は、`/Library/AquaProxy/no-mitm.txt` に次を追記する（管理者権限が必要）。
@@ -48,6 +58,15 @@
 - TLS の指紋（OpenSSL を使う curl）は本物の Chrome と一致しない。Cloudflare 側から区別できる可能性がある。
 - IDENTIFY の `capabilities` を送っていない（Web 版は送る）。送ると受信データの形式が変わるため、対応は未実装。
 - Discord は非公式クライアントの利用を規約で認めていない。どんな対策をしても、検出されないことは保証できない。
+
+## 確認方法（実機なし）
+
+開発用ビルドで次を実行すると、送る名乗りとヘッダーを書き出す（Discord には接続しない）。
+X-Super-Properties と IDENTIFY の properties が一致していることを確認できる。
+
+```
+"artifacts/local-dev/DerivedData/Build/Products/DevLocal/Legacy Discord Dev.app/Contents/MacOS/Legacy Discord Dev" --dump-client-identity
+```
 
 ## 開発・テストのルール
 

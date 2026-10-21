@@ -158,7 +158,11 @@ static NSString *DLClientLaunchID = nil;
 +(NSString *)browserLanguage {
     NSArray *languages = [NSLocale preferredLanguages];
     NSString *language = [languages count] ? [languages objectAtIndex:0] : @"en-US";
-    return [language stringByReplacingOccurrencesOfString:@"_" withString:@"-"];
+    language = [language stringByReplacingOccurrencesOfString:@"_" withString:@"-"];
+    // Chrome reports Japanese as plain "ja", and Discord's locales match.
+    if ([language hasPrefix:@"ja"]) return @"ja";
+    if ([language isEqualToString:@"en"]) return @"en-US";
+    return language;
 }
 
 +(NSInteger)clientBuildNumber {
@@ -232,7 +236,8 @@ static NSString *DLClientLaunchID = nil;
     NSString *language = [self browserLanguage];
     NSString *timeZone = [[NSTimeZone localTimeZone] name];
     return [NSDictionary dictionaryWithObjectsAndKeys:
-            [NSString stringWithFormat:@"%@,en;q=0.9", language], @"Accept-Language",
+            ([language hasPrefix:@"en"] ? [NSString stringWithFormat:@"%@,en;q=0.9", language]
+                                        : [NSString stringWithFormat:@"%@,en-US;q=0.9,en;q=0.8", language]), @"Accept-Language",
             language, @"X-Discord-Locale",
             (timeZone ? timeZone : @"UTC"), @"X-Discord-Timezone",
             @"bugReporterEnabled", @"X-Debug-Options",

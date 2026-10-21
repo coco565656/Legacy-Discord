@@ -516,21 +516,36 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     [self sendWSTextData:str];
 }
 
+-(void)subscribeToGuildWithID:(NSString *)guildID channelID:(NSString *)channelID ranges:(NSArray *)ranges {
+    if (![guildID length]) return;
+    NSMutableDictionary *subscription = [NSMutableDictionary dictionary];
+    [subscription setObject:[NSNumber numberWithBool:YES] forKey:@"typing"];
+    [subscription setObject:[NSNumber numberWithBool:YES] forKey:@"activities"];
+    [subscription setObject:[NSNumber numberWithBool:YES] forKey:@"threads"];
+    if ([channelID length] && [ranges count]) {
+        [subscription setObject:[NSDictionary dictionaryWithObject:ranges forKey:channelID] forKey:@"channels"];
+    }
+    NSDictionary *data = [NSDictionary dictionaryWithObject:[NSDictionary dictionaryWithObject:subscription forKey:guildID]
+                                                     forKey:@"subscriptions"];
+    NSDictionary *packet = [NSDictionary dictionaryWithObjectsAndKeys:
+                            [NSNumber numberWithInt:OPCodeGuildSubscriptionsBulk], @kWSOperation, data, @kWSData, nil];
+    [self sendWSTextData:[[CJSONSerializer serializer] serializeDictionary:packet error:nil]];
+}
+
 -(void)updateWSForChannel:(DLChannel *)c inServer:(DLServer *)s {
-    NSMutableDictionary *data = [[NSMutableDictionary alloc] init];
-    [data setObject:[s serverID] forKey:@"guild_id"];
-    [data setObject:[NSNumber numberWithBool:YES] forKey:@"typing"];
-    [data setObject:[NSNumber numberWithBool:YES] forKey:@"activities"];
-    [data setObject:[NSNumber numberWithBool:YES] forKey:@"threads"];
-    NSArray *channelInfo = [NSArray arrayWithObjects:[NSArray arrayWithObjects:[NSNumber numberWithInt:0], [NSNumber numberWithInt:99], nil], nil];
-    NSMutableDictionary *channels = [[NSMutableDictionary alloc] init];
-    [channels setObject:channelInfo forKey:[c channelID]];
-    NSMutableDictionary *d = [[NSMutableDictionary alloc] init];
-    [data setObject:channels forKey:@"channels"];
-    [d setObject:data forKey:@kWSData];
-    [d setObject:[NSNumber numberWithInt:OPCodeServerMemberOp] forKey:@kWSOperation];
-    NSData *str = [[CJSONSerializer serializer] serializeDictionary:d error:nil];
-    [self sendWSTextData:str];
+    NSArray *firstPage = [NSArray arrayWithObject:[NSArray arrayWithObjects:[NSNumber numberWithInt:0], [NSNumber numberWithInt:99], nil]];
+    [self subscribeToGuildWithID:[[s serverID] description] channelID:[[c channelID] description] ranges:firstPage];
+}
+
+-(void)requestOwnMemberInGuildWithID:(NSString *)guildID userID:(NSString *)userID {
+    if (![guildID length] || ![userID length]) return;
+    NSDictionary *data = [NSDictionary dictionaryWithObjectsAndKeys:
+                          [NSArray arrayWithObject:guildID], @"guild_id",
+                          [NSArray arrayWithObject:userID], @"user_ids",
+                          [NSNumber numberWithBool:NO], @"presences", nil];
+    NSDictionary *packet = [NSDictionary dictionaryWithObjectsAndKeys:
+                            [NSNumber numberWithInt:OPCodeQueryServerMembers], @kWSOperation, data, @kWSData, nil];
+    [self sendWSTextData:[[CJSONSerializer serializer] serializeDictionary:packet error:nil]];
 }
 
 -(void)sendVoiceStateUpdateForGuildID:(NSString *)guildID channelID:(NSString *)channelID
@@ -553,12 +568,16 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     [self sendWSTextData:json];
 }
 
+// Mention autocomplete, like the web client: a typed prefix, 10 results.
+// An empty query would ask for the member list in bulk (scraping-like), so
+// it is never sent; the composer lists cached members for a bare "@".
 -(void)queryServer:(DLServer *)s forMembersContainingUsername:(NSString *)username {
+    if (![username length] || ![s serverID]) return;
     NSMutableDictionary *data = [[NSMutableDictionary alloc] init];
     [data setObject:[NSArray arrayWithObject:[s serverID]] forKey:@"guild_id"];
     [data setObject:username forKey:@"query"];
-    [data setObject:[NSNumber numberWithInt:([username length] == 0 ? 100 : 10)] forKey:@"limit"];
-    [data setObject:[NSNumber numberWithBool:YES] forKey:@"presences"];
+    [data setObject:[NSNumber numberWithInt:10] forKey:@"limit"];
+    [data setObject:[NSNumber numberWithBool:NO] forKey:@"presences"];
     NSMutableDictionary *d = [[NSMutableDictionary alloc] init];
     [d setObject:data forKey:@kWSData];
     [d setObject:[NSNumber numberWithInt:OPCodeQueryServerMembers] forKey:@kWSOperation];
@@ -568,21 +587,13 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
 
 -(void)requestMembersForChannel:(DLChannel *)c inServer:(DLServer *)s from:(NSInteger)start to:(NSInteger)end {
     if (!c || !s) return;
-    NSMutableDictionary *data = [NSMutableDictionary dictionary];
-    [data setObject:[s serverID] forKey:@"guild_id"];
-    [data setObject:[NSNumber numberWithBool:NO] forKey:@"typing"];
-    [data setObject:[NSNumber numberWithBool:YES] forKey:@"activities"];
-    [data setObject:[NSNumber numberWithBool:YES] forKey:@"threads"];
-    NSArray *range = [NSArray arrayWithObjects:[NSNumber numberWithInteger:start],
-                                               [NSNumber numberWithInteger:end], nil];
-    NSDictionary *channels = [NSDictionary dictionaryWithObject:[NSArray arrayWithObject:range]
-                                                           forKey:[c channelID]];
-    [data setObject:channels forKey:@"channels"];
-    NSDictionary *packet = [NSDictionary dictionaryWithObjectsAndKeys:
-                            [NSNumber numberWithInt:OPCodeServerMemberOp], @kWSOperation,
-                            data, @kWSData, nil];
-    NSData *serialized = [[CJSONSerializer serializer] serializeDictionary:packet error:nil];
-    [self sendWSTextData:serialized];
+    // The web client keeps the first page subscribed and adds the visible one.
+    NSMutableArray *ranges = [NSMutableArray arrayWithObject:
+                              [NSArray arrayWithObjects:[NSNumber numberWithInt:0], [NSNumber numberWithInt:99], nil]];
+    if (start > 0) {
+        [ranges addObject:[NSArray arrayWithObjects:[NSNumber numberWithInteger:start], [NSNumber numberWithInteger:end], nil]];
+    }
+    [self subscribeToGuildWithID:[[s serverID] description] channelID:[[c channelID] description] ranges:ranges];
 }
 
 // READY lists the signed-in user's member object per guild in merged_members

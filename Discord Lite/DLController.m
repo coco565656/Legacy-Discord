@@ -357,14 +357,10 @@ static DLController* sharedObject = nil;
     if (!server || [server isEqual:[self myServerItem]]) {
         return;
     }
-    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
-    [req setDelegate:self];
-    [req setHeaders:[self requestHeaders]];
-    [req setIdentifier:RequestIDActiveThreads];
-    [req setUserInfo:[NSDictionary dictionaryWithObject:server forKey:@"server"]];
-    [req setUrl:[@API_ROOT stringByAppendingString:
-                 [NSString stringWithFormat:@"/guilds/%@/threads/active", [server serverID]]]];
-    [req start];
+    // GET /guilds/{id}/threads/active is a bot-only endpoint (a user token
+    // gets 403 every time). Like the web client, subscribe to the server on
+    // the gateway; its THREAD_LIST_SYNC delivers the active threads.
+    [[DLWSController sharedInstance] subscribeToGuildWithID:[[server serverID] description] channelID:nil ranges:nil];
 }
 
 -(void)loadArchivedThreadsForChannel:(DLChannel *)channel {
@@ -786,13 +782,21 @@ static DLController* sharedObject = nil;
     NSString *serverID = [[server serverID] description];
     if ([pendingMemberRequests containsObject:serverID]) return;
     [pendingMemberRequests addObject:serverID];
-    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
-    [req setDelegate:self];
-    [req setHeaders:[self requestHeaders]];
-    [req setIdentifier:RequestIDMyGuildMember];
-    [req setUserInfo:[NSDictionary dictionaryWithObject:server forKey:@"server"]];
-    [req setUrl:[@API_ROOT stringByAppendingFormat:@"/users/@me/guilds/%@/member", serverID]];
-    [req start];
+    // The web client asks the gateway for its own member (REQUEST_GUILD_MEMBERS
+    // with user_ids); /users/@me/guilds/{id}/member is an OAuth2 endpoint.
+    [[DLWSController sharedInstance] requestOwnMemberInGuildWithID:serverID userID:[[[self myUser] userID] description]];
+    [self performSelector:@selector(ownMemberRequestTimedOut:) withObject:server afterDelay:15.0];
+}
+
+// No chunk with our member arrived: show every channel rather than none.
+-(void)ownMemberRequestTimedOut:(DLServer *)server {
+    NSString *serverID = [[server serverID] description];
+    if (![pendingMemberRequests containsObject:serverID]) return;
+    [pendingMemberRequests removeObject:serverID];
+    if (![server hasKnownMemberRoles]) [server setMyRolesUnavailable:YES];
+    if ([delegate respondsToSelector:@selector(memberPermissionsDidLoadForServer:)]) {
+        [delegate memberPermissionsDidLoadForServer:server];
+    }
 }
 
 -(void)handleMyGuildMemberResponse:(AsyncHTTPRequest *)req {
@@ -1978,6 +1982,26 @@ static BOOL DLMuteEntryIsActive(NSDictionary *entry) {
 }
 
 -(void)wsDidReceiveMemberData:(NSArray *)memberData forServerWithID:(NSString *)serverID {
+    // Our own member (requested by loadMyMemberForServer:) carries the roles
+    // used for channel permissions.
+    NSString *myID = [[[self myUser] userID] description];
+    DLServer *ownServer = [self loadedServerWithID:serverID];
+    NSEnumerator *ownEnumerator = [memberData objectEnumerator];
+    NSDictionary *candidate;
+    while (myID && ownServer && (candidate = [ownEnumerator nextObject])) {
+        if (![candidate isKindOfClass:[NSDictionary class]]) continue;
+        if (![[[[candidate objectForKey:@"user"] objectForKey:@"id"] description] isEqualToString:myID]) continue;
+        NSArray *roles = [candidate objectForKey:@"roles"];
+        if ([roles isKindOfClass:[NSArray class]]) [ownServer setMyRoleIDs:roles];
+        [ownServer setMyNickname:[candidate objectForKey:@"nick"]];
+        if ([pendingMemberRequests containsObject:[serverID description]]) {
+            [pendingMemberRequests removeObject:[serverID description]];
+            if ([delegate respondsToSelector:@selector(memberPermissionsDidLoadForServer:)]) {
+                [delegate memberPermissionsDidLoadForServer:ownServer];
+            }
+        }
+        break;
+    }
     NSMutableArray *members = [[NSMutableArray alloc] init];
     NSEnumerator *e = [memberData objectEnumerator];
     NSDictionary *memberDict;

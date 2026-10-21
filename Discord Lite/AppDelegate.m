@@ -8,6 +8,7 @@
 
 #import "AppDelegate.h"
 #import "DLLocalization.h"
+#import "DLUtil.h"
 
 @interface AppDelegate ()
 
@@ -90,6 +91,19 @@
     //[NSURLProtocol registerClass:[DLURLProtocol class]];
     
 #if LEGACY_DISCORD_LOCAL_DEV
+    // --dump-client-identity: write the client description and API headers
+    // the app sends (no network use, no token) to stdout, then quit.
+    if ([[[NSProcessInfo processInfo] arguments] containsObject:@"--dump-client-identity"]) {
+        NSMutableDictionary *dump = [NSMutableDictionary dictionary];
+        [dump setObject:[DLUtil clientProperties] forKey:@"identify_properties_and_super_properties"];
+        [dump setObject:[DLUtil userAgentString] forKey:@"user_agent"];
+        [dump setObject:[DLUtil superPropertiesString] forKey:@"x_super_properties"];
+        [dump setObject:[DLUtil defaultHTTPPostHeaders] forKey:@"api_headers"];
+        NSData *json = [[CJSONSerializer serializer] serializeDictionary:dump error:nil];
+        fprintf(stdout, "%s\n", [[[[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] autorelease] UTF8String]);
+        fflush(stdout);
+        exit(0);
+    }
     mainWindow = [[DLMainWindowController alloc] initWithWindowNibName:@"DLMainWindowController"];
     [mainWindow setDelegate:self];
     [mainWindow showWindow:self];
