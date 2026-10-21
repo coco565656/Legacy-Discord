@@ -17,7 +17,7 @@
 #include "curl_headers/curl.h"
 
 
-#define WS_GATEWAY_URL "wss://gateway.discord.gg/?encoding=json&v=10"
+#define WS_GATEWAY_URL "wss://gateway.discord.gg/?encoding=json&v=9"
 
 
 #define kWSOperation "op"
@@ -91,6 +91,7 @@ typedef enum {
     NSTimer *heartbeatTimer;
     NSTimer *reachabilityTimer;
     NSTimer *keepaliveTimer;
+    NSMutableArray *identifyTimes;  // NSDates of recent IDENTIFYs (new sessions)
     int heartbeatInterval;
     id<DLWSControllerDelegate> delegate;
     BOOL heartbeatResponseReceived;

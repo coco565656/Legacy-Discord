@@ -19,6 +19,15 @@
     [self initializeRequest];
     
     
+    // Discord API requests carry the same browser headers as POSTs, so every
+    // request describes one client. Media and CDN requests are left alone.
+    if ([url hasPrefix:@"https://discord.com/api/"]) {
+        NSMutableDictionary *merged = [NSMutableDictionary dictionaryWithDictionary:
+                                       [[AsyncHTTPRequestSettings sharedInstance] persistentPOSTHeaders]];
+        [merged setObject:@"*/*" forKey:@"Accept"];
+        if (headers) [merged addEntriesFromDictionary:headers];
+        [self setHeaders:merged];
+    }
     if (headers) {
         rootHeader = nil;
         NSEnumerator *e = [[headers allKeys] objectEnumerator];

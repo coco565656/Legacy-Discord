@@ -11,6 +11,7 @@
 #import "DLServer.h"
 #import "DLPreferencesHandler.h"
 #import "DLThemes.h"
+#import "AsyncHTTPGetRequest.h"
 #include "curl_headers/curl.h"
 #include <pthread.h>
 #import <Security/Security.h>
@@ -24,7 +25,6 @@ static pthread_mutex_t systemProxyInfoMutex = PTHREAD_MUTEX_INITIALIZER;
 static NSDictionary *systemProxyInfoCache = nil;
 static NSDate *systemProxyInfoTimestamp = nil;
 
-static NSDictionary *superPropertiesDict;
 
 +(NSImage *)imageResize:(NSImage*)anImage newSize:(NSSize)newSize cornerRadius:(CGFloat)radius {
     if (!anImage || [anImage size].width <= 0.0 || [anImage size].height <= 0.0 ||
@@ -141,20 +141,112 @@ static NSDictionary *superPropertiesDict;
     [formatter release];
     return date;
 }
+// One client identity for every request: login, REST headers, the gateway
+// IDENTIFY and the WebSocket handshake all describe the same Discord web
+// client in Chrome on a Mac. Discord treats a token that shows up with
+// different client descriptions (or an years-old build number) as stolen.
+// Update these with each release.
+#define DLChromeMajorVersion "156"
+#define DLFallbackClientBuildNumber 643186
+static NSString *DLClientLaunchID = nil;
+
 +(NSString *)userAgentString {
-    return @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) discord/0.0.326 Chrome/128.0.6613.186 Electron/32.2.2 Safari/537.36";
+    // Chrome reports a frozen "10_15_7" on every Mac.
+    return @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" DLChromeMajorVersion @".0.0.0 Safari/537.36";
 }
-+(NSString *)superPropertiesString {
-    if (!superPropertiesDict) {
-        superPropertiesDict = [[NSDictionary alloc] initWithObjects:[NSArray arrayWithObjects:@"Mac OS X", @"Discord Client", @"stable", @"0.0.326", [DLUtil kernelVersion], @"x64", @"x64", @"en-US", [self userAgentString], @"32.2.2", @"23", @"209354", [NSNull null], [NSNull null], nil] forKeys:[NSArray arrayWithObjects:@"os", @"browser", @"release_channel", @"client_version", @"os_version", @"os_arch", @"app_arch", @"system_locale", @"browser_user_agent", @"browser_version", @"os_sdk_version", @"client_build_number", @"native_build_number", @"client_event_source", nil]];
+
++(NSString *)browserLanguage {
+    NSArray *languages = [NSLocale preferredLanguages];
+    NSString *language = [languages count] ? [languages objectAtIndex:0] : @"en-US";
+    return [language stringByReplacingOccurrencesOfString:@"_" withString:@"-"];
+}
+
++(NSInteger)clientBuildNumber {
+    NSInteger cached = [[NSUserDefaults standardUserDefaults] integerForKey:@"DiscordClientBuildNumber"];
+    return cached > DLFallbackClientBuildNumber ? cached : DLFallbackClientBuildNumber;
+}
+
+// The web client's build number changes almost daily. It is read from the
+// public login page (GLOBAL_ENV.BUILD_NUMBER) at most once a day.
++(void)refreshClientBuildNumber {
+    NSDate *checked = [[NSUserDefaults standardUserDefaults] objectForKey:@"DiscordClientBuildNumberChecked"];
+    if ([checked isKindOfClass:[NSDate class]] && -[checked timeIntervalSinceNow] < 24.0 * 60.0 * 60.0) return;
+    AsyncHTTPGetRequest *request = [[AsyncHTTPGetRequest alloc] init];
+    [request setDelegate:(id)self];
+    [request setHeaders:[NSDictionary dictionaryWithObjectsAndKeys:
+                         [NSString stringWithFormat:@"%@,en;q=0.9", [self browserLanguage]], @"Accept-Language",
+                         @"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", @"Accept", nil]];
+    [request setUrl:@"https://discord.com/login"];
+    [request start];
+}
+
++(void)requestDidFinishLoading:(AsyncHTTPRequest *)request {
+    if ([request result] == HTTPResultOK) {
+        NSString *html = [[[NSString alloc] initWithData:[request responseData] encoding:NSUTF8StringEncoding] autorelease];
+        NSRange marker = html ? [html rangeOfString:@"\"BUILD_NUMBER\":\""] : NSMakeRange(NSNotFound, 0);
+        if (marker.location != NSNotFound) {
+            NSInteger number = [[html substringWithRange:NSMakeRange(NSMaxRange(marker), MIN((NSUInteger)12, [html length] - NSMaxRange(marker)))] integerValue];
+            if (number > DLFallbackClientBuildNumber) {
+                [[NSUserDefaults standardUserDefaults] setInteger:number forKey:@"DiscordClientBuildNumber"];
+            }
+        }
+        [[NSUserDefaults standardUserDefaults] setObject:[NSDate date] forKey:@"DiscordClientBuildNumberChecked"];
     }
-    NSData *serializedData = [[CJSONSerializer serializer] serializeDictionary:superPropertiesDict error:nil];
+    [request release];
+}
+
+// Discord web client super properties (field set of the current web build).
++(NSDictionary *)clientProperties {
+    if (!DLClientLaunchID) {
+        CFUUIDRef uuid = CFUUIDCreate(NULL);
+        DLClientLaunchID = [[(NSString *)CFUUIDCreateString(NULL, uuid) lowercaseString] retain];
+        CFRelease(uuid);
+    }
+    NSMutableDictionary *properties = [NSMutableDictionary dictionary];
+    [properties setObject:@"Mac OS X" forKey:@"os"];
+    [properties setObject:@"Chrome" forKey:@"browser"];
+    [properties setObject:@"" forKey:@"device"];
+    [properties setObject:[self browserLanguage] forKey:@"system_locale"];
+    [properties setObject:[NSNumber numberWithBool:NO] forKey:@"has_client_mods"];
+    [properties setObject:[self userAgentString] forKey:@"browser_user_agent"];
+    [properties setObject:@DLChromeMajorVersion ".0.0.0" forKey:@"browser_version"];
+    [properties setObject:@"10.15.7" forKey:@"os_version"];
+    [properties setObject:@"" forKey:@"referrer"];
+    [properties setObject:@"" forKey:@"referring_domain"];
+    [properties setObject:@"" forKey:@"referrer_current"];
+    [properties setObject:@"" forKey:@"referring_domain_current"];
+    [properties setObject:@"stable" forKey:@"release_channel"];
+    [properties setObject:[NSNumber numberWithInteger:[self clientBuildNumber]] forKey:@"client_build_number"];
+    [properties setObject:[NSNull null] forKey:@"client_event_source"];
+    [properties setObject:DLClientLaunchID forKey:@"client_launch_id"];
+    return properties;
+}
+
++(NSString *)superPropertiesString {
+    NSData *serializedData = [[CJSONSerializer serializer] serializeDictionary:[self clientProperties] error:nil];
     return [NSString encodeBase64WithData:serializedData];
 }
+
+// Headers Chrome sends with every Discord API request from the web client.
 +(NSDictionary *)defaultHTTPPostHeaders {
-    NSDictionary *headers = [[NSDictionary alloc] initWithObjects:[NSArray arrayWithObjects:@"en-US,en;q=0.5", @"en-US", @"America/New_York", @"bugReporterEnabled", @"https://discord.com", @"1", @"1", @"keep-alive", @"https://discord.com/login?redirect_to=%2Flogin", @"empty", @"cors", @"same-origin", @"u=0", @"trailers", nil] forKeys:[NSArray arrayWithObjects:@"Accept-Language", @"X-Discord-Locale", @"X-Discord-Timezone", @"X-Debug-Options", @"Origin", @"DNT", @"Sec-GPC", @"Connection", @"Referer", @"Sec-Fetch-Dest", @"Sec-Fetch-Mode", @"Sec-Fetch-Site", @"Priority", @"TE", nil]];
-    return [headers autorelease];
+    NSString *language = [self browserLanguage];
+    NSString *timeZone = [[NSTimeZone localTimeZone] name];
+    return [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSString stringWithFormat:@"%@,en;q=0.9", language], @"Accept-Language",
+            language, @"X-Discord-Locale",
+            (timeZone ? timeZone : @"UTC"), @"X-Discord-Timezone",
+            @"bugReporterEnabled", @"X-Debug-Options",
+            @"https://discord.com", @"Origin",
+            @"https://discord.com/channels/@me", @"Referer",
+            @"\"Google Chrome\";v=\"" DLChromeMajorVersion @"\", \"Chromium\";v=\"" DLChromeMajorVersion @"\", \"Not.A/Brand\";v=\"99\"", @"sec-ch-ua",
+            @"?0", @"sec-ch-ua-mobile",
+            @"\"macOS\"", @"sec-ch-ua-platform",
+            @"empty", @"Sec-Fetch-Dest",
+            @"cors", @"Sec-Fetch-Mode",
+            @"same-origin", @"Sec-Fetch-Site",
+            @"u=1, i", @"Priority", nil];
 }
+
 +(NSString *)caBundlePath {
     return [[NSBundle mainBundle] pathForResource:@"cacert" ofType:@"pem"];
 }
@@ -387,6 +479,29 @@ static BOOL DLCertificateIsTrustedRoot(SecCertificateRef certificate, SecTrustSe
         return ![self hostIsInSystemProxyBypassList:host];
     }
     return NO;
+}
+
+// Discord's own hosts (API, gateway, CDN, media, voice).
++(BOOL)isDiscordHost:(NSString *)host {
+    host = [host lowercaseString];
+    NSArray *domains = [NSArray arrayWithObjects:@"discord.com", @"discord.gg", @"discordapp.com",
+                        @"discordapp.net", @"discord.media", nil];
+    NSEnumerator *enumerator = [domains objectEnumerator];
+    NSString *domain;
+    while (domain = [enumerator nextObject]) {
+        if ([host isEqualToString:domain] || [host hasSuffix:[@"." stringByAppendingString:domain]]) return YES;
+    }
+    return NO;
+}
+
+// Connections to Discord trust only the bundled Mozilla CA set. A local proxy
+// that decrypts and re-signs traffic (AquaProxy in MITM mode) then fails the
+// handshake instead of reading and rewriting Discord requests; a proxy that
+// only tunnels (CONNECT passthrough) keeps working. Other hosts also accept
+// roots trusted in the Keychain.
++(NSString *)caPathForURL:(NSString *)url {
+    if ([self isDiscordHost:[self hostOfURLString:url]]) return [self caBundlePath];
+    return [self effectiveCAPath];
 }
 
 +(NSString *)effectiveCAPath {

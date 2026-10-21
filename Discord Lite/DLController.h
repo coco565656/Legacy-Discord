@@ -16,7 +16,8 @@
 #import "DLDirectMessageChannel.h"
 #import "DLWSController.h"
 
-#define API_ROOT "https://discord.com/api/v10"
+// The web client still talks to API v9; matching it keeps one client identity.
+#define API_ROOT "https://discord.com/api/v9"
 // Posted on the main thread after newly received members are stored in their
 // DLServer. The object is the DLServer.
 #define DLServerMembersDidUpdateNotification @"DLServerMembersDidUpdateNotification"

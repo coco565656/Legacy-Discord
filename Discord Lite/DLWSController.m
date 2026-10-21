@@ -180,7 +180,7 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         char errorBuffer[CURL_ERROR_SIZE];
         errorBuffer[0] = '\0';
         curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, errorBuffer);
-        NSString *caBundlePath = [DLUtil effectiveCAPath];
+        NSString *caBundlePath = [DLUtil caPathForURL:@WS_GATEWAY_URL];
         curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 1L);
         curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 2L);
         if (caBundlePath) {
@@ -195,6 +195,10 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         CURLcode res = curl_easy_perform(handle);
         if (res != CURLE_OK) {
             NSLog(@"WebSocket connect failed: %s (%s)", curl_easy_strerror(res), errorBuffer[0] ? errorBuffer : "no detail");
+            if ((res == CURLE_PEER_FAILED_VERIFICATION || res == CURLE_SSL_CONNECT_ERROR) && [DLUtil systemProxyServesHost:@"gateway.discord.gg"]) {
+                NSLog(@"The system proxy intercepts Discord's encrypted traffic, which Legacy Discord refuses. "
+                      @"For AquaProxy, list discord.com, discord.gg, discordapp.com, discordapp.net and discord.media in /Library/AquaProxy/no-mitm.txt.");
+            }
         } else {
             NSLog(@"Gateway connection established.");
             curlWebSocketHandle = handle;
@@ -412,7 +416,8 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     [self startWithAuthToken:token];
 }
 
-// Gives a resumed session two seconds to be confirmed before falling back to
+// Gives a resumed session 20 seconds (the gateway replays missed events
+// first, which takes a while through slow links and proxies) to be confirmed before falling back to
 // a fresh identify. The callback validates the generation of the connection
 // whose resume it guards: if that connection died meanwhile — or was replaced
 // by a newer attempt — this must not touch the successor's live connection.
@@ -422,13 +427,38 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         return;
     }
     if (didResume) return;
-    NSLog(@"[WS] Resume unconfirmed after 2s (gen %d): reconnecting.", connectionGeneration);
+    NSLog(@"[WS] Resume unconfirmed after 20s (gen %d): reconnecting.", connectionGeneration);
     didReconnect = YES;
     reconnectScheduled = YES;
     [self abortCurrentConnection];
     [self performSelector:@selector(performReconnectIfCurrent:)
                withObject:[NSNumber numberWithInt:connectionGeneration]
                afterDelay:1.0];
+}
+
+// New-session budget: at most 3 IDENTIFYs in 10 minutes and 8 in an hour.
+// Returns how long to wait before the next one is allowed (0 = now).
+-(NSTimeInterval)identifyBudgetWait {
+    if (!identifyTimes) identifyTimes = [[NSMutableArray alloc] init];
+    NSDate *now = [NSDate date];
+    while ([identifyTimes count] && [now timeIntervalSinceDate:[identifyTimes objectAtIndex:0]] > 3600.0) {
+        [identifyTimes removeObjectAtIndex:0];
+    }
+    NSTimeInterval wait = 0.0;
+    NSUInteger count = [identifyTimes count];
+    if (count >= 8) {
+        wait = MAX(wait, 3600.0 - [now timeIntervalSinceDate:[identifyTimes objectAtIndex:count - 8]]);
+    }
+    if (count >= 3) {
+        NSTimeInterval sinceThirdLast = [now timeIntervalSinceDate:[identifyTimes objectAtIndex:count - 3]];
+        if (sinceThirdLast < 600.0) wait = MAX(wait, 600.0 - sinceThirdLast);
+    }
+    return MAX(0.0, wait);
+}
+
+-(void)recordIdentify {
+    if (!identifyTimes) identifyTimes = [[NSMutableArray alloc] init];
+    [identifyTimes addObject:[NSDate date]];
 }
 
 -(void)reconnectAfterUnexpectedClose {
@@ -468,9 +498,11 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
     // Hello handler once the gateway accepts a connection again. The retry
     // validates its generation: if something superseded this schedule the
     // delayed start quietly expires instead of stacking another attempt.
+    NSTimeInterval delay = reconnectDelay;
+    if (!canResume) delay = MAX(delay, [self identifyBudgetWait]);
     [self performSelector:@selector(performReconnectIfCurrent:)
                withObject:[NSNumber numberWithInt:connectionGeneration]
-               afterDelay:reconnectDelay];
+               afterDelay:delay];
     reconnectDelay = MIN(reconnectDelay * 2.0, 60.0);
 }
 
@@ -615,6 +647,7 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
                 [delegate wsDidReceiveMessage:m];
                 [m release];
             } else if ([type isEqualToString:@"READY"]) {
+                reconnectDelay = 2.0;
                 NSDictionary *wsData = [res objectForKey:@kWSData];
                 sessionID = [[wsData objectForKey:@"session_id"] retain];
                 id regions = [wsData objectForKey:@"geo_ordered_rtc_regions"];
@@ -729,6 +762,7 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
                                   forServerWithID:[wsData objectForKey:@"guild_id"]];
             } else if ([type isEqualToString:@"RESUMED"]) {
                 didResume = YES;
+                reconnectDelay = 2.0;
                 [self notifyConnectionState:DLWSConnectionStateConnected];
             }
             else if ([type isEqualToString:@"MESSAGE_DELETE"]) {
@@ -740,16 +774,16 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
         }
         case OPCodeHello: {
             heartbeatResponseReceived = YES;
-            // The gateway accepted the connection: clear the reconnect
-            // backoff for any future failure.
-            reconnectDelay = 2.0;
+            // The backoff is cleared on READY or RESUMED, not here: a gateway
+            // that says Hello and then drops the session must not be retried
+            // every two seconds.
             if (shouldResume) {
                 NSMutableDictionary *d = [[NSMutableDictionary alloc] init];
                 [d setObject:[NSNumber numberWithInt:OPCodeResume] forKey:@kWSOperation];
                 NSDictionary *data = [[NSDictionary alloc] initWithObjects:[NSArray arrayWithObjects:token, sessionID, [NSNumber numberWithInt:sequenceNumber], nil] forKeys:[NSArray arrayWithObjects:@"token", @"session_id", @"seq", nil]];
                 [d setObject:data forKey:@kWSData];
                 NSData *str = [[CJSONSerializer serializer] serializeDictionary:d error:nil];
-                NSLog(@"[WS] Sending resume (gen %d session=%@ seq=%d).", connectionGeneration, sessionID, sequenceNumber);
+                NSLog(@"[WS] Sending resume (gen %d seq=%d).", connectionGeneration, sequenceNumber);
                 [self sendWSTextData:str];
                 if (heartbeatTimer) {
                     [heartbeatTimer invalidate];
@@ -757,7 +791,7 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
                 heartbeatTimer = [NSTimer scheduledTimerWithTimeInterval:heartbeatInterval/1000.0 target:self selector:@selector(sendWSHeartbeat) userInfo:nil repeats:YES];
                 [self performSelector:@selector(validateResumeForGeneration:)
                            withObject:[NSNumber numberWithInt:connectionGeneration]
-                           afterDelay:2];
+                           afterDelay:20];
             } else {
                 NSDictionary *wsData = [res objectForKey:@kWSData];
                 heartbeatInterval = [[wsData objectForKey:@"heartbeat_interval"] intValue];
@@ -766,6 +800,25 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
                 }
                 heartbeatTimer = [NSTimer scheduledTimerWithTimeInterval:heartbeatInterval/1000.0 target:self selector:@selector(sendWSHeartbeat) userInfo:nil repeats:YES];
                 
+                // Every IDENTIFY starts a new session on the account (a new
+                // entry under Devices). Bursts of them look like a stolen
+                // token, so they are rationed; resumes are not limited.
+                NSTimeInterval budgetWait = [self identifyBudgetWait];
+                if (budgetWait > 0.0) {
+                    NSLog(@"[WS] New-session limit reached; next identify in %.0f s (gen %d).", budgetWait, connectionGeneration);
+                    if (heartbeatTimer) {
+                        [heartbeatTimer invalidate];
+                        heartbeatTimer = nil;
+                    }
+                    reconnectScheduled = YES;
+                    [self abortCurrentConnection];
+                    [self notifyConnectionState:DLWSConnectionStateReconnecting];
+                    [self performSelector:@selector(performReconnectIfCurrent:)
+                               withObject:[NSNumber numberWithInt:connectionGeneration]
+                               afterDelay:budgetWait];
+                    break;
+                }
+                [self recordIdentify];
                 NSMutableDictionary *d = [[NSMutableDictionary alloc] init];
                 [d setObject:[NSNumber numberWithInt:OPCodeIdentify] forKey:@kWSOperation];
                 NSLog(@"[WS] Sending identify (gen %d).", connectionGeneration);
@@ -773,14 +826,9 @@ static NSString *GatewayKeepalivePingMarker = @"dl-gateway-keepalive-ping";
                 NSMutableDictionary *data = [[NSMutableDictionary alloc] init];
                 [data setObject:[NSString stringWithString:token] forKey:@"token"];
                 
-                NSMutableDictionary *platformProps = [[NSMutableDictionary alloc] init];
-                // Gateway v10 property names (the "$"-prefixed ones are gone).
-                [platformProps setObject:@"Mac OS X" forKey:@"os"];
-                [platformProps setObject:@"Legacy Discord" forKey:@"browser"];
-                [platformProps setObject:@"" forKey:@"device"];
-                [platformProps setObject:[[NSProcessInfo processInfo] operatingSystemVersionString] forKey:@"os_version"];
-                [platformProps setObject:[[NSLocale currentLocale] localeIdentifier] forKey:@"system_locale"];
-                [data setObject:platformProps forKey:@"properties"];
+                // The same properties as X-Super-Properties on REST requests:
+                // a token that presents two different clients looks stolen.
+                [data setObject:[DLUtil clientProperties] forKey:@"properties"];
                 
                 NSMutableDictionary *presence = [[NSMutableDictionary alloc] init];
                 [presence setObject:@"online" forKey:@"status"];

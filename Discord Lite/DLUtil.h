@@ -32,11 +32,21 @@
 +(NSDate *)dateFromSnowflake:(NSString *)snowflake;
 +(NSString *)userAgentString;
 +(NSString *)superPropertiesString;
+// The client description shared by X-Super-Properties and the gateway
+// IDENTIFY "properties" (they must always match).
++(NSDictionary *)clientProperties;
+// Fetches the web client's current build number (at most once a day).
++(void)refreshClientBuildNumber;
 +(NSDictionary *)defaultHTTPPostHeaders;
 +(NSString *)caBundlePath;
 // CA bundle including the macOS Keychain trusted anchors (AquaProxy and
 // similar local MITM proxies install their root certificate there).
 +(NSString *)effectiveCAPath;
+// CA file for a URL: the bundled set only for Discord's hosts (so an
+// intercepting proxy cannot read or rewrite Discord traffic), else
+// effectiveCAPath.
++(NSString *)caPathForURL:(NSString *)url;
++(BOOL)isDiscordHost:(NSString *)host;
 // Honor the system Proxy settings (10.6 Network > Advanced > Proxies), which
 // AquaProxy configures. curlHandle is a CURL * to keep this header curl-free.
 +(void)applySystemProxyToCurlHandle:(void *)curlHandle url:(NSString *)url;

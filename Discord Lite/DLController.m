@@ -48,6 +48,7 @@ static DLController* sharedObject = nil;
     loadedMessages = [[NSMutableArray alloc] init];
     [[AsyncHTTPRequestSettings sharedInstance] setUserAgentString:[DLUtil userAgentString]];
     [[AsyncHTTPRequestSettings sharedInstance] setPersistentPOSTHeaders:[DLUtil defaultHTTPPostHeaders]];
+    [DLUtil refreshClientBuildNumber];
     [self loadUserDefaults];
     return self;
 }
@@ -235,12 +236,14 @@ static DLController* sharedObject = nil;
     [req start];
 }
 
+// The web client gets its login fingerprint from GET /experiments (the old
+// POST /auth/fingerprint is no longer used by official clients).
 -(void)getAuthFingerprint {
-    AsyncHTTPPostRequest *req = [[AsyncHTTPPostRequest alloc] init];
+    AsyncHTTPGetRequest *req = [[AsyncHTTPGetRequest alloc] init];
     [req setDelegate:self];
     [req setHeaders:[NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:[DLUtil superPropertiesString], nil] forKeys:[NSArray arrayWithObjects:@"X-Super-Properties", nil]]];
     [req setIdentifier:RequestIDGetFingerprint];
-    [req setUrl:[@API_ROOT stringByAppendingString:@"/auth/fingerprint"]];
+    [req setUrl:[@API_ROOT stringByAppendingString:@"/experiments?with_guild_experiments=true"]];
     [req start];
 }
 
